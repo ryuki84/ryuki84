@@ -5,11 +5,11 @@
 ---
 
 ## 👨‍💻 About Me
-Backend engineer with over **12 years of experience** in financial and fintech domains.  
+Backend engineer with over **13 years of experience** in financial and fintech domains.  
 Specialized in **Java & Spring-based backend systems**, REST API design,  
 and large-scale data processing for enterprise platforms.
 
-12년 이상의 경력을 가진 백엔드 엔지니어로,  
+13년 이상의 경력을 가진 백엔드 엔지니어로,  
 금융·핀테크 도메인에서 **Java · Spring 기반 백엔드 시스템**,  
 REST API 설계 및 **대규모 데이터 처리**를 주력으로 경험해 왔습니다.
 
