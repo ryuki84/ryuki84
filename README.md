@@ -50,6 +50,11 @@ REST API 설계 및 **대규모 데이터 처리**를 주력으로 경험해 왔
   Backend architecture & API design examples  
   실무 경험을 기반으로 한 백엔드 구조 및 API 설계 예제
 
+- **Toy Project**
+  개인 토이프로젝트 정리.
+  - 성경 읽기 + 암송 프로그램 (듀오링고 스타일)
+  - 추후 추가 예정
+
 ---
 
 ## 🔗 Links
