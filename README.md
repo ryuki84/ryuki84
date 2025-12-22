@@ -39,8 +39,8 @@ REST API 설계 및 **대규모 데이터 처리**를 주력으로 경험해 왔
 
 ## 📂 Repositories Overview | 레포지토리 소개
 - [**cs-study**](https://github.com/ryuki84/cs-study)  
-  CS fundamentals summarized for interview preparation  
-  면접 대비를 위한 CS 기초 개념 정리
+  CS fundamentals summarized 
+  CS 기초 개념 정리
 
 - **java-algorithm**  
   Algorithm problems solved with Java  
