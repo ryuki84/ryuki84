@@ -68,7 +68,9 @@
     <p>도구 선택: 1~5 (손·잠자리채·낚싯대·삽·묘목)</p>
     <p>T: 시간 빨리감기 (낮/밤 구경용)</p>
     <p>🏠 집 문 앞에서 스페이스 → 실내 꾸미기 (가구는 상점에서 구매)</p>
-    <p>⛰️ 오른쪽 위 던전 입구: Q 회전베기 · E 구르기 · F 물약 · I 장비창</p>
+    <p>⛰️ 던전 입구(오른쪽 위): 스페이스 공격 · Q 회전베기 · E 구르기 · F 물약 · R 화염구</p>
+    <p>🌴 야생 지대(왼쪽 입구): 나무·돌 채집, V 먹이주기(길들이기), G 탈것</p>
+    <p>I 장비 · K 캐릭터(스탯/스킬/동료) · C 제작</p>
     <p>🏪 상점에서 열매·물고기·곤충을 팔고 묘목을 사 보세요!</p>
     <button id="start">시작하기</button>
   </div>
@@ -100,8 +102,8 @@ const ITEMS = {
 };
 const DW = 48, DH = 32, BAGCAP = 20;
 const CAVE = { x: 26, y: 2, w: 2, h: 2 };
-const RARITY = [{ n: "일반", c: "#eeeeee", m: 1 }, { n: "마법", c: "#6fa8ff", m: 1.5 }, { n: "희귀", c: "#ffd34d", m: 2.3 }, { n: "전설", c: "#ff8a2b", m: 3.5 }];
-const RD = ["#555", "#2b6fd6", "#b8860b", "#d2691e"];      // 밝은 종이 배경용
+const RARITY = [{ n: "일반", c: "#eeeeee", m: 1 }, { n: "마법", c: "#6fa8ff", m: 1.5 }, { n: "희귀", c: "#ffd34d", m: 2.3 }, { n: "전설", c: "#ff8a2b", m: 3.5 }, { n: "세트", c: "#5be37d", m: 3.2 }];
+const RD = ["#555", "#2b6fd6", "#b8860b", "#d2691e", "#2e8b57"];      // 밝은 종이 배경용
 const SLOTS = {
   weapon: { n: "무기", es: ["🗡️", "🪓", "🔨"], base: ["검", "도끼", "망치"] },
   armor:  { n: "방어구", es: ["🛡️", "🥋"], base: ["방패", "갑옷"] },
@@ -121,6 +123,19 @@ const MONS = [
 const ri = n => Math.random() * n | 0;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 let uidN = Date.now(); const uid = () => ++uidN;
+const WILDG = { x: 0, y: 8, w: 2, h: 2 };
+const MAT = { wood: ["🪵", "나무"], stone: ["🪨", "돌"], fiber: ["🌿", "섬유"], berry: ["🫐", "열매"], meat: ["🥩", "고기"], hide: ["🐾", "가죽"], bone: ["🦴", "뼈"] };
+const DINOS = [
+  { e: "🦎", n: "도마뱀", hp: 20, dmg: 4, spd: 90, xp: 5, tame: 3, ride: false },
+  { e: "🐗", n: "멧돼지", hp: 45, dmg: 8, spd: 80, xp: 9, tame: 4, ride: true },
+  { e: "🦕", n: "브라키오", hp: 120, dmg: 10, spd: 45, xp: 20, tame: 6, ride: true, big: true },
+  { e: "🐊", n: "악어", hp: 90, dmg: 15, spd: 70, xp: 22, tame: 6, ride: true, aggro: true },
+  { e: "🦖", n: "랩터", hp: 110, dmg: 18, spd: 105, xp: 30, tame: 8, ride: true, aggro: true },
+];
+const SETS = {
+  hunter: { n: "사냥꾼", names: { weapon: "사냥꾼의 창", armor: "사냥꾼의 가죽옷", ring: "사냥꾼의 인장" }, bonus: { dmg: 14, crit: 8, ms: 10 } },
+  tamer:  { n: "조련사", names: { weapon: "조련사의 채찍", armor: "조련사의 망토", ring: "조련사의 목걸이" }, bonus: { hp: 80, armor: 20, ls: 3 } },
+};
 const RW = 12, RH = 8;           // 실내 크기(칸), 위 2줄은 벽
 const FURN = {
   chair:  { e: "🪑", n: "의자", p: 150 },
@@ -185,9 +200,11 @@ function save() { try { localStorage.setItem("pokgeun-maeul", JSON.stringify(S))
 S.fin = S.fin || {}; S.room = S.room || [];
 S.lv = S.lv || 1; S.xp = S.xp || 0; S.potions = S.potions ?? 2; S.bag = S.bag || []; S.best = S.best || 0;
 S.eq = S.eq || { weapon: { id: 1, slot: "weapon", e: "🗡️", n: "나무 칼", rar: 0, ilvl: 1, st: { dmg: 3 }, price: 10 }, armor: null, ring: null };
+if (!S.st) { S.st = { str: 0, dex: 0, vit: 0 }; S.sk = { whirl: 1, fire: 0, tough: 0, tamer: 0 }; S.pts = (S.lv - 1) * 5; S.sp = S.lv - 1; }
+S.mat = S.mat || { wood: 0, stone: 0, fiber: 0, berry: 0, meat: 0, hide: 0, bone: 0 }; S.pets = S.pets || []; S.petA = S.petA ?? -1;
 const trees = S.trees;
 let scene = "out", furnSel = null, dun = null;
-(() => { const z = (x, y) => x >= 25 && x <= 28 && y >= 1 && y <= 5;
+(() => { const z = (x, y) => (x >= 25 && x <= 28 && y >= 1 && y <= 5) || (x <= 3 && y >= 6 && y <= 12);
   for (let i = flowers.length - 1; i >= 0; i--) if (z(flowers[i].x, flowers[i].y)) flowers.splice(i, 1);
   for (let i = rocks.length - 1; i >= 0; i--) if (z(rocks[i].x, rocks[i].y)) rocks.splice(i, 1);
   for (let i = trees.length - 1; i >= 0; i--) if (z(trees[i].x, trees[i].y)) trees.splice(i, 1); })();
@@ -198,7 +215,7 @@ let modal = false, started = false, fast = false;
 let clock = new Date().getHours() + new Date().getMinutes() / 60;
 let vtime = 0, saveT = 0;
 
-const player = { x: 8.5 * T, y: 8.5 * T, dx: 0, dy: 1, tool: 0, hp: 100, atkCd: 0, qCd: 0, eCd: 0, fCd: 0, dash: 0, inv: 0, flash: 0 };
+const player = { x: 8.5 * T, y: 8.5 * T, dx: 0, dy: 1, tool: 0, hp: 100, atkCd: 0, qCd: 0, eCd: 0, fCd: 0, dash: 0, inv: 0, flash: 0, rCd: 0, mounted: false };
 const SPAWNS = [[11, 9], [13, 8], [5, 11], [12, 14]];
 const villagers = VILLAGERS.map((v, i) => ({ ...v, x: (SPAWNS[i][0] + .5) * T, y: (SPAWNS[i][1] + .5) * T, vx: 0, vy: 0, t: 0, talk: 0, line: 0 }));
 
@@ -213,9 +230,9 @@ function roomSolid(x, y) {
 }
 function solidTile(x, y) {
   if (scene === "home") return roomSolid(x, y);
-  if (scene === "dun") return x < 0 || y < 0 || x >= DW || y >= DH || dun.map[y][x] === "#";
+  if (scene === "dun") { const c = dun.map[y]?.[x]; return c === undefined || c === "#" || c === "w" || c === "T" || c === "R"; }
   if (x < 0 || y < 0 || x >= W || y >= H) return true;
-  return terrain[y][x] === "w" || inRect(HOUSE, x, y) || inRect(SHOP, x, y) || inRect(CAVE, x, y) || !!treeAt(x, y) || !!rockAt(x, y);
+  return terrain[y][x] === "w" || inRect(HOUSE, x, y) || inRect(SHOP, x, y) || inRect(CAVE, x, y) || inRect(WILDG, x, y) || !!treeAt(x, y) || !!rockAt(x, y);
 }
 function blocked(cx, cy, hw, hh) {
   for (const [ox, oy] of [[-hw, -hh], [hw, -hh], [-hw, hh], [hw, hh]])
@@ -236,9 +253,9 @@ function add(id, n = 1) {
   S.inv[id] = (S.inv[id] || 0) + n; hud(); return true;
 }
 function hud() {
-  $("bells").textContent = `🔔 ${S.bells.toLocaleString()} 벨 · ⚔️ Lv.${S.lv}`;
+  $("bells").textContent = `🔔 ${S.bells.toLocaleString()} 벨 · ⚔️ Lv.${S.lv}${S.pts + S.sp > 0 ? " ✨" : ""}`;
   const rows = Object.entries(S.inv).filter(([, v]) => v > 0).map(([k, v]) => `<div><span>${ITEMS[k].e} ${ITEMS[k].n}</span><span>×${v}</span></div>`).join("");
-  $("inv").innerHTML = `<b>🎒 주머니 ${count()}/${CAP}</b>${rows}<div><span>🧪 물약</span><span>×${S.potions}</span></div>`;
+  $("inv").innerHTML = `<b>🎒 주머니 ${count()}/${CAP}</b>${rows}<div><span>🧪 물약</span><span>×${S.potions}</span></div>${matRow()}`;
   renderFurn(); renderRpg();
   $("tools").style.display = scene === "dun" ? "none" : "flex";
   $("tools").innerHTML = TOOLS.map((t, i) => `<div class="tool ${i === player.tool ? "on" : ""}" data-i="${i}"><i>${i + 1}</i>${t.e}<small>${i === 4 ? "×" + (S.inv.sapling || 0) : t.n}</small></div>`).join("");
@@ -284,7 +301,7 @@ function renderShop() {
   $("closeShop").onclick = closeShop;
   $("shop").querySelectorAll("[data-pot]").forEach(b => b.onclick = () => { if (S.bells >= 60) { S.bells -= 60; S.potions++; hud(); renderShop(); } });
   $("shop").querySelectorAll("[data-sell]").forEach(b => b.onclick = () => { const it = S.bag.splice(+b.dataset.sell, 1)[0]; S.bells += it.price; hud(); renderShop(); });
-  if ($("sellGear")) $("sellGear").onclick = () => { S.bag = S.bag.filter(it => it.rar === 3 ? true : (S.bells += it.price, false)); hud(); renderShop(); };
+  if ($("sellGear")) $("sellGear").onclick = () => { S.bag = S.bag.filter(it => it.rar >= 3 ? true : (S.bells += it.price, false)); hud(); renderShop(); };
   $("shop").querySelectorAll("[data-buy]").forEach(b => b.onclick = () => {
     const f = FURN[b.dataset.buy]; if (S.bells < f.p) return;
     S.bells -= f.p; S.fin[b.dataset.buy] = (S.fin[b.dataset.buy] || 0) + 1; hud(); renderShop();
@@ -322,6 +339,7 @@ function act() {
   if (v) return talk(v);
   if (inRect(SHOP, tx, ty)) return openShop();
   if (inRect(CAVE, tx, ty)) return enterDungeon(1);
+  if (inRect(WILDG, tx, ty)) return enterDungeon(1, false, "wild");
   if (inRect(HOUSE, tx, ty)) return enterHome();
   const tool = player.tool;
   if (tool === 0) {
@@ -390,65 +408,134 @@ function actHome() {
   if (pickUp(tx, ty)) return save();
   say(furnSel ? "여기에는 놓을 수 없어요." : "오른쪽 위 목록에서 가구를 선택하세요.", 1500);
 }
-/* ---------- RPG: 장비 ---------- */
+/* ---------- RPG: 장비 · 캐릭터 · 제작 ---------- */
 const xpNeed = l => Math.round(25 * Math.pow(l, 1.6));
-function genGear(ilvl, boost = 0) {
-  const slot = ["weapon", "weapon", "armor", "armor", "ring"][ri(5)], sd = SLOTS[slot];
-  const r0 = Math.random() + boost * .15, rar = r0 > .98 ? 3 : r0 > .88 ? 2 : r0 > .6 ? 1 : 0, m = RARITY[rar].m;
-  const bi = ri(sd.es.length), st = {};
+const r1 = v => Math.round(v * 10) / 10;
+function genGear(ilvl, boost = 0, opt = {}) {
+  let rar, slot, setId = null;
+  if (opt.rar === undefined && Math.random() < .012 + boost * .01) { setId = Object.keys(SETS)[ri(2)]; slot = ["weapon", "armor", "ring"][ri(3)]; rar = 4; }
+  else {
+    slot = opt.slot || ["weapon", "weapon", "armor", "armor", "ring"][ri(5)];
+    const r0 = Math.random() + boost * .15; rar = opt.rar ?? (r0 > .98 ? 3 : r0 > .88 ? 2 : r0 > .6 ? 1 : 0);
+  }
+  const sd = SLOTS[slot], m = RARITY[rar].m, bi = ri(sd.es.length), st = {};
   if (slot === "weapon") st.dmg = Math.round((3 + ilvl * 2) * (.85 + Math.random() * .3) * m);
   if (slot === "armor") { st.armor = Math.round((2 + ilvl * 1.5) * (.85 + Math.random() * .3) * m); st.hp = Math.round((6 + ilvl * 3) * m); }
   if (slot === "ring") st.crit = Math.round(1 + ilvl * .2);
-  const pool = AFFIX.slice().sort(() => Math.random() - .5), na = [0, 1, 2 + ri(2), 4][rar];
+  const pool = AFFIX.slice().sort(() => Math.random() - .5), na = [0, 1, 2 + ri(2), 4, 3][rar];
   for (let i = 0; i < na; i++) { const a = pool[i]; st[a.k] = (st[a.k] || 0) + Math.max(1, Math.round(a.f(ilvl) * (.7 + Math.random() * .6) * (rar === 3 ? 1.4 : 1))); }
-  const n = rar === 3 ? LEG[slot][ri(LEG[slot].length)] : rar === 2 ? `${RPRE[ri(4)]} ${sd.base[bi]}` : rar === 1 ? `${MPRE[ri(4)]} ${sd.base[bi]}` : `낡은 ${sd.base[bi]}`;
-  return { id: uid(), slot, e: sd.es[bi], n, rar, ilvl, st, price: Math.round((8 + ilvl * 6) * [1, 3, 8, 25][rar]) };
+  const n = setId ? SETS[setId].names[slot] : opt.pre ? `${opt.pre} ${sd.base[bi]}` : rar === 3 ? LEG[slot][ri(LEG[slot].length)] : rar === 2 ? `${RPRE[ri(4)]} ${sd.base[bi]}` : rar === 1 ? `${MPRE[ri(4)]} ${sd.base[bi]}` : `낡은 ${sd.base[bi]}`;
+  return { id: uid(), slot, e: sd.es[bi], n, rar, ilvl, st, set: setId, price: Math.round((8 + ilvl * 6) * [1, 3, 8, 25, 40][rar]) };
 }
 function statTxt(st) {
   const L = { dmg: "공격력", hp: "체력", armor: "방어", crit: "치명타", as: "공속", ms: "이속", ls: "흡혈" };
-  return Object.entries(st).filter(([, v]) => v).map(([k, v]) => `${L[k]} +${v}${["crit", "as", "ms", "ls"].includes(k) ? "%" : ""}`).join(" · ");
+  return Object.entries(st).filter(([, v]) => v).map(([k, v]) => `${L[k]} +${r1(v)}${["crit", "as", "ms", "ls"].includes(k) ? "%" : ""}`).join(" · ");
 }
+const activePet = () => S.pets[S.petA] || null;
+const skLv = k => S.sk[k] || 0;
+function setCounts() { const c = {}; for (const it of Object.values(S.eq)) if (it?.set) c[it.set] = (c[it.set] || 0) + 1; return c; }
 function pstats() {
-  const t = { dmg: 0, hp: 0, armor: 0, crit: 0, as: 0, ms: 0, ls: 0 };
+  const t = { dmg: 0, hp: 0, armor: 0, crit: 0, as: 0, ms: 0, ls: 0 }, cnt = setCounts();
   for (const it of Object.values(S.eq)) if (it) for (const k in it.st) t[k] += it.st[k];
-  return { maxhp: 80 + S.lv * 20 + t.hp, dmg: 6 + S.lv * 2 + t.dmg, armor: S.lv * 2 + t.armor, crit: Math.min(60, 5 + t.crit), as: 1 + t.as / 100, ms: 1 + Math.min(40, t.ms) / 100, ls: t.ls };
+  for (const id in cnt) if (cnt[id] >= 2) for (const k in SETS[id].bonus) t[k] += SETS[id].bonus[k] * (cnt[id] >= 3 ? 1 : .5);
+  const { str, dex, vit } = S.st, mount = player.mounted && activePet() ? 1.5 : 1;
+  t.dmg += str * 2; t.crit += dex * .4; t.as += dex * .5; t.hp += vit * 8; t.armor += vit;
+  return { maxhp: Math.round((80 + S.lv * 20 + t.hp) * (1 + .05 * skLv("tough"))), dmg: 6 + S.lv * 2 + t.dmg, armor: S.lv * 2 + t.armor, crit: r1(Math.min(60, 5 + t.crit)), as: 1 + t.as / 100, ms: (1 + Math.min(40, t.ms) / 100) * mount, ls: r1(t.ls) };
 }
 function gearRow(it, attr) { return `<div class="g" ${attr}><span style="color:${RD[it.rar]};font-weight:700">${it.e} ${it.n} <small style="display:inline;opacity:.6">[${RARITY[it.rar].n} iLv${it.ilvl}]</small><small>${statTxt(it.st) || "능력치 없음"}</small></span></div>`; }
-function renderGear() {
-  const st = pstats();
-  $("gear").innerHTML = `<h2>⚔️ 장비 · Lv.${S.lv}</h2>
+const SKILLS = {
+  whirl: ["🌀", "회전베기 (Q)", "주변 적에게 큰 피해. 레벨당 피해·범위↑ 쿨타임↓"],
+  fire: ["🔥", "화염구 (R)", "직선으로 날아가는 불덩이. Lv5부터 관통 · 캐릭터 Lv3 필요"],
+  tough: ["🛡️", "강인함", "최대 체력 +5% / Lv"],
+  tamer: ["🐾", "조련술", "길들이기 추가 성공 확률↑ · 동료 공격력 +10% / Lv"],
+};
+const craftIlvl = () => Math.max(2, Math.round(S.lv * 1.2 + 2));
+const RECIPES = [
+  { e: "🪓", n: "원시 무기 (마법)", cost: { wood: 3, stone: 4 }, make: () => genGear(craftIlvl(), 0, { slot: "weapon", rar: 1, pre: "원시" }) },
+  { e: "🦴", n: "뼈 무기 (희귀)", cost: { bone: 6, stone: 4, hide: 2 }, make: () => genGear(craftIlvl(), 0, { slot: "weapon", rar: 2, pre: "뼈" }) },
+  { e: "🥋", n: "가죽 갑옷 (마법)", cost: { hide: 4, fiber: 4 }, make: () => genGear(craftIlvl(), 0, { slot: "armor", rar: 1, pre: "가죽" }) },
+  { e: "🛡️", n: "뼈 갑옷 (희귀)", cost: { hide: 6, bone: 6, fiber: 4 }, make: () => genGear(craftIlvl(), 0, { slot: "armor", rar: 2, pre: "뼈" }) },
+  { e: "💍", n: "뼈 반지 (희귀)", cost: { bone: 4, fiber: 2 }, make: () => genGear(craftIlvl(), 0, { slot: "ring", rar: 2, pre: "뼈" }) },
+  { e: "🧪", n: "약초 물약", cost: { berry: 3, fiber: 1 }, make: null },
+  { e: "👑", n: "공룡왕의 장비 (전설)", cost: { hide: 12, bone: 12, stone: 10, wood: 10 }, make: () => genGear(craftIlvl() + 2, 0, { rar: 3, pre: "공룡왕의" }) },
+];
+function craft(i) {
+  const r = RECIPES[i];
+  if (!Object.entries(r.cost).every(([k, v]) => (S.mat[k] || 0) >= v)) return;
+  if (r.make && S.bag.length >= BAGCAP) return say("가방이 가득 찼어요.");
+  for (const k in r.cost) S.mat[k] -= r.cost[k];
+  if (r.make) { const it = r.make(); S.bag.push(it); say(`${it.e} ${it.n} 제작 완료! (${RARITY[it.rar].n})`, 2500); } else { S.potions++; say("🧪 약초 물약을 만들었어요!"); }
+  hud(); renderGear();
+}
+let gearTab = "equip";
+function bodyEquip() {
+  const st = pstats(), cnt = setCounts();
+  const sets = Object.entries(cnt).map(([id, n]) => `<div style="color:${RD[4]}">🌿 ${SETS[id].n} 세트 ${n}/3${n >= 3 ? " (전체 효과)" : n >= 2 ? " (절반 효과)" : ""} — ${statTxt(SETS[id].bonus)}</div>`).join("");
+  return `<h2>⚔️ 장비 · Lv.${S.lv}</h2>
     <div>경험치 ${S.xp}/${xpNeed(S.lv)} · 최고 ${S.best}층</div>
-    <div>체력 ${st.maxhp} · 공격력 ${st.dmg} · 방어 ${st.armor}<br>치명타 ${st.crit}% · 공속 ×${st.as.toFixed(2)} · 이속 ×${st.ms.toFixed(2)} · 흡혈 ${st.ls}%</div>
+    <div>체력 ${st.maxhp} · 공격력 ${st.dmg} · 방어 ${st.armor}<br>치명타 ${st.crit}% · 공속 ×${st.as.toFixed(2)} · 이속 ×${st.ms.toFixed(2)} · 흡혈 ${st.ls}%</div>${sets}
     <h3>착용 중 (클릭하면 해제)</h3>
     ${["weapon", "armor", "ring"].map(k => S.eq[k] ? gearRow(S.eq[k], `data-un="${k}"`) : `<div class="g"><span>${SLOTS[k].n}: 비어 있음</span></div>`).join("")}
     <h3>가방 ${S.bag.length}/${BAGCAP} (클릭하면 착용)</h3>
-    ${S.bag.map((it, i) => gearRow(it, `data-eq="${i}"`)).join("") || "<div>비어 있어요. 던전에서 장비를 찾아 보세요!</div>"}
-    <button id="closeGear">닫기 (I)</button>`;
+    ${S.bag.map((it, i) => gearRow(it, `data-eq="${i}"`)).join("") || "<div>비어 있어요. 던전·야생에서 장비를 찾거나 제작해 보세요!</div>"}`;
+}
+function bodyChar() {
+  const row = (l, r) => `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:2px 0"><span>${l}</span>${r}</div>`;
+  const btn = (attr, ok, txt = "+") => `<button style="margin:0;padding:0 12px" ${attr} ${ok ? "" : "disabled"}>${txt}</button>`;
+  const STAT = [["str", "💪 힘", "공격력 +2"], ["dex", "🏹 민첩", "치명타 +0.4% · 공속 +0.5%"], ["vit", "❤️ 체력", "체력 +8 · 방어 +1"]];
+  return `<h2>📜 Lv.${S.lv} 캐릭터</h2><div>능력치 포인트 <b>${S.pts}</b> · 스킬 포인트 <b>${S.sp}</b> <small>(레벨업마다 +5 / +1)</small></div>
+    <h3>능력치</h3>${STAT.map(([k, n, d]) => row(`${n} <b>${S.st[k]}</b> <small>${d} / pt</small>`, btn(`data-stat="${k}"`, S.pts > 0))).join("")}
+    <h3>스킬</h3>${Object.entries(SKILLS).map(([k, [e, n, d]]) => row(`${e} ${n} <b>Lv.${S.sk[k]}</b>/10<br><small>${d}</small>`, btn(`data-skill="${k}"`, S.sp > 0 && S.sk[k] < 10 && (k !== "fire" || S.lv >= 3)))).join("")}
+    <h3>동료 (${S.pets.length}/4)</h3>${S.pets.map((p, i) => { const b = DINOS[p.idx]; return row(`${b.e} ${b.n} Lv.${p.lv} <small>공격 ${Math.round(b.dmg * (.8 + .25 * p.lv))}${b.ride ? " · 탈것" : ""}</small>`, btn(`data-pet="${i}"`, true, S.petA === i ? "동행 중" : "동행")); }).join("") || "<div><small>야생 지대에서 공룡에게 V키로 먹이(🫐/🥩)를 주면 길들일 수 있어요.</small></div>"}`;
+}
+function bodyCraft() {
+  const own = Object.entries(MAT).map(([k, [e, n]]) => `${e} ${n} ${S.mat[k] || 0}`).join(" · ");
+  return `<h2>🔨 제작</h2><div><small>${own}</small></div>` + RECIPES.map((r, i) => {
+    const ok = Object.entries(r.cost).every(([k, v]) => (S.mat[k] || 0) >= v);
+    const cost = Object.entries(r.cost).map(([k, v]) => `<span style="color:${(S.mat[k] || 0) >= v ? "inherit" : "#c0392b"}">${MAT[k][0]}${v}</span>`).join(" ");
+    return `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:3px 0"><span>${r.e} ${r.n}<br><small>${cost}</small></span><button style="margin:0;padding:2px 12px" data-craft="${i}" ${ok ? "" : "disabled"}>제작</button></div>`;
+  }).join("");
+}
+function renderGear() {
+  const tabs = [["equip", "⚔️ 장비 (I)"], ["char", "📜 캐릭터 (K)"], ["craft", "🔨 제작 (C)"]].map(([k, l]) => `<button data-tab="${k}" style="margin:0 6px 8px 0;padding:3px 10px;${gearTab === k ? "background:#fff" : ""}">${l}</button>`).join("");
+  $("gear").innerHTML = tabs + (gearTab === "char" ? bodyChar() : gearTab === "craft" ? bodyCraft() : bodyEquip()) + `<button id="closeGear">닫기</button>`;
 }
 $("gear").addEventListener("click", e => {
-  if (e.target.id === "closeGear") return closeShop();
-  const g = e.target.closest(".g"); if (!g) return;
-  if (g.dataset.eq !== undefined) { const it = S.bag[+g.dataset.eq]; const old = S.eq[it.slot]; S.eq[it.slot] = it; S.bag.splice(+g.dataset.eq, 1); if (old) S.bag.push(old); }
-  else if (g.dataset.un) { if (S.bag.length >= BAGCAP) return say("가방이 가득 찼어요."); S.bag.push(S.eq[g.dataset.un]); S.eq[g.dataset.un] = null; }
+  const t = e.target, d = t.dataset || {};
+  if (t.id === "closeGear") return closeShop();
+  if (d.tab) { gearTab = d.tab; return renderGear(); }
+  if (d.craft !== undefined) return craft(+d.craft);
+  if (d.stat) { if (S.pts > 0) { S.st[d.stat]++; S.pts--; } }
+  else if (d.skill) { if (S.sp > 0 && S.sk[d.skill] < 10 && (d.skill !== "fire" || S.lv >= 3)) { S.sk[d.skill]++; S.sp--; } }
+  else if (d.pet !== undefined) { const i = +d.pet; S.petA = S.petA === i ? -1 : i; if (scene === "dun" && dun) dun.pet = activePet() ? { x: player.x, y: player.y, cd: 0 } : null; }
+  else {
+    const g = t.closest(".g"); if (!g) return;
+    if (g.dataset.eq !== undefined) { const it = S.bag[+g.dataset.eq]; const old = S.eq[it.slot]; S.eq[it.slot] = it; S.bag.splice(+g.dataset.eq, 1); if (old) S.bag.push(old); }
+    else if (g.dataset.un) { if (S.bag.length >= BAGCAP) return say("가방이 가득 찼어요."); S.bag.push(S.eq[g.dataset.un]); S.eq[g.dataset.un] = null; }
+    else return;
+  }
   player.hp = Math.min(player.hp, pstats().maxhp); renderGear(); hud();
 });
-function toggleGear() {
-  if (!$("gear").hidden) return closeShop();
-  if (modal || !started) return;
-  modal = true; renderGear(); $("gear").hidden = false;
+function togglePanel(tab) {
+  if (!started) return;
+  if (!$("gear").hidden) { if (gearTab === tab) return closeShop(); gearTab = tab; return renderGear(); }
+  if (modal) return;
+  gearTab = tab; modal = true; renderGear(); $("gear").hidden = false;
 }
 
-/* ---------- RPG: 던전 ---------- */
+/* ---------- RPG: 던전 · 야생 지대 ---------- */
+function matRow() { const s = Object.entries(MAT).filter(([k]) => S.mat[k] > 0).map(([k, [e]]) => `${e}${S.mat[k]}`).join(" "); return s ? `<div>${s}</div>` : ""; }
 function renderRpg() {
   const el = $("rpg");
   if (scene !== "dun" || !dun) { el.hidden = true; return; }
-  const st = pstats(), P = player, cd = v => v > 0 ? v.toFixed(1) + "s" : "준비";
+  const st = pstats(), P = player, cd = v => v > 0 ? v.toFixed(1) + "s" : "준비", wild = dun.kind === "wild";
   el.hidden = false;
   el.innerHTML = `<div class="bar"><i class="hp" style="width:${clamp(P.hp / st.maxhp * 100, 0, 100)}%"></i><span>❤️ ${Math.max(0, Math.ceil(P.hp))}/${st.maxhp}</span></div>
     <div class="bar"><i class="xp" style="width:${S.xp / xpNeed(S.lv) * 100}%"></i><span>Lv.${S.lv} · ${S.xp}/${xpNeed(S.lv)}</span></div>
-    <div class="sk"><b>스페이스</b> 공격 · <b>Q</b> 회전베기 ${cd(P.qCd)}<br><b>E</b> 구르기 ${cd(P.eCd)} · <b>F</b> 🧪×${S.potions} · <b>I</b> 장비</div>
-    <div>🕳️ 지하 ${dun.depth}층 · 몬스터 ${dun.mons.length}마리</div>`;
+    <div class="sk"><b>스페이스</b> 공격${wild ? "·채집" : ""} · <b>Q</b> 회전 ${cd(P.qCd)}<br><b>E</b> 구르기 ${cd(P.eCd)} · <b>R</b> 화염구 ${skLv("fire") ? cd(P.rCd) : "미습득"}<br><b>F</b> 🧪×${S.potions}${wild ? " · <b>V</b> 먹이주기 · <b>G</b> 탈것" : ""}<br><b>I</b> 장비 · <b>K</b> 캐릭터 · <b>C</b> 제작</div>
+    <div>${wild ? "🌴 야생 지대" : `🕳️ 지하 ${dun.depth}층`} · 몬스터 ${dun.mons.length}마리${S.pts + S.sp > 0 ? " · ✨포인트!" : ""}</div>`;
 }
+function newDun(o) { return { depth: 1, mons: [], loot: [], fx: [], arcs: [], proj: [], nhp: {}, regrow: [], spawnT: 0, stairs: null, pet: null, ...o }; }
 function genDun(depth) {
   const map = Array.from({ length: DH }, () => Array(DW).fill("#")), rooms = [];
   for (let i = 0; i < 90 && rooms.length < 9; i++) {
@@ -467,7 +554,7 @@ function genDun(depth) {
     carve(x1, y1);
   }
   const [ex, ey] = c(rooms[0]), [sx, sy] = c(rooms[rooms.length - 1]);
-  const d = { depth, map, mons: [], loot: [], fx: [], arcs: [], exit: { x: ex, y: ey }, stairs: { x: sx, y: sy } };
+  const d = newDun({ depth, map, exit: { x: ex, y: ey }, stairs: { x: sx, y: sy } });
   for (let i = 1; i < rooms.length; i++) {
     const r = rooms[i], n = 2 + ri(3) + (depth / 3 | 0);
     for (let k = 0; k < n; k++) {
@@ -484,17 +571,52 @@ function mkMon(depth, x, y, boss) {
   const sc = 1 + .3 * (depth - 1), hp = Math.round(base.hp * sc * (boss ? 7 : 1));
   return { ...base, x, y, hp, mhp: hp, dmg: Math.round(base.dmg * sc * (boss ? 1.5 : 1)), xp: Math.round(base.xp * sc * (boss ? 8 : 1)), cd: 0, flash: 0, kb: 0, kx: 0, ky: 0, boss };
 }
-function enterDungeon(depth, keepHp) {
-  cancelFish(); scene = "dun"; dun = genDun(depth);
-  const P = player; P.x = (dun.exit.x + 1.5) * T; P.y = (dun.exit.y + .5) * T; P.dx = 1; P.dy = 0;
-  P.atkCd = P.qCd = P.eCd = P.fCd = P.dash = P.inv = 0;
+function mkDino(idx, tier, x, y, boss) {
+  const b = DINOS[idx], sc = 1 + .25 * tier, hp = Math.round(b.hp * sc * (boss ? 6 : 1));
+  return { ...b, n: boss ? "티라노 왕" : b.n, tame: boss ? 0 : b.tame, idx, tier, boss, wild: true, hostile: !!b.aggro || boss, tp: 0, hp, mhp: hp, dmg: Math.round(b.dmg * sc * (boss ? 1.5 : 1)), xp: Math.round(b.xp * sc * (boss ? 8 : 1)), x, y, cd: 0, flash: 0, kb: 0, kx: 0, ky: 0, wt: 0, wvx: 0, wvy: 0 };
+}
+function spawnWild(d, avoid) {
+  const h = d.map.length, w = d.map[0].length;
+  for (let k = 0; k < 40; k++) {
+    const x = 2 + ri(w - 4), y = 2 + ri(h - 4);
+    if (d.map[y][x] !== ".") continue;
+    const px = (x + .5) * T, py = (y + .5) * T;
+    if (Math.hypot(x - d.exit.x, y - d.exit.y) < 10 || (avoid && Math.hypot(px - avoid.x, py - avoid.y) < 300)) continue;
+    const tier = Math.min(4, (Math.hypot(x - d.exit.x, y - d.exit.y) / 14) | 0), idx = clamp(tier - 1 + ri(2), 0, DINOS.length - 1);
+    d.mons.push(mkDino(idx, tier, px, py, false)); return;
+  }
+}
+function genWild() {
+  const w = 64, h = 44, ex = 3, ey = h - 4;
+  const map = Array.from({ length: h }, (_, y) => Array.from({ length: w }, (_, x) => (x === 0 || y === 0 || x === w - 1 || y === h - 1) ? "#" : "."));
+  for (let n = 0; n < 4; n++) {
+    const cx = 10 + ri(w - 20), cy = 6 + ri(h - 16), rx = 3 + ri(4), ry = 2 + ri(3);
+    if (Math.hypot(cx - ex, cy - ey) < rx + 8) continue;
+    for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) if (((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2 < 1) map[y][x] = "w";
+  }
+  for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) map[5 + dy][w - 6 + dx] = ".";
+  const put = (c, n) => { for (let i = 0, k = 0; i < n && k < 600; k++) { const x = 1 + ri(w - 2), y = 1 + ri(h - 2); if (map[y][x] === "." && Math.hypot(x - ex, y - ey) > 5 && Math.hypot(x - (w - 6), y - 5) > 3) { map[y][x] = c; i++; } } };
+  put("T", 90); put("R", 30); put("B", 34);
+  const d = newDun({ kind: "wild", map, exit: { x: ex, y: ey } });
+  for (let i = 0; i < 30; i++) spawnWild(d, null);
+  d.mons.push(mkDino(4, 5, (w - 6 + .5) * T, 5.5 * T, true));
+  return d;
+}
+function enterDungeon(depth, keepHp, kind) {
+  cancelFish(); scene = "dun"; dun = kind === "wild" ? genWild() : genDun(depth);
+  const P = player; P.x = (dun.exit.x + 1.5) * T; P.y = (dun.exit.y + .5) * T; P.dx = 1; P.dy = 0; P.mounted = false;
+  P.atkCd = P.qCd = P.eCd = P.fCd = P.rCd = P.dash = P.inv = 0;
   if (!keepHp) P.hp = pstats().maxhp;
-  S.best = Math.max(S.best, depth); hud();
-  say(depth % 5 === 0 ? `🐲 지하 ${depth}층 — 보스가 있어요!` : `🕳️ 지하 ${depth}층`, 2500);
+  dun.pet = activePet() ? { x: P.x - 20, y: P.y, cd: 0 } : null;
+  if (kind !== "wild") S.best = Math.max(S.best, depth);
+  hud();
+  say(kind === "wild" ? "🌴 야생 지대 — 나무·돌을 모으고 공룡을 길들여 보세요!" : depth % 5 === 0 ? `🐲 지하 ${depth}층 — 보스가 있어요!` : `🕳️ 지하 ${depth}층`, 3000);
 }
 function leaveDungeon(dead) {
-  scene = "out"; dun = null; const P = player;
-  P.x = (CAVE.x + 1) * T; P.y = 4.5 * T; P.dx = 0; P.dy = 1; P.hp = pstats().maxhp;
+  const wild = dun.kind === "wild", P = player;
+  scene = "out"; dun = null; P.mounted = false;
+  if (wild) { P.x = 1 * T; P.y = 10.5 * T; } else { P.x = (CAVE.x + 1) * T; P.y = 4.5 * T; }
+  P.dx = 0; P.dy = 1; P.hp = pstats().maxhp;
   if (dead) { S.bells = Math.floor(S.bells * .9); say("💀 쓰러졌어요… 벨의 10%를 잃었어요."); } else say("마을로 돌아왔어요 🏡");
   hud(); save();
 }
@@ -502,52 +624,123 @@ function fx(x, y, txt, col) { dun.fx.push({ x, y, txt, col, t: .9 }); }
 function heal(n) { const m = pstats().maxhp; player.hp = Math.min(m, player.hp + n); }
 function gainXp(n) {
   S.xp += n;
-  while (S.xp >= xpNeed(S.lv)) { S.xp -= xpNeed(S.lv); S.lv++; player.hp = pstats().maxhp; fx(player.x, player.y - 30, "LEVEL UP!", "#ffd34d"); say(`⚔️ 레벨 ${S.lv}이 되었어요!`, 2500); }
+  while (S.xp >= xpNeed(S.lv)) {
+    S.xp -= xpNeed(S.lv); S.lv++; S.pts += 5; S.sp += 1; player.hp = pstats().maxhp;
+    fx(player.x, player.y - 30, "LEVEL UP!", "#ffd34d"); say(`⚔️ 레벨 ${S.lv}! 능력치 +5, 스킬 +1 포인트 (K 캐릭터창)`, 3000);
+  }
   hud();
 }
+function petXp(n) {
+  const pe = activePet(); if (!pe) return;
+  pe.xp += n * .6;
+  while (pe.xp >= pe.lv * 40 && pe.lv < 20) { pe.xp -= pe.lv * 40; pe.lv++; say(`🐾 ${DINOS[pe.idx].e} 동료가 Lv.${pe.lv}이 되었어요!`, 2000); }
+}
+function matAdd(k, n) { S.mat[k] = (S.mat[k] || 0) + n; fx(player.x, player.y - 26 - (dun.fx.length % 4) * 14, `${MAT[k][0]}+${n}`, "#ffffff"); hud(); }
 function hitMon(m, mult) {
   const st = pstats(), crit = Math.random() * 100 < st.crit, d = Math.max(1, Math.round(st.dmg * mult * (.85 + Math.random() * .3) * (crit ? 2 : 1)));
-  m.hp -= d; m.flash = .12; m.kb = .12;
+  m.hp -= d; m.flash = .12; m.kb = .12; if (m.wild) m.hostile = true;
   const a = Math.atan2(m.y - player.y, m.x - player.x); m.kx = Math.cos(a) * (m.boss ? 80 : 220); m.ky = Math.sin(a) * (m.boss ? 80 : 220);
   fx(m.x, m.y - 18, (crit ? "💥" : "") + d, crit ? "#ffd34d" : "#ffffff");
   if (st.ls > 0) heal(Math.max(1, Math.round(d * st.ls / 100)));
   if (m.hp <= 0) killMon(m);
 }
+function petHit(m, pe) {
+  const d = Math.max(1, Math.round(DINOS[pe.idx].dmg * (.8 + .25 * pe.lv) * (1 + .1 * skLv("tamer"))));
+  m.hp -= d; m.flash = .1; m.hostile = true; fx(m.x, m.y - 18, String(d), "#9be39b");
+  if (m.hp <= 0) killMon(m);
+}
 function killMon(m) {
-  dun.mons.splice(dun.mons.indexOf(m), 1); gainXp(m.xp);
-  const sp = () => ({ x: m.x + (Math.random() - .5) * 30, y: m.y + (Math.random() - .5) * 30 });
-  dun.loot.push({ t: "bell", n: Math.round((3 + ri(6)) * (1 + dun.depth * .3) * (m.boss ? 6 : 1)), ...sp() });
-  const ilvl = Math.max(1, Math.round(dun.depth * 1.5 + S.lv * .5));
-  if (m.boss) for (let i = 0; i < 2; i++) dun.loot.push({ t: "gear", it: genGear(ilvl, 3), ...sp() });
-  else if (Math.random() < .2) dun.loot.push({ t: "gear", it: genGear(ilvl), ...sp() });
+  const i = dun.mons.indexOf(m); if (i < 0) return;
+  dun.mons.splice(i, 1); gainXp(m.xp); if (dun.pet) petXp(m.xp);
+  const wild = !!m.wild, sp = () => ({ x: m.x + (Math.random() - .5) * 30, y: m.y + (Math.random() - .5) * 30 });
+  dun.loot.push({ t: "bell", n: wild ? Math.round((2 + ri(4)) * (1 + m.tier * .4) * (m.boss ? 6 : 1)) : Math.round((3 + ri(6)) * (1 + dun.depth * .3) * (m.boss ? 6 : 1)), ...sp() });
+  const ilvl = Math.max(1, Math.round((wild ? 2 + m.tier * 2 : dun.depth * 1.5) + S.lv * .5));
+  if (m.boss) for (let k = 0; k < 2; k++) dun.loot.push({ t: "gear", it: genGear(ilvl, 3), ...sp() });
+  else if (Math.random() < (wild ? .12 : .2)) dun.loot.push({ t: "gear", it: genGear(ilvl), ...sp() });
   if (Math.random() < .07) dun.loot.push({ t: "pot", ...sp() });
   if (Math.random() < .05) dun.loot.push({ t: "furn", id: Object.keys(FURN)[ri(Object.keys(FURN).length)], ...sp() });
+  if (wild) {
+    matAdd("meat", 1 + ri(2) + (m.big ? 2 : 0) + (m.boss ? 4 : 0));
+    if (Math.random() < .55 || m.boss) matAdd("hide", 1 + (m.big ? 1 : 0) + (m.boss ? 3 : 0));
+    if (Math.random() < .3 + .1 * m.tier || m.boss) matAdd("bone", 1 + (m.boss ? 3 : 0));
+  }
+}
+function gatherNode() {
+  const P = player;
+  for (const o of [26, 38]) {
+    const tx = Math.floor((P.x + P.dx * o) / T), ty = Math.floor((P.y + 8 + P.dy * o) / T), c = dun.map[ty]?.[tx];
+    if (c !== "T" && c !== "R" && c !== "B") continue;
+    const key = ty * 1000 + tx, hp = (dun.nhp[key] ?? (c === "B" ? 2 : 3)) - 1;
+    fx((tx + .5) * T, (ty + .3) * T, c === "R" ? "⛏️" : c === "T" ? "🪓" : "✂️", "#fff");
+    if (hp > 0) { dun.nhp[key] = hp; return; }
+    delete dun.nhp[key]; dun.map[ty][tx] = "."; dun.regrow.push({ x: tx, y: ty, c, t: 75 });
+    if (c === "T") matAdd("wood", 2 + ri(2));
+    else if (c === "R") { matAdd("stone", 2 + ri(2)); if (Math.random() < .15) matAdd("bone", 1); }
+    else { matAdd("fiber", 1 + ri(2)); if (Math.random() < .6) matAdd("berry", 1 + ri(2)); }
+    return;
+  }
 }
 function attack() {
   if (scene !== "dun" || modal) return; const P = player, st = pstats();
   if (P.atkCd > 0) return; P.atkCd = .42 / st.as; dun.arcs.push({ a: Math.atan2(P.dy, P.dx), t: .15, r: 58, whirl: false });
   for (const m of [...dun.mons]) { const dx = m.x - P.x, dy = m.y - P.y, d = Math.hypot(dx, dy); if (d < 58 + (m.boss ? 12 : 0) && (dx * P.dx + dy * P.dy) / (d || 1) > .1) hitMon(m, 1); }
+  if (dun.kind === "wild") gatherNode();
 }
 function whirl() {
-  const P = player; if (P.qCd > 0 || modal) return; P.qCd = 5; dun.arcs.push({ a: 0, t: .25, r: 84, whirl: true });
-  for (const m of [...dun.mons]) if (Math.hypot(m.x - P.x, m.y - P.y) < 84 + (m.boss ? 12 : 0)) hitMon(m, 1.8);
+  const P = player; if (scene !== "dun" || P.qCd > 0 || modal) return; const L = skLv("whirl"), r = 84 + 4 * (L - 1);
+  P.qCd = Math.max(2, 5 - .3 * (L - 1)); dun.arcs.push({ a: 0, t: .25, r, whirl: true });
+  for (const m of [...dun.mons]) if (Math.hypot(m.x - P.x, m.y - P.y) < r + (m.boss ? 12 : 0)) hitMon(m, 1.8 + .25 * (L - 1));
 }
-function dash() { const P = player; if (P.eCd > 0 || modal) return; P.eCd = 2.5; P.dash = .16; P.inv = .3; }
+function fireball() {
+  const P = player; if (scene !== "dun" || modal) return; const L = skLv("fire");
+  if (L < 1) return say("🔥 화염구는 K 캐릭터창에서 스킬 포인트로 배워요 (Lv.3 이상).", 2500);
+  if (P.rCd > 0) return; P.rCd = 3; const l = Math.hypot(P.dx, P.dy) || 1;
+  dun.proj.push({ x: P.x, y: P.y, vx: P.dx / l * 380, vy: P.dy / l * 380, m: 2 + .35 * (L - 1), life: 1.1, pierce: L >= 5, hit: new Set() });
+}
+function dash() { const P = player; if (scene !== "dun" || P.eCd > 0 || modal) return; P.eCd = 2.5; P.dash = .16; P.inv = .3; }
 function drinkPotion() {
-  const P = player, m = pstats().maxhp;
-  if (S.potions <= 0) return say("물약이 없어요. 상점에서 살 수 있어요.", 1500);
+  const P = player, m = pstats().maxhp; if (scene !== "dun") return;
+  if (S.potions <= 0) return say("물약이 없어요. 상점에서 사거나 제작할 수 있어요.", 1500);
   if (P.fCd > 0 || P.hp >= m) return;
   S.potions--; P.fCd = 1; heal(Math.round(m * .45)); fx(P.x, P.y - 24, "+HP", "#7bd88f"); hud();
 }
+function feed() {
+  const P = player; if (scene !== "dun" || modal || dun.kind !== "wild") return;
+  const m = dun.mons.filter(m => m.tame && Math.hypot(m.x - P.x, m.y - P.y) < 80).sort((a, b) => Math.hypot(a.x - P.x, a.y - P.y) - Math.hypot(b.x - P.x, b.y - P.y))[0];
+  if (!m) return say("가까이에 길들일 수 있는 공룡이 없어요. (V: 먹이주기)", 1800);
+  if (m.hostile && m.hp > m.mhp * .5) return say(`${m.e} 너무 난폭해요! 체력을 절반 이하로 줄인 뒤 먹이를 주세요.`, 2500);
+  const bait = S.mat.berry > 0 ? "berry" : S.mat.meat > 0 ? "meat" : null;
+  if (!bait) return say("먹이(🫐 열매 / 🥩 고기)가 없어요. 덤불과 사냥으로 구할 수 있어요.", 2200);
+  S.mat[bait]--; m.tp += 1 + (Math.random() < .12 * skLv("tamer") ? 1 : 0); m.hostile = false; m.wt = 2; m.wvx = m.wvy = 0;
+  fx(m.x, m.y - 24, `${MAT[bait][0]} ${Math.min(m.tp, m.tame)}/${m.tame}`, "#ffd34d"); hud();
+  if (m.tp >= m.tame) {
+    if (S.pets.length >= 4) { m.tp = m.tame - 1; return say("동료가 가득 찼어요 (최대 4). K 캐릭터창에서 확인하세요."); }
+    dun.mons.splice(dun.mons.indexOf(m), 1); S.pets.push({ idx: m.idx, lv: 1, xp: 0 });
+    if (S.petA < 0) { S.petA = S.pets.length - 1; dun.pet = { x: m.x, y: m.y, cd: 0 }; }
+    say(`🎉 ${m.e} ${obj(m.n)} 길들였어요! (K: 동료 관리 · G: 탈것)`, 3500); hud();
+  }
+}
+function toggleMount() {
+  const P = player, pe = activePet(); if (scene !== "dun" || modal) return;
+  if (!pe || !dun.pet) return say("동행 중인 동료가 없어요. (K 캐릭터창)", 1800);
+  if (!DINOS[pe.idx].ride) return say("이 동료는 탈 수 없어요.", 1800);
+  P.mounted = !P.mounted; if (P.mounted) { dun.pet.x = P.x; dun.pet.y = P.y; }
+  say(P.mounted ? `${DINOS[pe.idx].e} 탑승! 이동속도 ↑ (동료는 공격을 쉬어요)` : "내렸어요.", 1800);
+}
 function tryMove(e, vx, vy) { if (!blocked(e.x + vx, e.y + 8, 8, 6)) e.x += vx; if (!blocked(e.x, e.y + 8 + vy, 8, 6)) e.y += vy; }
 function updateDun(dt) {
-  const P = player, st = pstats();
-  for (const k of ["atkCd", "qCd", "eCd", "fCd", "dash", "inv", "flash"]) P[k] = Math.max(0, P[k] - dt);
+  const P = player, st = pstats(), wild = dun.kind === "wild";
+  for (const k of ["atkCd", "qCd", "eCd", "fCd", "rCd", "dash", "inv", "flash"]) P[k] = Math.max(0, P[k] - dt);
   if (keys.has("Space") || keys.has("KeyZ")) attack();
   for (const m of dun.mons) {
     m.flash = Math.max(0, m.flash - dt); m.cd = Math.max(0, m.cd - dt);
     const dx = P.x - m.x, dy = P.y - m.y, d = Math.hypot(dx, dy);
     if (m.kb > 0) { m.kb -= dt; tryMove(m, m.kx * dt, m.ky * dt); continue; }
+    if (m.wild && !m.hostile) {
+      m.wt -= dt;
+      if (m.wt <= 0) { m.wt = 1 + Math.random() * 2.5; const a = Math.random() < .4 ? null : Math.random() * 6.28; m.wvx = a === null ? 0 : Math.cos(a) * 28; m.wvy = a === null ? 0 : Math.sin(a) * 28; }
+      tryMove(m, m.wvx * dt, m.wvy * dt); continue;
+    }
     if (d < 260 && d > 24) tryMove(m, dx / d * m.spd * dt, dy / d * m.spd * dt);
     if (d < 32 && m.cd <= 0) {
       m.cd = 1;
@@ -555,6 +748,27 @@ function updateDun(dt) {
     }
   }
   if (P.hp <= 0) return leaveDungeon(true);
+  const pet = dun.pet, pe = activePet();
+  if (pet && pe) {
+    if (P.mounted) { pet.x = P.x; pet.y = P.y; }
+    else {
+      pet.cd = Math.max(0, pet.cd - dt);
+      if (Math.hypot(pet.x - P.x, pet.y - P.y) > 420) { pet.x = P.x; pet.y = P.y; }
+      let tgt = null, bd = 220;
+      for (const m of dun.mons) { const dd = Math.hypot(m.x - pet.x, m.y - pet.y); if (dd < bd && Math.hypot(m.x - P.x, m.y - P.y) < 300 && !(m.wild && !m.hostile)) { bd = dd; tgt = m; } }
+      const goal = tgt || P, dd = Math.hypot(goal.x - pet.x, goal.y - pet.y);
+      if (dd > (tgt ? 28 : 50)) tryMove(pet, (goal.x - pet.x) / dd * 140 * dt, (goal.y - pet.y) / dd * 140 * dt);
+      if (tgt && dd <= 36 && pet.cd <= 0) { pet.cd = .9; petHit(tgt, pe); }
+    }
+  } else if (P.mounted) P.mounted = false;
+  for (const q of dun.proj) {
+    q.life -= dt; q.x += q.vx * dt; q.y += q.vy * dt;
+    if (solidTile(Math.floor(q.x / T), Math.floor(q.y / T))) { q.life = 0; continue; }
+    for (const m of [...dun.mons]) if (!q.hit.has(m) && Math.hypot(m.x - q.x, m.y - q.y) < 22 + (m.boss ? 12 : 0)) { q.hit.add(m); hitMon(m, q.m); if (!q.pierce) { q.life = 0; break; } }
+  }
+  dun.proj = dun.proj.filter(q => q.life > 0);
+  for (let i = dun.regrow.length - 1; i >= 0; i--) { const r = dun.regrow[i]; r.t -= dt; if (r.t <= 0 && Math.floor(P.x / T) !== r.x) { dun.map[r.y][r.x] = r.c; dun.regrow.splice(i, 1); } }
+  if (wild && (dun.spawnT += dt) > 20) { dun.spawnT = 0; if (dun.mons.length < 32) spawnWild(dun, P); }
   for (let i = dun.loot.length - 1; i >= 0; i--) {
     const l = dun.loot[i], d = Math.hypot(P.x - l.x, P.y - l.y);
     if (l.t === "bell" && d < 110) { l.x += (P.x - l.x) / d * 200 * dt; l.y += (P.y - l.y) / d * 200 * dt; }
@@ -572,19 +786,28 @@ function updateDun(dt) {
   for (const a of dun.arcs) a.t -= dt; dun.arcs = dun.arcs.filter(a => a.t > 0);
   const near = p => Math.hypot(P.x - (p.x + .5) * T, P.y - (p.y + .5) * T) < 26;
   if (near(dun.exit)) leaveDungeon(false);
-  else if (near(dun.stairs)) { save(); enterDungeon(dun.depth + 1, true); heal(Math.round(pstats().maxhp * .25)); }
+  else if (dun.stairs && near(dun.stairs)) { save(); enterDungeon(dun.depth + 1, true); heal(Math.round(pstats().maxhp * .25)); }
 }
 function drawDun() {
-  const P = player, cx = clamp(P.x - VW / 2, 0, DW * T - VW), cy = clamp(P.y - VH / 2, 0, DH * T - VH);
+  const P = player, MW = dun.map[0].length, MH = dun.map.length, wild = dun.kind === "wild";
+  const cx = clamp(P.x - VW / 2, 0, MW * T - VW), cy = clamp(P.y - VH / 2, 0, MH * T - VH);
   ctx.fillStyle = "#14121c"; ctx.fillRect(0, 0, VW, VH);
   ctx.save(); ctx.translate(-cx, -cy);
-  const x0 = Math.max(0, cx / T | 0), x1 = Math.min(DW, (cx + VW) / T + 1 | 0), y0 = Math.max(0, cy / T | 0), y1 = Math.min(DH, (cy + VH) / T + 1 | 0);
+  const x0 = Math.max(0, cx / T | 0), x1 = Math.min(MW, (cx + VW) / T + 1 | 0), y0 = Math.max(0, cy / T | 0), y1 = Math.min(MH, (cy + VH) / T + 1 | 0);
   for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
-    if (dun.map[y][x] === "#") { ctx.fillStyle = "#2b2740"; ctx.fillRect(x * T, y * T, T + 1, T + 1); if (dun.map[y + 1]?.[x] === ".") { ctx.fillStyle = "#463f68"; ctx.fillRect(x * T, y * T + T - 8, T + 1, 8); } }
+    const c = dun.map[y][x];
+    if (wild) {
+      ctx.fillStyle = c === "#" ? "#4d4636" : c === "w" ? "#4a9fd0" : (x + y) % 2 ? "#7bbf5a" : "#74b854"; ctx.fillRect(x * T, y * T, T + 1, T + 1);
+      if (c === "w") { ctx.strokeStyle = "rgba(255,255,255,.3)"; ctx.lineWidth = 2; ctx.beginPath(); const o = Math.sin(vtime * 2 + x + y) * 4; ctx.moveTo(x * T + 6, y * T + 16 + o); ctx.lineTo(x * T + 22, y * T + 16 + o); ctx.stroke(); }
+    } else if (c === "#") { ctx.fillStyle = "#2b2740"; ctx.fillRect(x * T, y * T, T + 1, T + 1); if (dun.map[y + 1]?.[x] === ".") { ctx.fillStyle = "#463f68"; ctx.fillRect(x * T, y * T + T - 8, T + 1, 8); } }
     else { ctx.fillStyle = (x + y) % 2 ? "#4b4766" : "#46425f"; ctx.fillRect(x * T, y * T, T + 1, T + 1); }
   }
+  if (wild) for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
+    const c = dun.map[y][x];
+    if (c === "T") emoji("🌲", (x + .5) * T, (y + .4) * T, 44); else if (c === "R") emoji("🪨", (x + .5) * T, (y + .55) * T, 30); else if (c === "B") emoji("🌿", (x + .5) * T, (y + .55) * T, 26);
+  }
   emoji("🌀", (dun.exit.x + .5) * T, (dun.exit.y + .5) * T, 30); label("마을", (dun.exit.x + .5) * T, (dun.exit.y + .5) * T - 24);
-  emoji("🕳️", (dun.stairs.x + .5) * T, (dun.stairs.y + .5) * T, 30); label("다음 층", (dun.stairs.x + .5) * T, (dun.stairs.y + .5) * T - 24);
+  if (dun.stairs) { emoji("🕳️", (dun.stairs.x + .5) * T, (dun.stairs.y + .5) * T, 30); label("다음 층", (dun.stairs.x + .5) * T, (dun.stairs.y + .5) * T - 24); }
   for (const l of dun.loot) {
     const bob = Math.sin(vtime * 4 + l.x) * 2;
     if (l.t === "gear") {
@@ -593,13 +816,17 @@ function drawDun() {
     } else emoji(l.t === "bell" ? "💰" : l.t === "pot" ? "🧪" : FURN[l.id].e, l.x, l.y + bob, l.t === "bell" ? 16 : 20);
   }
   const ents = dun.mons.map(m => ({ y: m.y + 12, f: () => {
-    const sz = m.boss ? 54 : 28; emoji(m.e, m.x, m.y, sz);
+    const sz = m.boss ? 54 : m.big ? 40 : 28; emoji(m.e, m.x, m.y, sz);
     if (m.flash > 0) { ctx.fillStyle = "rgba(255,255,255,.6)"; ctx.beginPath(); ctx.arc(m.x, m.y, sz / 2.2, 0, 7); ctx.fill(); }
-    const w = m.boss ? 60 : 30; ctx.fillStyle = "#000"; ctx.fillRect(m.x - w / 2 - 1, m.y - sz / 2 - 9, w + 2, 6); ctx.fillStyle = m.boss ? "#e0a030" : "#e04848"; ctx.fillRect(m.x - w / 2, m.y - sz / 2 - 8, w * m.hp / m.mhp, 4);
+    const w = m.boss ? 60 : 30; ctx.fillStyle = "#000"; ctx.fillRect(m.x - w / 2 - 1, m.y - sz / 2 - 9, w + 2, 6); ctx.fillStyle = m.boss ? "#e0a030" : m.wild && !m.hostile ? "#6fc36f" : "#e04848"; ctx.fillRect(m.x - w / 2, m.y - sz / 2 - 8, w * m.hp / m.mhp, 4);
     if (m.boss) label(m.n, m.x, m.y - sz / 2 - 20);
+    else if (m.tame && Math.hypot(m.x - P.x, m.y - P.y) < 90) label(`${m.n} 🐾${Math.min(m.tp, m.tame)}/${m.tame}`, m.x, m.y - sz / 2 - 20);
   } }));
-  ents.push({ y: P.y + 14, f: () => { ctx.globalAlpha = P.inv > 0 && Math.floor(vtime * 20) % 2 ? .4 : 1; emoji("🧒", P.x, P.y, 32); const w = S.eq.weapon; if (w) { const sw = P.atkCd > .25 ? 1 : 0; emoji(w.e, P.x + P.dx * (14 + sw * 14), P.y + P.dy * (14 + sw * 14) + 4, 20); } ctx.globalAlpha = 1; } });
+  const pe = activePet();
+  if (dun.pet && pe) ents.push({ y: (P.mounted ? P.y : dun.pet.y) + 13, f: () => { const b = DINOS[pe.idx], px = P.mounted ? P.x : dun.pet.x, py = P.mounted ? P.y + 4 : dun.pet.y; emoji(b.e, px, py, b.big ? 40 : 28); if (!P.mounted) label(`Lv.${pe.lv}`, px, py - 22); } });
+  ents.push({ y: P.y + 15, f: () => { ctx.globalAlpha = P.inv > 0 && Math.floor(vtime * 20) % 2 ? .4 : 1; const oy = P.mounted ? -14 : 0; emoji("🧒", P.x, P.y + oy, 32); const w = S.eq.weapon; if (w) { const sw = P.atkCd > .25 ? 1 : 0; emoji(w.e, P.x + P.dx * (14 + sw * 14), P.y + oy + P.dy * (14 + sw * 14) + 4, 20); } ctx.globalAlpha = 1; } });
   ents.sort((a, b) => a.y - b.y).forEach(e => e.f());
+  for (const q of dun.proj) emoji("🔥", q.x, q.y, 22);
   for (const a of dun.arcs) {
     ctx.strokeStyle = `rgba(255,255,255,${a.t * 5})`; ctx.lineWidth = a.whirl ? 6 : 5; ctx.beginPath();
     if (a.whirl) ctx.arc(P.x, P.y, a.r * (1.2 - a.t), 0, 7); else ctx.arc(P.x, P.y, a.r - 8, Math.atan2(P.dy, P.dx) - .9, Math.atan2(P.dy, P.dx) + .9);
@@ -608,8 +835,8 @@ function drawDun() {
   ctx.font = "bold 15px sans-serif"; ctx.lineWidth = 3;
   for (const f of dun.fx) { ctx.globalAlpha = Math.min(1, f.t * 2); ctx.strokeStyle = "#000"; ctx.strokeText(f.txt, f.x, f.y); ctx.fillStyle = f.col; ctx.fillText(f.txt, f.x, f.y); } ctx.globalAlpha = 1;
   ctx.restore();
-  const g = ctx.createRadialGradient(P.x - cx, P.y - cy, 140, P.x - cx, P.y - cy, 420);
-  g.addColorStop(0, "rgba(0,0,0,0)"); g.addColorStop(1, "rgba(5,3,15,.82)"); ctx.fillStyle = g; ctx.fillRect(0, 0, VW, VH);
+  if (wild) { const d = darkness(); if (d > 0) { ctx.fillStyle = `rgba(14,22,78,${d})`; ctx.fillRect(0, 0, VW, VH); } }
+  else { const g = ctx.createRadialGradient(P.x - cx, P.y - cy, 140, P.x - cx, P.y - cy, 420); g.addColorStop(0, "rgba(0,0,0,0)"); g.addColorStop(1, "rgba(5,3,15,.82)"); ctx.fillStyle = g; ctx.fillRect(0, 0, VW, VH); }
 }
 function catchFish() {
   const r = R();
@@ -638,7 +865,12 @@ addEventListener("keydown", e => {
   else if (scene === "dun" && e.code === "KeyQ") whirl();
   else if (scene === "dun" && e.code === "KeyE") dash();
   else if (scene === "dun" && e.code === "KeyF") drinkPotion();
-  else if (e.code === "KeyI") toggleGear();
+  else if (e.code === "KeyI") togglePanel("equip");
+  else if (e.code === "KeyK") togglePanel("char");
+  else if (e.code === "KeyC") togglePanel("craft");
+  else if (scene === "dun" && e.code === "KeyR") fireball();
+  else if (scene === "dun" && e.code === "KeyV") feed();
+  else if (scene === "dun" && e.code === "KeyG") toggleMount();
   else if (e.code === "KeyX" && scene === "home") { const { tx, ty } = target(); if (pickUp(tx, ty)) save(); }
   else if (e.code === "KeyT") { fast = !fast; if (!fast) { const d = new Date(); clock = d.getHours() + d.getMinutes() / 60; } say(fast ? "⏩ 시간이 빨리 흘러요 (T로 해제)" : "⏱️ 현재 시각으로 돌아왔어요"); }
   else if (/^Digit[1-5]$/.test(e.code)) { player.tool = +e.code.slice(5) - 1; cancelFish(); hud(); }
@@ -741,6 +973,7 @@ function draw() {
   const ents = [];
   ents.push({ y: (HOUSE.y + HOUSE.h) * T, f: () => { emoji("🏠", (HOUSE.x + 1.5) * T, (HOUSE.y + 1) * T, 92); label("내 집", (HOUSE.x + 1.5) * T, (HOUSE.y + HOUSE.h) * T + 8); } });
   ents.push({ y: (SHOP.y + SHOP.h) * T, f: () => { emoji("🏪", (SHOP.x + 1.5) * T, (SHOP.y + 1) * T, 92); label("다람쥐 상점", (SHOP.x + 1.5) * T, (SHOP.y + SHOP.h) * T + 8); } });
+  ents.push({ y: (WILDG.y + WILDG.h) * T, f: () => { emoji("🌴", 1 * T, (WILDG.y + .9) * T, 64); emoji("🦕", 1.3 * T, (WILDG.y + 1.6) * T, 24); label("야생 지대", 1.2 * T, (WILDG.y + WILDG.h) * T + 8); } });
   ents.push({ y: (CAVE.y + CAVE.h) * T, f: () => { emoji("⛰️", (CAVE.x + 1) * T, (CAVE.y + 1) * T, 84); emoji("🕳️", (CAVE.x + 1) * T, (CAVE.y + 1.6) * T, 26); label("던전 입구", (CAVE.x + 1) * T, (CAVE.y + CAVE.h) * T + 8); } });
   for (const r of rocks) ents.push({ y: (r.y + .8) * T, f: () => emoji("🪨", (r.x + .5) * T, (r.y + .55) * T, 30) });
   for (const f of flowers) if (!f.back) ents.push({ y: (f.y + .5) * T, f: () => emoji(f.e, (f.x + .5) * T, (f.y + .55) * T, 22) });
@@ -806,7 +1039,7 @@ function frame(now) {
 player.hp = pstats().maxhp;
 resize(); hud(); $("clock").textContent = clockText();
 requestAnimationFrame(frame);
-window.__game = { enterDungeon, get dun() { return dun; }, pstats, genGear, attack, scene: () => scene, furnSelSet: v => { furnSel = v; renderFurn(); }, player, trees, S, keys, act, get fishing() { return fishing; }, bugs, villagers }; // 디버그/테스트용
+window.__game = { fireball, feed, toggleMount, craft, togglePanel, enterDungeon, get dun() { return dun; }, pstats, genGear, attack, scene: () => scene, furnSelSet: v => { furnSel = v; renderFurn(); }, player, trees, S, keys, act, get fishing() { return fishing; }, bugs, villagers }; // 디버그/테스트용
 </script>
 </body>
 </html>
