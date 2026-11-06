@@ -1,0 +1,415 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>포근 마을</title>
+<style>
+  :root { --ink:#4a3b2a; --paper:#fff8e6; --accent:#f2a65a; }
+  * { box-sizing:border-box; }
+  html,body { margin:0; height:100%; background:#2b3a2e; font-family:"Apple SD Gothic Neo","Noto Sans KR",system-ui,sans-serif; color:var(--ink); }
+  #wrap { position:relative; width:min(100vw, calc(100vh * 1.5)); aspect-ratio:3/2; margin:0 auto; top:50%; transform:translateY(-50%); user-select:none; }
+  canvas { width:100%; height:100%; display:block; border-radius:12px; }
+  .pill { position:absolute; background:var(--paper); border:3px solid var(--ink); border-radius:999px; padding:4px 14px; font-weight:700; font-size:clamp(11px,1.8vw,18px); box-shadow:0 3px 0 rgba(0,0,0,.25); }
+  #bells { left:12px; top:10px; }
+  #clock { left:12px; top:46px; }
+  #inv { position:absolute; right:12px; top:10px; background:var(--paper); border:3px solid var(--ink); border-radius:14px; padding:8px 12px; font-size:clamp(11px,1.7vw,16px); min-width:130px; box-shadow:0 3px 0 rgba(0,0,0,.25); }
+  #inv b { display:block; margin-bottom:4px; }
+  #inv div { display:flex; justify-content:space-between; gap:12px; }
+  #tools { position:absolute; left:50%; bottom:10px; transform:translateX(-50%); display:flex; gap:8px; }
+  .tool { width:clamp(40px,7vw,64px); height:clamp(40px,7vw,64px); background:var(--paper); border:3px solid var(--ink); border-radius:14px; display:flex; flex-direction:column; align-items:center; justify-content:center; font-size:clamp(18px,3.4vw,30px); position:relative; cursor:pointer; box-shadow:0 3px 0 rgba(0,0,0,.25); }
+  .tool small { font-size:clamp(9px,1.2vw,12px); }
+  .tool i { position:absolute; left:4px; top:0; font-size:11px; font-style:normal; opacity:.6; }
+  .tool.on { background:var(--accent); transform:translateY(-6px); }
+  #msg { position:absolute; left:50%; bottom:clamp(60px,10vw,92px); transform:translateX(-50%); max-width:80%; background:var(--paper); border:3px solid var(--ink); border-radius:16px; padding:10px 18px; font-size:clamp(13px,2vw,20px); font-weight:600; text-align:center; box-shadow:0 4px 0 rgba(0,0,0,.25); }
+  #msg[hidden], #shop[hidden], #help[hidden] { display:none; }
+  #shop, #help { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); background:var(--paper); border:4px solid var(--ink); border-radius:20px; padding:18px 24px; min-width:min(86%,340px); box-shadow:0 6px 0 rgba(0,0,0,.3); font-size:clamp(13px,2vw,18px); }
+  #shop h2, #help h2 { margin:0 0 10px; }
+  #shop .row { display:flex; justify-content:space-between; padding:2px 0; }
+  button { font:inherit; font-weight:700; background:var(--accent); color:var(--ink); border:3px solid var(--ink); border-radius:12px; padding:6px 14px; margin:8px 6px 0 0; cursor:pointer; }
+  button:disabled { opacity:.45; cursor:default; }
+  #help p { margin:4px 0; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="c"></canvas>
+  <div id="bells" class="pill"></div>
+  <div id="clock" class="pill"></div>
+  <div id="inv"></div>
+  <div id="tools"></div>
+  <div id="msg" hidden></div>
+  <div id="shop" hidden></div>
+  <div id="help">
+    <h2>🌳 포근 마을에 오신 걸 환영해요</h2>
+    <p>이동: 방향키 / WASD</p>
+    <p>행동: 스페이스 또는 Z</p>
+    <p>도구 선택: 1~5 (손·잠자리채·낚싯대·삽·묘목)</p>
+    <p>T: 시간 빨리감기 (낮/밤 구경용)</p>
+    <p>🏪 상점에서 열매·물고기·곤충을 팔고 묘목을 사 보세요!</p>
+    <button id="start">시작하기</button>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* ---------- 상수 / 데이터 ---------- */
+const T = 32, W = 30, H = 20, VW = W * T, VH = H * T;
+const HOUSE = { x: 3, y: 3, w: 3, h: 2 };
+const SHOP  = { x: 13, y: 3, w: 3, h: 2 };
+const CAP = 30;
+
+const ITEMS = {
+  apple:    { e: "🍎", n: "사과", p: 50 },
+  orange:   { e: "🍊", n: "오렌지", p: 50 },
+  peach:    { e: "🍑", n: "복숭아", p: 80 },
+  flower:   { e: "🌷", n: "꽃", p: 30 },
+  crucian:  { e: "🐟", n: "붕어", p: 100 },
+  tropical: { e: "🐠", n: "열대어", p: 250 },
+  puffer:   { e: "🐡", n: "복어", p: 400 },
+  shark:    { e: "🦈", n: "상어", p: 1500 },
+  boot:     { e: "🥾", n: "낡은 장화", p: 10 },
+  butterfly:{ e: "🦋", n: "나비", p: 80 },
+  firefly:  { e: "✨", n: "반딧불이", p: 150 },
+  fossil:   { e: "🦴", n: "화석", p: 500 },
+  shell:    { e: "🐚", n: "조개", p: 60 },
+  sapling:  { e: "🌱", n: "묘목", p: 0 },
+};
+const FRUITS = ["apple", "orange", "peach"];
+const TOOLS = [
+  { e: "🖐️", n: "손" }, { e: "🥅", n: "채" }, { e: "🎣", n: "낚시" },
+  { e: "⛏️", n: "삽" }, { e: "🌱", n: "묘목" },
+];
+const VILLAGERS = [
+  { name: "콩이", e: "🐶", lines: ["오늘도 산책하기 좋은 날이네요!", "저기 연못에서 큰 물고기를 봤어요.", "멍! 아, 말버릇이에요."] },
+  { name: "나비", e: "🐱", lines: ["야옹~ 햇살이 따뜻해요.", "나무를 흔들면 열매가 떨어진대요.", "낮잠 자러 가야겠어요…"] },
+  { name: "토리", e: "🐰", lines: ["깡총! 꽃이 정말 예쁘죠?", "묘목을 심으면 나무가 자라요.", "상점에 가면 벨을 벌 수 있어요."] },
+  { name: "곰돌", e: "🐻", lines: ["으음… 배고프다.", "화석은 비싸게 팔린대요.", "밤에는 반딧불이가 나와요."] },
+];
+
+/* ---------- 유틸 ---------- */
+function mulberry32(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; };
+const rnd = mulberry32(20260506);          // 맵 생성용 (항상 같은 마을)
+const R = Math.random;
+const $ = id => document.getElementById(id);
+const inRect = (r, x, y) => x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h;
+
+/* ---------- 맵 ---------- */
+const terrain = [];
+for (let y = 0; y < H; y++) { terrain[y] = []; for (let x = 0; x < W; x++) {
+  const ex = (x - 22) / 6, ey = (y - 13) / 3.6;
+  terrain[y][x] = ex * ex + ey * ey < 1 ? "w" : "g";
+} }
+for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (terrain[y][x] === "g") {
+  for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) if (terrain[y + j]?.[x + i] === "w") terrain[y][x] = "s";
+}
+for (let x = 3; x <= 15; x++) terrain[5][x] = "p";
+for (let y = 5; y <= 9; y++) terrain[y][8] = "p";
+
+const flowers = [];   // {x,y,e,back}
+const rocks = [];
+const freeGrass = (x, y) => terrain[y]?.[x] === "g" && !inRect({x:HOUSE.x-1,y:HOUSE.y-1,w:HOUSE.w+2,h:HOUSE.h+3}, x, y) && !inRect({x:SHOP.x-1,y:SHOP.y-1,w:SHOP.w+2,h:SHOP.h+3}, x, y) && Math.hypot(x - 8, y - 8) > 2.5;
+function scatter(n, fn) { let tries = 0; while (n > 0 && tries++ < 2000) { const x = rnd() * W | 0, y = rnd() * H | 0; if (freeGrass(x, y) && fn(x, y)) n--; } }
+const seedTrees = [];
+scatter(10, (x, y) => { if (seedTrees.some(t => Math.hypot(t.x - x, t.y - y) < 3)) return false; seedTrees.push({ x, y, age: 99, fruit: 3, kind: FRUITS[rnd() * 3 | 0], t: 0 }); return true; });
+scatter(28, (x, y) => { if (seedTrees.some(t => t.x === x && t.y === y)) return false; flowers.push({ x, y, e: ["🌷", "🌼", "🌸", "🌺"][rnd() * 4 | 0], back: 0 }); return true; });
+scatter(6, (x, y) => { if (seedTrees.some(t => t.x === x && t.y === y) || flowers.some(f => f.x === x && f.y === y)) return false; rocks.push({ x, y }); return true; });
+
+/* ---------- 상태 / 저장 ---------- */
+let S = { bells: 200, inv: { sapling: 1 }, trees: seedTrees };
+try { const raw = localStorage.getItem("pokgeun-maeul"); if (raw) S = JSON.parse(raw); } catch (e) {}
+function save() { try { localStorage.setItem("pokgeun-maeul", JSON.stringify(S)); } catch (e) {} }
+const trees = S.trees;
+const ground = [];       // 바닥에 떨어진 아이템 {x,y,k}
+const bugs = [];
+let fishing = null;      // {tx,ty,state,t}
+let modal = false, started = false, fast = false;
+let clock = new Date().getHours() + new Date().getMinutes() / 60;
+let vtime = 0, saveT = 0;
+
+const player = { x: 8.5 * T, y: 8.5 * T, dx: 0, dy: 1, tool: 0 };
+const SPAWNS = [[11, 9], [13, 8], [5, 11], [12, 14]];
+const villagers = VILLAGERS.map((v, i) => ({ ...v, x: (SPAWNS[i][0] + .5) * T, y: (SPAWNS[i][1] + .5) * T, vx: 0, vy: 0, t: 0, talk: 0, line: 0 }));
+
+/* ---------- 충돌 ---------- */
+const treeAt = (x, y) => trees.find(t => t.x === x && t.y === y);
+const rockAt = (x, y) => rocks.find(r => r.x === x && r.y === y);
+const flowerAt = (x, y) => flowers.find(f => f.x === x && f.y === y && !f.back);
+function solidTile(x, y) {
+  if (x < 0 || y < 0 || x >= W || y >= H) return true;
+  return terrain[y][x] === "w" || inRect(HOUSE, x, y) || inRect(SHOP, x, y) || !!treeAt(x, y) || !!rockAt(x, y);
+}
+function blocked(cx, cy, hw, hh) {
+  for (const [ox, oy] of [[-hw, -hh], [hw, -hh], [-hw, hh], [hw, hh]])
+    if (solidTile(Math.floor((cx + ox) / T), Math.floor((cy + oy) / T))) return true;
+  return false;
+}
+
+/* ---------- UI ---------- */
+function obj(n) { const c = n.charCodeAt(n.length - 1) - 0xAC00; return n + (c >= 0 && c % 28 ? "을" : "를"); }
+let msgTimer = 0;
+function say(text, ms = 2600) {
+  const m = $("msg"); m.textContent = text; m.hidden = false;
+  clearTimeout(msgTimer); msgTimer = setTimeout(() => m.hidden = true, ms);
+}
+function count() { return Object.entries(S.inv).reduce((a, [k, v]) => a + (k === "sapling" ? 0 : v), 0); }
+function add(id, n = 1) {
+  if (id !== "sapling" && count() + n > CAP) { say("주머니가 가득 찼어요! 상점에서 팔아 보세요."); return false; }
+  S.inv[id] = (S.inv[id] || 0) + n; hud(); return true;
+}
+function hud() {
+  $("bells").textContent = `🔔 ${S.bells.toLocaleString()} 벨`;
+  const rows = Object.entries(S.inv).filter(([, v]) => v > 0).map(([k, v]) => `<div><span>${ITEMS[k].e} ${ITEMS[k].n}</span><span>×${v}</span></div>`).join("");
+  $("inv").innerHTML = `<b>🎒 주머니 ${count()}/${CAP}</b>${rows || "<div>비어 있어요</div>"}`;
+  $("tools").innerHTML = TOOLS.map((t, i) => `<div class="tool ${i === player.tool ? "on" : ""}" data-i="${i}"><i>${i + 1}</i>${t.e}<small>${i === 4 ? "×" + (S.inv.sapling || 0) : t.n}</small></div>`).join("");
+}
+$("tools").addEventListener("click", e => { const t = e.target.closest(".tool"); if (t) { player.tool = +t.dataset.i; cancelFish(); hud(); } });
+function clockText() {
+  const h = Math.floor(clock) % 24, m = Math.floor((clock % 1) * 60);
+  return `${h < 6 || h >= 19 ? "🌙" : "☀️"} ${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
+
+/* ---------- 상점 ---------- */
+function openShop() {
+  modal = true; cancelFish(); renderShop(); $("shop").hidden = false;
+}
+function closeShop() { modal = false; $("shop").hidden = true; save(); }
+function renderShop() {
+  const sell = Object.entries(S.inv).filter(([k, v]) => v > 0 && ITEMS[k].p > 0);
+  const total = sell.reduce((a, [k, v]) => a + ITEMS[k].p * v, 0);
+  $("shop").innerHTML = `<h2>🐿️ 다람쥐 상점</h2>
+    <div>어서 오세요! 🔔 ${S.bells.toLocaleString()} 벨</div><hr>
+    ${sell.map(([k, v]) => `<div class="row"><span>${ITEMS[k].e} ${ITEMS[k].n} ×${v}</span><span>${(ITEMS[k].p * v).toLocaleString()}</span></div>`).join("") || "<div>팔 물건이 없어요.</div>"}
+    <button id="sellAll" ${total ? "" : "disabled"}>모두 팔기 (+${total.toLocaleString()})</button>
+    <button id="buySap" ${S.bells >= 100 ? "" : "disabled"}>🌱 묘목 사기 (100)</button>
+    <button id="closeShop">닫기 (Esc)</button>`;
+  $("sellAll").onclick = () => { S.bells += total; sell.forEach(([k]) => S.inv[k] = 0); hud(); renderShop(); };
+  $("buySap").onclick = () => { if (S.bells >= 100) { S.bells -= 100; add("sapling"); renderShop(); } };
+  $("closeShop").onclick = closeShop;
+}
+
+/* ---------- 행동 ---------- */
+function target() {
+  const px = player.x + player.dx * 26, py = player.y + 8 + player.dy * 26;
+  return { px, py, tx: Math.floor(px / T), ty: Math.floor(py / T) };
+}
+function dropFruit(tree) {
+  const spots = [];
+  for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) {
+    const x = tree.x + i, y = tree.y + j;
+    if ((i || j) && !solidTile(x, y) && !ground.some(g => g.x === x && g.y === y)) spots.push([x, y]);
+  }
+  spots.sort(() => R() - .5);
+  const n = Math.min(tree.fruit, spots.length);
+  for (let i = 0; i < n; i++) ground.push({ x: spots[i][0], y: spots[i][1], k: tree.kind });
+  tree.fruit -= n; tree.t = 0;
+}
+function cancelFish() { fishing = null; }
+function act() {
+  if (!started) return;
+  if (modal) return;
+  if (fishing) {
+    if (fishing.state === "bite") { catchFish(); } else { say("너무 일렀어요… 찌가 움직일 때까지 기다려요."); }
+    fishing = null; return;
+  }
+  const { px, py, tx, ty } = target();
+  const v = villagers.find(v => Math.hypot(v.x - px, v.y - py) < 30);
+  if (v) return talk(v);
+  if (inRect(SHOP, tx, ty)) return openShop();
+  if (inRect(HOUSE, tx, ty)) { save(); return say("내 집이에요. 게임을 저장했어요 💾"); }
+  const tool = player.tool;
+  if (tool === 0) {
+    const tr = treeAt(tx, ty), fl = flowerAt(tx, ty);
+    if (tr && tr.age >= 60) { if (tr.fruit > 0) { dropFruit(tr); say("우수수! 열매가 떨어졌어요 🍎"); } else say("열매가 없어요. 조금 기다려 봐요."); }
+    else if (tr) say("아직 어린 나무예요 🌱");
+    else if (fl) { if (add("flower")) { fl.back = 90; say(`${fl.e} 꽃을 땄어요!`); } }
+    else if (rockAt(tx, ty)) say("단단한 바위예요.");
+  } else if (tool === 1) {
+    const b = bugs.findIndex(b => Math.hypot(b.x - px, b.y - py) < 40);
+    if (b >= 0) { if (add(bugs[b].id)) { say(`${ITEMS[bugs[b].id].e} ${obj(ITEMS[bugs[b].id].n)} 잡았어요!`); bugs.splice(b, 1); } }
+    else say("휙! …아무것도 없었어요.");
+  } else if (tool === 2) {
+    if (terrain[ty]?.[tx] === "w") { fishing = { tx, ty, state: "wait", t: 1.5 + R() * 3 }; say("찌를 던졌어요…", 1200); }
+    else say("물가에서 연못을 바라보고 사용해요.");
+  } else if (tool === 3) {
+    const t = terrain[ty]?.[tx];
+    if ((t !== "g" && t !== "s") || solidTile(tx, ty) || flowerAt(tx, ty)) return say("여기는 팔 수 없어요.");
+    const r = R();
+    if (t === "s" && r < .45) { if (add("shell")) say("🐚 조개를 찾았어요!"); }
+    else if (t === "g" && r < .2) { if (add("fossil")) say("🦴 화석을 파냈어요!!"); }
+    else say("흙만 나왔어요.");
+  } else if (tool === 4) {
+    if (!(S.inv.sapling > 0)) return say("묘목이 없어요. 상점에서 살 수 있어요.");
+    if (terrain[ty]?.[tx] !== "g" || solidTile(tx, ty) || flowerAt(tx, ty) || inRect({x:HOUSE.x,y:HOUSE.y+2,w:HOUSE.w,h:1}, tx, ty)) return say("여기에는 심을 수 없어요.");
+    if (trees.some(t => Math.abs(t.x - tx) <= 1 && Math.abs(t.y - ty) <= 1)) return say("나무끼리 너무 가까워요.");
+    S.inv.sapling--; trees.push({ x: tx, y: ty, age: 0, fruit: 0, kind: FRUITS[R() * 3 | 0], t: 0 });
+    hud(); say("🌱 묘목을 심었어요! 1분쯤 지나면 자라요."); save();
+  }
+}
+function catchFish() {
+  const r = R();
+  const id = r < .04 ? "boot" : r < .05 ? "shark" : r < .15 ? "puffer" : r < .4 ? "tropical" : "crucian";
+  if (add(id)) say(`${ITEMS[id].e} ${obj(ITEMS[id].n)} 낚았어요!`);
+}
+function talk(v) {
+  v.talk = 3; player.dx = Math.sign(v.x - player.x) || player.dx;
+  const h = Math.floor(clock);
+  let line;
+  if (R() < .2) { const g = 20 + (R() * 4 | 0) * 10; S.bells += g; hud(); line = `선물이에요! 벨 ${g}개를 드릴게요. 🔔`; }
+  else if ((h >= 22 || h < 5) && R() < .6) line = "하암… 너무 늦었어요. 졸려요.";
+  else { line = v.lines[v.line++ % v.lines.length]; }
+  say(`${v.e} ${v.name}: ${line}`, 3200);
+}
+
+/* ---------- 입력 ---------- */
+const keys = new Set();
+addEventListener("keydown", e => {
+  if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space"].includes(e.code)) e.preventDefault();
+  if (e.repeat) return;
+  keys.add(e.code);
+  if (!started) { if (e.code === "Space" || e.code === "Enter") begin(); return; }
+  if (e.code === "Escape" && modal) closeShop();
+  else if (e.code === "Space" || e.code === "KeyZ") act();
+  else if (e.code === "KeyT") { fast = !fast; if (!fast) { const d = new Date(); clock = d.getHours() + d.getMinutes() / 60; } say(fast ? "⏩ 시간이 빨리 흘러요 (T로 해제)" : "⏱️ 현재 시각으로 돌아왔어요"); }
+  else if (/^Digit[1-5]$/.test(e.code)) { player.tool = +e.code.slice(5) - 1; cancelFish(); hud(); }
+});
+addEventListener("keyup", e => keys.delete(e.code));
+addEventListener("blur", () => keys.clear());
+function begin() { started = true; $("help").hidden = true; hud(); say("나무를 흔들고, 낚시하고, 곤충을 잡아 보세요!", 3500); }
+$("start").onclick = begin;
+
+/* ---------- 업데이트 ---------- */
+function update(dt) {
+  vtime += dt;
+  clock = (clock + dt / 3600 * (fast ? 180 : 1)) % 24;
+  if (!started || modal) return;
+  // 이동
+  let ix = (keys.has("ArrowRight") || keys.has("KeyD") ? 1 : 0) - (keys.has("ArrowLeft") || keys.has("KeyA") ? 1 : 0);
+  let iy = (keys.has("ArrowDown") || keys.has("KeyS") ? 1 : 0) - (keys.has("ArrowUp") || keys.has("KeyW") ? 1 : 0);
+  if (ix || iy) {
+    cancelFish();
+    if (ix) { player.dx = ix; player.dy = 0; } else { player.dx = 0; player.dy = iy; }
+    const len = Math.hypot(ix, iy), sp = 120 * dt / len;
+    if (!blocked(player.x + ix * sp, player.y + 8, 9, 6)) player.x += ix * sp;
+    if (!blocked(player.x, player.y + 8 + iy * sp, 9, 6)) player.y += iy * sp;
+  }
+  // 바닥 아이템 줍기
+  const ptx = Math.floor(player.x / T), pty = Math.floor((player.y + 8) / T);
+  for (let i = ground.length - 1; i >= 0; i--) if (ground[i].x === ptx && ground[i].y === pty && add(ground[i].k)) ground.splice(i, 1);
+  // 낚시
+  if (fishing) {
+    fishing.t -= dt;
+    if (fishing.t <= 0) {
+      if (fishing.state === "wait") { fishing.state = "bite"; fishing.t = .9; }
+      else { say("놓쳤어요…"); fishing = null; }
+    }
+  }
+  // 나무 성장
+  for (const t of trees) {
+    t.age += dt;
+    if (t.age >= 60 && t.fruit < 3) { t.t += dt; if (t.t > 45) { t.fruit++; t.t = 0; } }
+  }
+  for (const f of flowers) if (f.back > 0) f.back -= dt;
+  // 주민
+  for (const v of villagers) {
+    if (v.talk > 0) { v.talk -= dt; continue; }
+    v.t -= dt;
+    if (v.t <= 0) { v.t = 1 + R() * 2.5; const a = R() < .35 ? null : R() * Math.PI * 2; v.vx = a === null ? 0 : Math.cos(a) * 28; v.vy = a === null ? 0 : Math.sin(a) * 28; }
+    const nx = v.x + v.vx * dt, ny = v.y + v.vy * dt;
+    if (!blocked(nx, v.y + 8, 9, 6) && Math.hypot(nx - player.x, v.y - player.y) > 22) v.x = nx; else v.vx *= -1;
+    if (!blocked(v.x, ny + 8, 9, 6) && Math.hypot(v.x - player.x, ny - player.y) > 22) v.y = ny; else v.vy *= -1;
+  }
+  // 곤충
+  const day = clock >= 6 && clock < 18, night = clock >= 19 || clock < 5;
+  if (bugs.length < 6 && R() < dt * .5 && (day || night)) {
+    const x = R() * W | 0, y = R() * H | 0;
+    if (terrain[y][x] === "g") bugs.push({ x: (x + .5) * T, y: (y + .5) * T, a: R() * 6.28, life: 40, id: day ? "butterfly" : "firefly" });
+  }
+  for (let i = bugs.length - 1; i >= 0; i--) {
+    const b = bugs[i]; b.life -= dt; b.a += (R() - .5) * 3 * dt;
+    const nx = b.x + Math.cos(b.a) * 38 * dt, ny = b.y + Math.sin(b.a) * 38 * dt;
+    if (nx < 0 || ny < 0 || nx > VW || ny > VH || terrain[ny / T | 0]?.[nx / T | 0] === "w") b.a += Math.PI; else { b.x = nx; b.y = ny; }
+    if (b.life <= 0 || (b.id === "butterfly" ? !day : !night)) bugs.splice(i, 1);
+  }
+  if ((saveT += dt) > 10) { saveT = 0; save(); }
+}
+
+/* ---------- 그리기 ---------- */
+const cv = $("c"), ctx = cv.getContext("2d");
+let sc = 1;
+function resize() {
+  const dpr = window.devicePixelRatio || 1, w = cv.clientWidth;
+  cv.width = Math.round(w * dpr); cv.height = Math.round(w * dpr * VH / VW); sc = cv.width / VW;
+}
+addEventListener("resize", resize);
+
+function emoji(e, x, y, size) { ctx.font = `${size}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`; ctx.fillText(e, x, y); }
+function darkness() {
+  const h = clock;
+  if (h >= 21 || h < 5) return .55;
+  if (h < 7) return .55 * (7 - h) / 2;
+  if (h >= 17) return .55 * (h - 17) / 4;
+  return 0;
+}
+function draw() {
+  ctx.setTransform(sc, 0, 0, sc, 0, 0);
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  // 지형
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const t = terrain[y][x];
+    ctx.fillStyle = t === "w" ? "#5bb8e8" : t === "s" ? "#f1dfa0" : t === "p" ? "#dcbf8f" : (x + y) % 2 ? "#8fd16a" : "#88ca64";
+    ctx.fillRect(x * T, y * T, T + 1, T + 1);
+    if (t === "w") { ctx.strokeStyle = "rgba(255,255,255,.35)"; ctx.lineWidth = 2; ctx.beginPath(); const o = Math.sin(vtime * 2 + x + y) * 4; ctx.moveTo(x * T + 6, y * T + 16 + o); ctx.lineTo(x * T + 22, y * T + 16 + o); ctx.stroke(); }
+  }
+  // 건물 (바닥 기준 정렬을 위해 엔티티와 함께 그림)
+  const ents = [];
+  ents.push({ y: (HOUSE.y + HOUSE.h) * T, f: () => { emoji("🏠", (HOUSE.x + 1.5) * T, (HOUSE.y + 1) * T, 92); label("내 집", (HOUSE.x + 1.5) * T, (HOUSE.y + HOUSE.h) * T + 8); } });
+  ents.push({ y: (SHOP.y + SHOP.h) * T, f: () => { emoji("🏪", (SHOP.x + 1.5) * T, (SHOP.y + 1) * T, 92); label("다람쥐 상점", (SHOP.x + 1.5) * T, (SHOP.y + SHOP.h) * T + 8); } });
+  for (const r of rocks) ents.push({ y: (r.y + .8) * T, f: () => emoji("🪨", (r.x + .5) * T, (r.y + .55) * T, 30) });
+  for (const f of flowers) if (!f.back) ents.push({ y: (f.y + .5) * T, f: () => emoji(f.e, (f.x + .5) * T, (f.y + .55) * T, 22) });
+  for (const g of ground) ents.push({ y: (g.y + .6) * T, f: () => emoji(ITEMS[g.k].e, (g.x + .5) * T, (g.y + .55) * T + Math.sin(vtime * 4 + g.x) * 2, 20) });
+  for (const t of trees) ents.push({ y: (t.y + 1) * T, f: () => {
+    const cx = (t.x + .5) * T, cy = (t.y + .5) * T;
+    if (t.age < 20) emoji("🌱", cx, cy + 4, 24);
+    else if (t.age < 60) emoji("🌿", cx, cy + 2, 30);
+    else { emoji("🌳", cx, cy - 6, 52); for (let i = 0; i < t.fruit; i++) emoji(ITEMS[t.kind].e, cx + (i - 1) * 13, cy - 12 + (i % 2) * 8, 14); }
+  } });
+  for (const v of villagers) ents.push({ y: v.y + 14, f: () => {
+    emoji(v.e, v.x, v.y, 30);
+    if (Math.hypot(v.x - player.x, v.y - player.y) < 70) label(v.name, v.x, v.y - 24);
+  } });
+  ents.push({ y: player.y + 14, f: () => {
+    emoji("🧒", player.x, player.y, 32);
+    if (fishing) emoji(fishing.state === "bite" ? "❗" : "…", player.x, player.y - 28, 22);
+  } });
+  ents.sort((a, b) => a.y - b.y).forEach(e => e.f());
+  // 낚시찌
+  if (fishing) { const bob = fishing.state === "bite" ? Math.abs(Math.sin(vtime * 20)) * 6 : Math.sin(vtime * 3) * 2; emoji("🔴", (fishing.tx + .5) * T, (fishing.ty + .5) * T + bob, 14); }
+  // 곤충
+  for (const b of bugs) emoji(ITEMS[b.id].e, b.x, b.y - 10 + Math.sin(vtime * 8 + b.a) * 3, b.id === "firefly" ? 16 : 20);
+  // 조준 표시
+  if (started && !modal) { const { tx, ty } = target(); ctx.strokeStyle = "rgba(255,255,255,.7)"; ctx.lineWidth = 2; ctx.setLineDash([5, 4]); ctx.strokeRect(tx * T + 2, ty * T + 2, T - 4, T - 4); ctx.setLineDash([]); }
+  // 낮밤
+  const d = darkness();
+  if (d > 0) { ctx.fillStyle = `rgba(14,22,78,${d})`; ctx.fillRect(0, 0, VW, VH); }
+}
+function label(text, x, y) {
+  ctx.font = "bold 12px sans-serif"; const w = ctx.measureText(text).width + 12;
+  ctx.fillStyle = "rgba(255,248,230,.92)"; ctx.fillRect(x - w / 2, y - 9, w, 18);
+  ctx.fillStyle = "#4a3b2a"; ctx.fillText(text, x, y);
+}
+
+/* ---------- 메인 루프 ---------- */
+let last = performance.now(), hudT = 0;
+function frame(now) {
+  const dt = Math.min(.05, (now - last) / 1000); last = now;
+  update(dt); draw();
+  if ((hudT += dt) > .5) { hudT = 0; $("clock").textContent = clockText(); }
+  requestAnimationFrame(frame);
+}
+resize(); hud(); $("clock").textContent = clockText();
+requestAnimationFrame(frame);
+window.__game = { player, trees, S, keys, act, get fishing() { return fishing; }, bugs, villagers }; // 디버그/테스트용
+</script>
+</body>
+</html>
