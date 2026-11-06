@@ -22,14 +22,15 @@
   .tool i { position:absolute; left:4px; top:0; font-size:11px; font-style:normal; opacity:.6; }
   .tool.on { background:var(--accent); transform:translateY(-6px); }
   #msg { position:absolute; left:50%; bottom:clamp(60px,10vw,92px); transform:translateX(-50%); max-width:80%; background:var(--paper); border:3px solid var(--ink); border-radius:16px; padding:10px 18px; font-size:clamp(13px,2vw,20px); font-weight:600; text-align:center; box-shadow:0 4px 0 rgba(0,0,0,.25); }
-  #msg[hidden], #shop[hidden], #help[hidden] { display:none; }
-  #shop, #help { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); background:var(--paper); border:4px solid var(--ink); border-radius:20px; padding:18px 24px; min-width:min(86%,340px); box-shadow:0 6px 0 rgba(0,0,0,.3); font-size:clamp(13px,2vw,18px); }
-  #shop h2, #help h2 { margin:0 0 10px; }
+  #msg[hidden], #shop[hidden], #help[hidden], #gear[hidden], #rpg[hidden] { display:none; }
+  #shop, #help, #gear { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); background:var(--paper); border:4px solid var(--ink); border-radius:20px; padding:18px 24px; min-width:min(86%,340px); box-shadow:0 6px 0 rgba(0,0,0,.3); font-size:clamp(13px,2vw,18px); }
+  #shop h2, #help h2, #gear h2 { margin:0 0 10px; }
   #shop .row { display:flex; justify-content:space-between; padding:2px 0; }
   button { font:inherit; font-weight:700; background:var(--accent); color:var(--ink); border:3px solid var(--ink); border-radius:12px; padding:6px 14px; margin:8px 6px 0 0; cursor:pointer; }
   button:disabled { opacity:.45; cursor:default; }
   #help p { margin:4px 0; }
-  #shop { max-height:88%; overflow:auto; }
+  #shop, #gear { max-height:88%; overflow:auto; }
+  #gear h3 { margin:10px 0 2px; }
   #shop h3 { margin:10px 0 2px; }
   #shop .row button { margin:0; padding:1px 10px; }
   #furn { position:absolute; left:12px; top:90px; background:var(--paper); border:3px solid var(--ink); border-radius:14px; padding:8px 10px; font-size:clamp(11px,1.6vw,15px); box-shadow:0 3px 0 rgba(0,0,0,.25); max-width:190px; }
@@ -37,6 +38,15 @@
   #furn .it { display:flex; justify-content:space-between; gap:10px; padding:2px 6px; border-radius:8px; cursor:pointer; }
   #furn .it.on { background:var(--accent); }
   #furn small { display:block; margin-top:6px; opacity:.75; line-height:1.35; }
+  .g { padding:3px 8px; border-radius:8px; cursor:pointer; }
+  .g:hover { background:rgba(0,0,0,.08); }
+  .g small { display:block; font-weight:400; opacity:.85; }
+  #rpg { position:absolute; left:12px; bottom:10px; width:min(260px,34%); font-size:clamp(10px,1.4vw,13px); background:rgba(255,248,230,.94); border:3px solid var(--ink); border-radius:14px; padding:8px 10px; box-shadow:0 3px 0 rgba(0,0,0,.25); }
+  #rpg .bar { position:relative; height:19px; background:#d8cdb8; border-radius:9px; overflow:hidden; margin-bottom:5px; border:2px solid var(--ink); }
+  #rpg .bar i { position:absolute; left:0; top:0; bottom:0; }
+  #rpg .bar i.hp { background:#e04848; } #rpg .bar i.xp { background:#4a8fd6; }
+  #rpg .bar span { position:absolute; inset:0; text-align:center; line-height:15px; font-weight:700; color:#fff; text-shadow:0 0 3px #000,0 0 3px #000; }
+  #rpg .sk { margin:2px 0; line-height:1.5; }
 </style>
 </head>
 <body>
@@ -47,6 +57,8 @@
   <div id="inv"></div>
   <div id="tools"></div>
   <div id="furn" hidden></div>
+  <div id="rpg" hidden></div>
+  <div id="gear" hidden></div>
   <div id="msg" hidden></div>
   <div id="shop" hidden></div>
   <div id="help">
@@ -56,6 +68,7 @@
     <p>도구 선택: 1~5 (손·잠자리채·낚싯대·삽·묘목)</p>
     <p>T: 시간 빨리감기 (낮/밤 구경용)</p>
     <p>🏠 집 문 앞에서 스페이스 → 실내 꾸미기 (가구는 상점에서 구매)</p>
+    <p>⛰️ 오른쪽 위 던전 입구: Q 회전베기 · E 구르기 · F 물약 · I 장비창</p>
     <p>🏪 상점에서 열매·물고기·곤충을 팔고 묘목을 사 보세요!</p>
     <button id="start">시작하기</button>
   </div>
@@ -85,6 +98,29 @@ const ITEMS = {
   shell:    { e: "🐚", n: "조개", p: 60 },
   sapling:  { e: "🌱", n: "묘목", p: 0 },
 };
+const DW = 48, DH = 32, BAGCAP = 20;
+const CAVE = { x: 26, y: 2, w: 2, h: 2 };
+const RARITY = [{ n: "일반", c: "#eeeeee", m: 1 }, { n: "마법", c: "#6fa8ff", m: 1.5 }, { n: "희귀", c: "#ffd34d", m: 2.3 }, { n: "전설", c: "#ff8a2b", m: 3.5 }];
+const RD = ["#555", "#2b6fd6", "#b8860b", "#d2691e"];      // 밝은 종이 배경용
+const SLOTS = {
+  weapon: { n: "무기", es: ["🗡️", "🪓", "🔨"], base: ["검", "도끼", "망치"] },
+  armor:  { n: "방어구", es: ["🛡️", "🥋"], base: ["방패", "갑옷"] },
+  ring:   { n: "반지", es: ["💍"], base: ["반지"] },
+};
+const MPRE = ["예리한", "튼튼한", "날랜", "빛나는"], RPRE = ["용사의", "그림자", "폭풍의", "태양의"];
+const LEG = { weapon: ["포근 마을의 수호검", "달빛 도끼", "풍요의 망치"], armor: ["다람쥐 장군의 갑옷", "숲의 수호 방패"], ring: ["별빛 반지", "행운의 인장"] };
+const AFFIX = [
+  { k: "dmg", f: l => 2 + l * 1.2 }, { k: "hp", f: l => 10 + l * 5 }, { k: "armor", f: l => 2 + l * 1.4 },
+  { k: "crit", f: l => 2 + l * .4 }, { k: "as", f: l => 3 + l * .5 }, { k: "ms", f: l => 3 + l * .3 }, { k: "ls", f: l => 1 + l * .15 },
+];
+const MONS = [
+  { e: "🐀", n: "쥐", hp: 22, dmg: 5, spd: 75, xp: 6 }, { e: "🦇", n: "박쥐", hp: 16, dmg: 6, spd: 115, xp: 7 },
+  { e: "🕷️", n: "거미", hp: 30, dmg: 8, spd: 85, xp: 9 }, { e: "💀", n: "해골", hp: 48, dmg: 10, spd: 62, xp: 12 },
+  { e: "🧟", n: "좀비", hp: 80, dmg: 13, spd: 48, xp: 16 }, { e: "👹", n: "도깨비", hp: 130, dmg: 18, spd: 66, xp: 26 },
+];
+const ri = n => Math.random() * n | 0;
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+let uidN = Date.now(); const uid = () => ++uidN;
 const RW = 12, RH = 8;           // 실내 크기(칸), 위 2줄은 벽
 const FURN = {
   chair:  { e: "🪑", n: "의자", p: 150 },
@@ -147,8 +183,14 @@ let S = { bells: 200, inv: { sapling: 1 }, trees: seedTrees, fin: { chair: 1, pl
 try { const raw = localStorage.getItem("pokgeun-maeul"); if (raw) S = JSON.parse(raw); } catch (e) {}
 function save() { try { localStorage.setItem("pokgeun-maeul", JSON.stringify(S)); } catch (e) {} }
 S.fin = S.fin || {}; S.room = S.room || [];
+S.lv = S.lv || 1; S.xp = S.xp || 0; S.potions = S.potions ?? 2; S.bag = S.bag || []; S.best = S.best || 0;
+S.eq = S.eq || { weapon: { id: 1, slot: "weapon", e: "🗡️", n: "나무 칼", rar: 0, ilvl: 1, st: { dmg: 3 }, price: 10 }, armor: null, ring: null };
 const trees = S.trees;
-let scene = "out", furnSel = null;
+let scene = "out", furnSel = null, dun = null;
+(() => { const z = (x, y) => x >= 25 && x <= 28 && y >= 1 && y <= 5;
+  for (let i = flowers.length - 1; i >= 0; i--) if (z(flowers[i].x, flowers[i].y)) flowers.splice(i, 1);
+  for (let i = rocks.length - 1; i >= 0; i--) if (z(rocks[i].x, rocks[i].y)) rocks.splice(i, 1);
+  for (let i = trees.length - 1; i >= 0; i--) if (z(trees[i].x, trees[i].y)) trees.splice(i, 1); })();
 const ground = [];       // 바닥에 떨어진 아이템 {x,y,k}
 const bugs = [];
 let fishing = null;      // {tx,ty,state,t}
@@ -156,7 +198,7 @@ let modal = false, started = false, fast = false;
 let clock = new Date().getHours() + new Date().getMinutes() / 60;
 let vtime = 0, saveT = 0;
 
-const player = { x: 8.5 * T, y: 8.5 * T, dx: 0, dy: 1, tool: 0 };
+const player = { x: 8.5 * T, y: 8.5 * T, dx: 0, dy: 1, tool: 0, hp: 100, atkCd: 0, qCd: 0, eCd: 0, fCd: 0, dash: 0, inv: 0, flash: 0 };
 const SPAWNS = [[11, 9], [13, 8], [5, 11], [12, 14]];
 const villagers = VILLAGERS.map((v, i) => ({ ...v, x: (SPAWNS[i][0] + .5) * T, y: (SPAWNS[i][1] + .5) * T, vx: 0, vy: 0, t: 0, talk: 0, line: 0 }));
 
@@ -171,8 +213,9 @@ function roomSolid(x, y) {
 }
 function solidTile(x, y) {
   if (scene === "home") return roomSolid(x, y);
+  if (scene === "dun") return x < 0 || y < 0 || x >= DW || y >= DH || dun.map[y][x] === "#";
   if (x < 0 || y < 0 || x >= W || y >= H) return true;
-  return terrain[y][x] === "w" || inRect(HOUSE, x, y) || inRect(SHOP, x, y) || !!treeAt(x, y) || !!rockAt(x, y);
+  return terrain[y][x] === "w" || inRect(HOUSE, x, y) || inRect(SHOP, x, y) || inRect(CAVE, x, y) || !!treeAt(x, y) || !!rockAt(x, y);
 }
 function blocked(cx, cy, hw, hh) {
   for (const [ox, oy] of [[-hw, -hh], [hw, -hh], [-hw, hh], [hw, hh]])
@@ -193,10 +236,11 @@ function add(id, n = 1) {
   S.inv[id] = (S.inv[id] || 0) + n; hud(); return true;
 }
 function hud() {
-  $("bells").textContent = `🔔 ${S.bells.toLocaleString()} 벨`;
+  $("bells").textContent = `🔔 ${S.bells.toLocaleString()} 벨 · ⚔️ Lv.${S.lv}`;
   const rows = Object.entries(S.inv).filter(([, v]) => v > 0).map(([k, v]) => `<div><span>${ITEMS[k].e} ${ITEMS[k].n}</span><span>×${v}</span></div>`).join("");
-  $("inv").innerHTML = `<b>🎒 주머니 ${count()}/${CAP}</b>${rows || "<div>비어 있어요</div>"}`;
-  renderFurn();
+  $("inv").innerHTML = `<b>🎒 주머니 ${count()}/${CAP}</b>${rows}<div><span>🧪 물약</span><span>×${S.potions}</span></div>`;
+  renderFurn(); renderRpg();
+  $("tools").style.display = scene === "dun" ? "none" : "flex";
   $("tools").innerHTML = TOOLS.map((t, i) => `<div class="tool ${i === player.tool ? "on" : ""}" data-i="${i}"><i>${i + 1}</i>${t.e}<small>${i === 4 ? "×" + (S.inv.sapling || 0) : t.n}</small></div>`).join("");
 }
 function renderFurn() {
@@ -219,7 +263,7 @@ function clockText() {
 function openShop() {
   modal = true; cancelFish(); renderShop(); $("shop").hidden = false;
 }
-function closeShop() { modal = false; $("shop").hidden = true; save(); }
+function closeShop() { modal = false; $("shop").hidden = true; $("gear").hidden = true; save(); }
 function renderShop() {
   const sell = Object.entries(S.inv).filter(([k, v]) => v > 0 && ITEMS[k].p > 0);
   const total = sell.reduce((a, [k, v]) => a + ITEMS[k].p * v, 0);
@@ -228,12 +272,19 @@ function renderShop() {
     ${sell.map(([k, v]) => `<div class="row"><span>${ITEMS[k].e} ${ITEMS[k].n} ×${v}</span><span>${(ITEMS[k].p * v).toLocaleString()}</span></div>`).join("") || "<div>팔 물건이 없어요.</div>"}
     <h3>🛋️ 가구</h3>
     ${Object.entries(FURN).map(([k, f]) => `<div class="row"><span>${f.e} ${f.n}${f.wall ? " (벽)" : f.rug ? " (바닥)" : ""}${S.fin[k] ? ` · 보유 ${S.fin[k]}` : ""}</span><button data-buy="${k}" ${S.bells >= f.p ? "" : "disabled"}>${f.p}</button></div>`).join("")}
+    <h3>⚔️ 모험</h3>
+    <div class="row"><span>🧪 체력 물약 (보유 ${S.potions})</span><button data-pot ${S.bells >= 60 ? "" : "disabled"}>60</button></div>
+    ${S.bag.map((it, i) => `<div class="row"><span style="color:${RD[it.rar]};font-weight:700">${it.e} ${it.n}</span><button data-sell="${i}">${it.price}</button></div>`).join("")}
+    ${S.bag.some(it => it.rar < 3) ? `<button id="sellGear">전설 제외 장비 모두 팔기</button>` : ""}
     <button id="sellAll" ${total ? "" : "disabled"}>모두 팔기 (+${total.toLocaleString()})</button>
     <button id="buySap" ${S.bells >= 100 ? "" : "disabled"}>🌱 묘목 사기 (100)</button>
     <button id="closeShop">닫기 (Esc)</button>`;
   $("sellAll").onclick = () => { S.bells += total; sell.forEach(([k]) => S.inv[k] = 0); hud(); renderShop(); };
   $("buySap").onclick = () => { if (S.bells >= 100) { S.bells -= 100; add("sapling"); renderShop(); } };
   $("closeShop").onclick = closeShop;
+  $("shop").querySelectorAll("[data-pot]").forEach(b => b.onclick = () => { if (S.bells >= 60) { S.bells -= 60; S.potions++; hud(); renderShop(); } });
+  $("shop").querySelectorAll("[data-sell]").forEach(b => b.onclick = () => { const it = S.bag.splice(+b.dataset.sell, 1)[0]; S.bells += it.price; hud(); renderShop(); });
+  if ($("sellGear")) $("sellGear").onclick = () => { S.bag = S.bag.filter(it => it.rar === 3 ? true : (S.bells += it.price, false)); hud(); renderShop(); };
   $("shop").querySelectorAll("[data-buy]").forEach(b => b.onclick = () => {
     const f = FURN[b.dataset.buy]; if (S.bells < f.p) return;
     S.bells -= f.p; S.fin[b.dataset.buy] = (S.fin[b.dataset.buy] || 0) + 1; hud(); renderShop();
@@ -261,6 +312,7 @@ function act() {
   if (!started) return;
   if (modal) return;
   if (scene === "home") return actHome();
+  if (scene === "dun") return attack();
   if (fishing) {
     if (fishing.state === "bite") { catchFish(); } else { say("너무 일렀어요… 찌가 움직일 때까지 기다려요."); }
     fishing = null; return;
@@ -269,6 +321,7 @@ function act() {
   const v = villagers.find(v => Math.hypot(v.x - px, v.y - py) < 30);
   if (v) return talk(v);
   if (inRect(SHOP, tx, ty)) return openShop();
+  if (inRect(CAVE, tx, ty)) return enterDungeon(1);
   if (inRect(HOUSE, tx, ty)) return enterHome();
   const tool = player.tool;
   if (tool === 0) {
@@ -337,6 +390,227 @@ function actHome() {
   if (pickUp(tx, ty)) return save();
   say(furnSel ? "여기에는 놓을 수 없어요." : "오른쪽 위 목록에서 가구를 선택하세요.", 1500);
 }
+/* ---------- RPG: 장비 ---------- */
+const xpNeed = l => Math.round(25 * Math.pow(l, 1.6));
+function genGear(ilvl, boost = 0) {
+  const slot = ["weapon", "weapon", "armor", "armor", "ring"][ri(5)], sd = SLOTS[slot];
+  const r0 = Math.random() + boost * .15, rar = r0 > .98 ? 3 : r0 > .88 ? 2 : r0 > .6 ? 1 : 0, m = RARITY[rar].m;
+  const bi = ri(sd.es.length), st = {};
+  if (slot === "weapon") st.dmg = Math.round((3 + ilvl * 2) * (.85 + Math.random() * .3) * m);
+  if (slot === "armor") { st.armor = Math.round((2 + ilvl * 1.5) * (.85 + Math.random() * .3) * m); st.hp = Math.round((6 + ilvl * 3) * m); }
+  if (slot === "ring") st.crit = Math.round(1 + ilvl * .2);
+  const pool = AFFIX.slice().sort(() => Math.random() - .5), na = [0, 1, 2 + ri(2), 4][rar];
+  for (let i = 0; i < na; i++) { const a = pool[i]; st[a.k] = (st[a.k] || 0) + Math.max(1, Math.round(a.f(ilvl) * (.7 + Math.random() * .6) * (rar === 3 ? 1.4 : 1))); }
+  const n = rar === 3 ? LEG[slot][ri(LEG[slot].length)] : rar === 2 ? `${RPRE[ri(4)]} ${sd.base[bi]}` : rar === 1 ? `${MPRE[ri(4)]} ${sd.base[bi]}` : `낡은 ${sd.base[bi]}`;
+  return { id: uid(), slot, e: sd.es[bi], n, rar, ilvl, st, price: Math.round((8 + ilvl * 6) * [1, 3, 8, 25][rar]) };
+}
+function statTxt(st) {
+  const L = { dmg: "공격력", hp: "체력", armor: "방어", crit: "치명타", as: "공속", ms: "이속", ls: "흡혈" };
+  return Object.entries(st).filter(([, v]) => v).map(([k, v]) => `${L[k]} +${v}${["crit", "as", "ms", "ls"].includes(k) ? "%" : ""}`).join(" · ");
+}
+function pstats() {
+  const t = { dmg: 0, hp: 0, armor: 0, crit: 0, as: 0, ms: 0, ls: 0 };
+  for (const it of Object.values(S.eq)) if (it) for (const k in it.st) t[k] += it.st[k];
+  return { maxhp: 80 + S.lv * 20 + t.hp, dmg: 6 + S.lv * 2 + t.dmg, armor: S.lv * 2 + t.armor, crit: Math.min(60, 5 + t.crit), as: 1 + t.as / 100, ms: 1 + Math.min(40, t.ms) / 100, ls: t.ls };
+}
+function gearRow(it, attr) { return `<div class="g" ${attr}><span style="color:${RD[it.rar]};font-weight:700">${it.e} ${it.n} <small style="display:inline;opacity:.6">[${RARITY[it.rar].n} iLv${it.ilvl}]</small><small>${statTxt(it.st) || "능력치 없음"}</small></span></div>`; }
+function renderGear() {
+  const st = pstats();
+  $("gear").innerHTML = `<h2>⚔️ 장비 · Lv.${S.lv}</h2>
+    <div>경험치 ${S.xp}/${xpNeed(S.lv)} · 최고 ${S.best}층</div>
+    <div>체력 ${st.maxhp} · 공격력 ${st.dmg} · 방어 ${st.armor}<br>치명타 ${st.crit}% · 공속 ×${st.as.toFixed(2)} · 이속 ×${st.ms.toFixed(2)} · 흡혈 ${st.ls}%</div>
+    <h3>착용 중 (클릭하면 해제)</h3>
+    ${["weapon", "armor", "ring"].map(k => S.eq[k] ? gearRow(S.eq[k], `data-un="${k}"`) : `<div class="g"><span>${SLOTS[k].n}: 비어 있음</span></div>`).join("")}
+    <h3>가방 ${S.bag.length}/${BAGCAP} (클릭하면 착용)</h3>
+    ${S.bag.map((it, i) => gearRow(it, `data-eq="${i}"`)).join("") || "<div>비어 있어요. 던전에서 장비를 찾아 보세요!</div>"}
+    <button id="closeGear">닫기 (I)</button>`;
+}
+$("gear").addEventListener("click", e => {
+  if (e.target.id === "closeGear") return closeShop();
+  const g = e.target.closest(".g"); if (!g) return;
+  if (g.dataset.eq !== undefined) { const it = S.bag[+g.dataset.eq]; const old = S.eq[it.slot]; S.eq[it.slot] = it; S.bag.splice(+g.dataset.eq, 1); if (old) S.bag.push(old); }
+  else if (g.dataset.un) { if (S.bag.length >= BAGCAP) return say("가방이 가득 찼어요."); S.bag.push(S.eq[g.dataset.un]); S.eq[g.dataset.un] = null; }
+  player.hp = Math.min(player.hp, pstats().maxhp); renderGear(); hud();
+});
+function toggleGear() {
+  if (!$("gear").hidden) return closeShop();
+  if (modal || !started) return;
+  modal = true; renderGear(); $("gear").hidden = false;
+}
+
+/* ---------- RPG: 던전 ---------- */
+function renderRpg() {
+  const el = $("rpg");
+  if (scene !== "dun" || !dun) { el.hidden = true; return; }
+  const st = pstats(), P = player, cd = v => v > 0 ? v.toFixed(1) + "s" : "준비";
+  el.hidden = false;
+  el.innerHTML = `<div class="bar"><i class="hp" style="width:${clamp(P.hp / st.maxhp * 100, 0, 100)}%"></i><span>❤️ ${Math.max(0, Math.ceil(P.hp))}/${st.maxhp}</span></div>
+    <div class="bar"><i class="xp" style="width:${S.xp / xpNeed(S.lv) * 100}%"></i><span>Lv.${S.lv} · ${S.xp}/${xpNeed(S.lv)}</span></div>
+    <div class="sk"><b>스페이스</b> 공격 · <b>Q</b> 회전베기 ${cd(P.qCd)}<br><b>E</b> 구르기 ${cd(P.eCd)} · <b>F</b> 🧪×${S.potions} · <b>I</b> 장비</div>
+    <div>🕳️ 지하 ${dun.depth}층 · 몬스터 ${dun.mons.length}마리</div>`;
+}
+function genDun(depth) {
+  const map = Array.from({ length: DH }, () => Array(DW).fill("#")), rooms = [];
+  for (let i = 0; i < 90 && rooms.length < 9; i++) {
+    const w = 6 + ri(6), h = 5 + ri(5), x = 1 + ri(DW - w - 2), y = 1 + ri(DH - h - 2);
+    if (rooms.some(r => x < r.x + r.w + 2 && x + w + 2 > r.x && y < r.y + r.h + 2 && y + h + 2 > r.y)) continue;
+    rooms.push({ x, y, w, h });
+  }
+  if (rooms.length < 4) return genDun(depth);
+  for (const r of rooms) for (let y = r.y; y < r.y + r.h; y++) for (let x = r.x; x < r.x + r.w; x++) map[y][x] = ".";
+  const carve = (x, y) => { for (let j = 0; j < 2; j++) for (let i = 0; i < 2; i++) { const xx = x + i, yy = y + j; if (xx > 0 && yy > 0 && xx < DW - 1 && yy < DH - 1) map[yy][xx] = "."; } };
+  const c = r => [r.x + (r.w >> 1), r.y + (r.h >> 1)];
+  for (let i = 1; i < rooms.length; i++) {
+    let [x1, y1] = c(rooms[i - 1]); const [x2, y2] = c(rooms[i]);
+    while (x1 !== x2) { carve(x1, y1); x1 += Math.sign(x2 - x1); }
+    while (y1 !== y2) { carve(x1, y1); y1 += Math.sign(y2 - y1); }
+    carve(x1, y1);
+  }
+  const [ex, ey] = c(rooms[0]), [sx, sy] = c(rooms[rooms.length - 1]);
+  const d = { depth, map, mons: [], loot: [], fx: [], arcs: [], exit: { x: ex, y: ey }, stairs: { x: sx, y: sy } };
+  for (let i = 1; i < rooms.length; i++) {
+    const r = rooms[i], n = 2 + ri(3) + (depth / 3 | 0);
+    for (let k = 0; k < n; k++) {
+      const x = r.x + ri(r.w), y = r.y + ri(r.h);
+      if (Math.abs(x - sx) + Math.abs(y - sy) < 3) continue;
+      d.mons.push(mkMon(depth, (x + .5) * T, (y + .5) * T, false));
+    }
+  }
+  if (depth % 5 === 0) d.mons.push(mkMon(depth, (sx - 1.5) * T, (sy + .5) * T, true));
+  return d;
+}
+function mkMon(depth, x, y, boss) {
+  const base = boss ? { e: "🐲", n: "대왕 용", hp: 130, dmg: 18, spd: 70, xp: 26 } : MONS[Math.min(MONS.length - 1, ri(Math.min(MONS.length, 2 + (depth >> 1))))];
+  const sc = 1 + .3 * (depth - 1), hp = Math.round(base.hp * sc * (boss ? 7 : 1));
+  return { ...base, x, y, hp, mhp: hp, dmg: Math.round(base.dmg * sc * (boss ? 1.5 : 1)), xp: Math.round(base.xp * sc * (boss ? 8 : 1)), cd: 0, flash: 0, kb: 0, kx: 0, ky: 0, boss };
+}
+function enterDungeon(depth, keepHp) {
+  cancelFish(); scene = "dun"; dun = genDun(depth);
+  const P = player; P.x = (dun.exit.x + 1.5) * T; P.y = (dun.exit.y + .5) * T; P.dx = 1; P.dy = 0;
+  P.atkCd = P.qCd = P.eCd = P.fCd = P.dash = P.inv = 0;
+  if (!keepHp) P.hp = pstats().maxhp;
+  S.best = Math.max(S.best, depth); hud();
+  say(depth % 5 === 0 ? `🐲 지하 ${depth}층 — 보스가 있어요!` : `🕳️ 지하 ${depth}층`, 2500);
+}
+function leaveDungeon(dead) {
+  scene = "out"; dun = null; const P = player;
+  P.x = (CAVE.x + 1) * T; P.y = 4.5 * T; P.dx = 0; P.dy = 1; P.hp = pstats().maxhp;
+  if (dead) { S.bells = Math.floor(S.bells * .9); say("💀 쓰러졌어요… 벨의 10%를 잃었어요."); } else say("마을로 돌아왔어요 🏡");
+  hud(); save();
+}
+function fx(x, y, txt, col) { dun.fx.push({ x, y, txt, col, t: .9 }); }
+function heal(n) { const m = pstats().maxhp; player.hp = Math.min(m, player.hp + n); }
+function gainXp(n) {
+  S.xp += n;
+  while (S.xp >= xpNeed(S.lv)) { S.xp -= xpNeed(S.lv); S.lv++; player.hp = pstats().maxhp; fx(player.x, player.y - 30, "LEVEL UP!", "#ffd34d"); say(`⚔️ 레벨 ${S.lv}이 되었어요!`, 2500); }
+  hud();
+}
+function hitMon(m, mult) {
+  const st = pstats(), crit = Math.random() * 100 < st.crit, d = Math.max(1, Math.round(st.dmg * mult * (.85 + Math.random() * .3) * (crit ? 2 : 1)));
+  m.hp -= d; m.flash = .12; m.kb = .12;
+  const a = Math.atan2(m.y - player.y, m.x - player.x); m.kx = Math.cos(a) * (m.boss ? 80 : 220); m.ky = Math.sin(a) * (m.boss ? 80 : 220);
+  fx(m.x, m.y - 18, (crit ? "💥" : "") + d, crit ? "#ffd34d" : "#ffffff");
+  if (st.ls > 0) heal(Math.max(1, Math.round(d * st.ls / 100)));
+  if (m.hp <= 0) killMon(m);
+}
+function killMon(m) {
+  dun.mons.splice(dun.mons.indexOf(m), 1); gainXp(m.xp);
+  const sp = () => ({ x: m.x + (Math.random() - .5) * 30, y: m.y + (Math.random() - .5) * 30 });
+  dun.loot.push({ t: "bell", n: Math.round((3 + ri(6)) * (1 + dun.depth * .3) * (m.boss ? 6 : 1)), ...sp() });
+  const ilvl = Math.max(1, Math.round(dun.depth * 1.5 + S.lv * .5));
+  if (m.boss) for (let i = 0; i < 2; i++) dun.loot.push({ t: "gear", it: genGear(ilvl, 3), ...sp() });
+  else if (Math.random() < .2) dun.loot.push({ t: "gear", it: genGear(ilvl), ...sp() });
+  if (Math.random() < .07) dun.loot.push({ t: "pot", ...sp() });
+  if (Math.random() < .05) dun.loot.push({ t: "furn", id: Object.keys(FURN)[ri(Object.keys(FURN).length)], ...sp() });
+}
+function attack() {
+  if (scene !== "dun" || modal) return; const P = player, st = pstats();
+  if (P.atkCd > 0) return; P.atkCd = .42 / st.as; dun.arcs.push({ a: Math.atan2(P.dy, P.dx), t: .15, r: 58, whirl: false });
+  for (const m of [...dun.mons]) { const dx = m.x - P.x, dy = m.y - P.y, d = Math.hypot(dx, dy); if (d < 58 + (m.boss ? 12 : 0) && (dx * P.dx + dy * P.dy) / (d || 1) > .1) hitMon(m, 1); }
+}
+function whirl() {
+  const P = player; if (P.qCd > 0 || modal) return; P.qCd = 5; dun.arcs.push({ a: 0, t: .25, r: 84, whirl: true });
+  for (const m of [...dun.mons]) if (Math.hypot(m.x - P.x, m.y - P.y) < 84 + (m.boss ? 12 : 0)) hitMon(m, 1.8);
+}
+function dash() { const P = player; if (P.eCd > 0 || modal) return; P.eCd = 2.5; P.dash = .16; P.inv = .3; }
+function drinkPotion() {
+  const P = player, m = pstats().maxhp;
+  if (S.potions <= 0) return say("물약이 없어요. 상점에서 살 수 있어요.", 1500);
+  if (P.fCd > 0 || P.hp >= m) return;
+  S.potions--; P.fCd = 1; heal(Math.round(m * .45)); fx(P.x, P.y - 24, "+HP", "#7bd88f"); hud();
+}
+function tryMove(e, vx, vy) { if (!blocked(e.x + vx, e.y + 8, 8, 6)) e.x += vx; if (!blocked(e.x, e.y + 8 + vy, 8, 6)) e.y += vy; }
+function updateDun(dt) {
+  const P = player, st = pstats();
+  for (const k of ["atkCd", "qCd", "eCd", "fCd", "dash", "inv", "flash"]) P[k] = Math.max(0, P[k] - dt);
+  if (keys.has("Space") || keys.has("KeyZ")) attack();
+  for (const m of dun.mons) {
+    m.flash = Math.max(0, m.flash - dt); m.cd = Math.max(0, m.cd - dt);
+    const dx = P.x - m.x, dy = P.y - m.y, d = Math.hypot(dx, dy);
+    if (m.kb > 0) { m.kb -= dt; tryMove(m, m.kx * dt, m.ky * dt); continue; }
+    if (d < 260 && d > 24) tryMove(m, dx / d * m.spd * dt, dy / d * m.spd * dt);
+    if (d < 32 && m.cd <= 0) {
+      m.cd = 1;
+      if (P.inv <= 0) { const n = Math.max(1, Math.round(m.dmg * (100 / (100 + st.armor)) * (.9 + Math.random() * .2))); P.hp -= n; P.inv = .35; P.flash = .15; fx(P.x, P.y - 20, "-" + n, "#ff6b6b"); }
+    }
+  }
+  if (P.hp <= 0) return leaveDungeon(true);
+  for (let i = dun.loot.length - 1; i >= 0; i--) {
+    const l = dun.loot[i], d = Math.hypot(P.x - l.x, P.y - l.y);
+    if (l.t === "bell" && d < 110) { l.x += (P.x - l.x) / d * 200 * dt; l.y += (P.y - l.y) / d * 200 * dt; }
+    if (d > 26) continue;
+    if (l.t === "bell") { S.bells += l.n; fx(P.x, P.y - 24, `+${l.n}🔔`, "#ffe27a"); }
+    else if (l.t === "pot") { S.potions++; fx(P.x, P.y - 24, "🧪 +1", "#7bd88f"); }
+    else if (l.t === "furn") { S.fin[l.id] = (S.fin[l.id] || 0) + 1; say(`${FURN[l.id].e} ${obj(FURN[l.id].n)} 주웠어요! 집에 놓아 보세요.`); }
+    else if (l.t === "gear") {
+      if (S.bag.length >= BAGCAP) { if (!l.warn) { l.warn = 1; say("가방이 가득 찼어요! (I: 장비창)"); } continue; }
+      S.bag.push(l.it); fx(P.x, P.y - 24, l.it.n, RARITY[l.it.rar].c); if (l.it.rar >= 2) say(`✨ ${RARITY[l.it.rar].n} 장비: ${l.it.e} ${l.it.n}!`, 2500);
+    }
+    dun.loot.splice(i, 1); hud();
+  }
+  for (const f of dun.fx) { f.t -= dt; f.y -= 22 * dt; } dun.fx = dun.fx.filter(f => f.t > 0);
+  for (const a of dun.arcs) a.t -= dt; dun.arcs = dun.arcs.filter(a => a.t > 0);
+  const near = p => Math.hypot(P.x - (p.x + .5) * T, P.y - (p.y + .5) * T) < 26;
+  if (near(dun.exit)) leaveDungeon(false);
+  else if (near(dun.stairs)) { save(); enterDungeon(dun.depth + 1, true); heal(Math.round(pstats().maxhp * .25)); }
+}
+function drawDun() {
+  const P = player, cx = clamp(P.x - VW / 2, 0, DW * T - VW), cy = clamp(P.y - VH / 2, 0, DH * T - VH);
+  ctx.fillStyle = "#14121c"; ctx.fillRect(0, 0, VW, VH);
+  ctx.save(); ctx.translate(-cx, -cy);
+  const x0 = Math.max(0, cx / T | 0), x1 = Math.min(DW, (cx + VW) / T + 1 | 0), y0 = Math.max(0, cy / T | 0), y1 = Math.min(DH, (cy + VH) / T + 1 | 0);
+  for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
+    if (dun.map[y][x] === "#") { ctx.fillStyle = "#2b2740"; ctx.fillRect(x * T, y * T, T + 1, T + 1); if (dun.map[y + 1]?.[x] === ".") { ctx.fillStyle = "#463f68"; ctx.fillRect(x * T, y * T + T - 8, T + 1, 8); } }
+    else { ctx.fillStyle = (x + y) % 2 ? "#4b4766" : "#46425f"; ctx.fillRect(x * T, y * T, T + 1, T + 1); }
+  }
+  emoji("🌀", (dun.exit.x + .5) * T, (dun.exit.y + .5) * T, 30); label("마을", (dun.exit.x + .5) * T, (dun.exit.y + .5) * T - 24);
+  emoji("🕳️", (dun.stairs.x + .5) * T, (dun.stairs.y + .5) * T, 30); label("다음 층", (dun.stairs.x + .5) * T, (dun.stairs.y + .5) * T - 24);
+  for (const l of dun.loot) {
+    const bob = Math.sin(vtime * 4 + l.x) * 2;
+    if (l.t === "gear") {
+      const c = RARITY[l.it.rar].c; ctx.fillStyle = c; ctx.globalAlpha = .35 + .15 * Math.sin(vtime * 5); ctx.beginPath(); ctx.arc(l.x, l.y, 15, 0, 7); ctx.fill(); ctx.globalAlpha = 1;
+      emoji(l.it.e, l.x, l.y + bob, 20); ctx.font = "bold 11px sans-serif"; ctx.lineWidth = 3; ctx.strokeStyle = "#000"; ctx.strokeText(l.it.n, l.x, l.y - 18); ctx.fillStyle = c; ctx.fillText(l.it.n, l.x, l.y - 18);
+    } else emoji(l.t === "bell" ? "💰" : l.t === "pot" ? "🧪" : FURN[l.id].e, l.x, l.y + bob, l.t === "bell" ? 16 : 20);
+  }
+  const ents = dun.mons.map(m => ({ y: m.y + 12, f: () => {
+    const sz = m.boss ? 54 : 28; emoji(m.e, m.x, m.y, sz);
+    if (m.flash > 0) { ctx.fillStyle = "rgba(255,255,255,.6)"; ctx.beginPath(); ctx.arc(m.x, m.y, sz / 2.2, 0, 7); ctx.fill(); }
+    const w = m.boss ? 60 : 30; ctx.fillStyle = "#000"; ctx.fillRect(m.x - w / 2 - 1, m.y - sz / 2 - 9, w + 2, 6); ctx.fillStyle = m.boss ? "#e0a030" : "#e04848"; ctx.fillRect(m.x - w / 2, m.y - sz / 2 - 8, w * m.hp / m.mhp, 4);
+    if (m.boss) label(m.n, m.x, m.y - sz / 2 - 20);
+  } }));
+  ents.push({ y: P.y + 14, f: () => { ctx.globalAlpha = P.inv > 0 && Math.floor(vtime * 20) % 2 ? .4 : 1; emoji("🧒", P.x, P.y, 32); const w = S.eq.weapon; if (w) { const sw = P.atkCd > .25 ? 1 : 0; emoji(w.e, P.x + P.dx * (14 + sw * 14), P.y + P.dy * (14 + sw * 14) + 4, 20); } ctx.globalAlpha = 1; } });
+  ents.sort((a, b) => a.y - b.y).forEach(e => e.f());
+  for (const a of dun.arcs) {
+    ctx.strokeStyle = `rgba(255,255,255,${a.t * 5})`; ctx.lineWidth = a.whirl ? 6 : 5; ctx.beginPath();
+    if (a.whirl) ctx.arc(P.x, P.y, a.r * (1.2 - a.t), 0, 7); else ctx.arc(P.x, P.y, a.r - 8, Math.atan2(P.dy, P.dx) - .9, Math.atan2(P.dy, P.dx) + .9);
+    ctx.stroke();
+  }
+  ctx.font = "bold 15px sans-serif"; ctx.lineWidth = 3;
+  for (const f of dun.fx) { ctx.globalAlpha = Math.min(1, f.t * 2); ctx.strokeStyle = "#000"; ctx.strokeText(f.txt, f.x, f.y); ctx.fillStyle = f.col; ctx.fillText(f.txt, f.x, f.y); } ctx.globalAlpha = 1;
+  ctx.restore();
+  const g = ctx.createRadialGradient(P.x - cx, P.y - cy, 140, P.x - cx, P.y - cy, 420);
+  g.addColorStop(0, "rgba(0,0,0,0)"); g.addColorStop(1, "rgba(5,3,15,.82)"); ctx.fillStyle = g; ctx.fillRect(0, 0, VW, VH);
+}
 function catchFish() {
   const r = R();
   const id = r < .04 ? "boot" : r < .05 ? "shark" : r < .15 ? "puffer" : r < .4 ? "tropical" : "crucian";
@@ -361,6 +635,10 @@ addEventListener("keydown", e => {
   if (!started) { if (e.code === "Space" || e.code === "Enter") begin(); return; }
   if (e.code === "Escape" && modal) closeShop();
   else if (e.code === "Space" || e.code === "KeyZ") act();
+  else if (scene === "dun" && e.code === "KeyQ") whirl();
+  else if (scene === "dun" && e.code === "KeyE") dash();
+  else if (scene === "dun" && e.code === "KeyF") drinkPotion();
+  else if (e.code === "KeyI") toggleGear();
   else if (e.code === "KeyX" && scene === "home") { const { tx, ty } = target(); if (pickUp(tx, ty)) save(); }
   else if (e.code === "KeyT") { fast = !fast; if (!fast) { const d = new Date(); clock = d.getHours() + d.getMinutes() / 60; } say(fast ? "⏩ 시간이 빨리 흘러요 (T로 해제)" : "⏱️ 현재 시각으로 돌아왔어요"); }
   else if (/^Digit[1-5]$/.test(e.code)) { player.tool = +e.code.slice(5) - 1; cancelFish(); hud(); }
@@ -378,13 +656,16 @@ function update(dt) {
   // 이동
   let ix = (keys.has("ArrowRight") || keys.has("KeyD") ? 1 : 0) - (keys.has("ArrowLeft") || keys.has("KeyA") ? 1 : 0);
   let iy = (keys.has("ArrowDown") || keys.has("KeyS") ? 1 : 0) - (keys.has("ArrowUp") || keys.has("KeyW") ? 1 : 0);
+  if (scene === "dun" && player.dash > 0 && !(ix || iy)) { ix = Math.sign(player.dx); iy = Math.sign(player.dy); }
   if (ix || iy) {
     cancelFish();
-    if (ix) { player.dx = ix; player.dy = 0; } else { player.dx = 0; player.dy = iy; }
-    const len = Math.hypot(ix, iy), sp = 120 * dt / len;
+    if (scene === "dun") { const l = Math.hypot(ix, iy); if (player.dash <= 0) { player.dx = ix / l; player.dy = iy / l; } }
+    else if (ix) { player.dx = ix; player.dy = 0; } else { player.dx = 0; player.dy = iy; }
+    const len = Math.hypot(ix, iy), sp = (scene === "dun" ? (player.dash > 0 ? 340 : 120 * pstats().ms) : 120) * dt / len;
     if (!blocked(player.x + ix * sp, player.y + 8, 9, 6)) player.x += ix * sp;
     if (!blocked(player.x, player.y + 8 + iy * sp, 9, 6)) player.y += iy * sp;
   }
+  if (scene === "dun") { updateDun(dt); return; }
   if (scene === "home") { if (Math.floor((player.y + 8) / T) >= RH) leaveHome(); return; }
   // 바닥 아이템 줍기
   const ptx = Math.floor(player.x / T), pty = Math.floor((player.y + 8) / T);
@@ -448,6 +729,7 @@ function draw() {
   ctx.setTransform(sc, 0, 0, sc, 0, 0);
   ctx.textAlign = "center"; ctx.textBaseline = "middle";
   if (scene === "home") return drawHome();
+  if (scene === "dun") return drawDun();
   // 지형
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
     const t = terrain[y][x];
@@ -459,6 +741,7 @@ function draw() {
   const ents = [];
   ents.push({ y: (HOUSE.y + HOUSE.h) * T, f: () => { emoji("🏠", (HOUSE.x + 1.5) * T, (HOUSE.y + 1) * T, 92); label("내 집", (HOUSE.x + 1.5) * T, (HOUSE.y + HOUSE.h) * T + 8); } });
   ents.push({ y: (SHOP.y + SHOP.h) * T, f: () => { emoji("🏪", (SHOP.x + 1.5) * T, (SHOP.y + 1) * T, 92); label("다람쥐 상점", (SHOP.x + 1.5) * T, (SHOP.y + SHOP.h) * T + 8); } });
+  ents.push({ y: (CAVE.y + CAVE.h) * T, f: () => { emoji("⛰️", (CAVE.x + 1) * T, (CAVE.y + 1) * T, 84); emoji("🕳️", (CAVE.x + 1) * T, (CAVE.y + 1.6) * T, 26); label("던전 입구", (CAVE.x + 1) * T, (CAVE.y + CAVE.h) * T + 8); } });
   for (const r of rocks) ents.push({ y: (r.y + .8) * T, f: () => emoji("🪨", (r.x + .5) * T, (r.y + .55) * T, 30) });
   for (const f of flowers) if (!f.back) ents.push({ y: (f.y + .5) * T, f: () => emoji(f.e, (f.x + .5) * T, (f.y + .55) * T, 22) });
   for (const g of ground) ents.push({ y: (g.y + .6) * T, f: () => emoji(ITEMS[g.k].e, (g.x + .5) * T, (g.y + .55) * T + Math.sin(vtime * 4 + g.x) * 2, 20) });
@@ -512,16 +795,18 @@ function label(text, x, y) {
 }
 
 /* ---------- 메인 루프 ---------- */
-let last = performance.now(), hudT = 0;
+let last = performance.now(), hudT = 0, rpgT = 0;
 function frame(now) {
   const dt = Math.min(.05, (now - last) / 1000); last = now;
   update(dt); draw();
   if ((hudT += dt) > .5) { hudT = 0; $("clock").textContent = clockText(); }
+  if (scene === "dun" && (rpgT += dt) > .1) { rpgT = 0; renderRpg(); }
   requestAnimationFrame(frame);
 }
+player.hp = pstats().maxhp;
 resize(); hud(); $("clock").textContent = clockText();
 requestAnimationFrame(frame);
-window.__game = { scene: () => scene, furnSelSet: v => { furnSel = v; renderFurn(); }, player, trees, S, keys, act, get fishing() { return fishing; }, bugs, villagers }; // 디버그/테스트용
+window.__game = { enterDungeon, get dun() { return dun; }, pstats, genGear, attack, scene: () => scene, furnSelSet: v => { furnSel = v; renderFurn(); }, player, trees, S, keys, act, get fishing() { return fishing; }, bugs, villagers }; // 디버그/테스트용
 </script>
 </body>
 </html>
