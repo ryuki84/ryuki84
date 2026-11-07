@@ -47,17 +47,43 @@
   #rpg .bar i.hp { background:#e04848; } #rpg .bar i.xp { background:#4a8fd6; }
   #rpg .bar span { position:absolute; inset:0; text-align:center; line-height:15px; font-weight:700; color:#fff; text-shadow:0 0 3px #000,0 0 3px #000; }
   #rpg .sk { margin:2px 0; line-height:1.5; }
+  #stage { display:contents; }
+  #touch { display:none; }
+  #touch button { margin:0; padding:0; touch-action:none; user-select:none; -webkit-user-select:none; }
+  #touch .dpad { display:grid; grid-template-columns:repeat(3,52px); grid-auto-rows:52px; gap:4px; }
+  #touch .dpad button { border-radius:14px; font-size:18px; }
+  #touch .acts { display:flex; flex-direction:column; align-items:flex-end; gap:8px; }
+  #touch .row2 { display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end; }
+  #touch .row2 button { min-width:46px; height:38px; border-radius:10px; font-size:13px; padding:0 8px; }
+  #touch .big { width:84px; height:84px; border-radius:50%; font-size:30px; }
+  #touch button.down { filter:brightness(.82); transform:scale(.94); }
+  .td, .tw, .th { display:none; }
+  body[data-scene="dun"] .td, body[data-scene="wild"] .td, body[data-scene="wild"] .tw, body[data-scene="home"] .th { display:block; }
+  @media (max-width:760px), (pointer:coarse) {
+    html, body { height:auto; min-height:100%; touch-action:manipulation; }
+    #wrap { width:100%; aspect-ratio:auto; top:0; transform:none; margin:0; padding-bottom:16px; }
+    #stage { display:block; position:relative; width:100%; aspect-ratio:3/2; }
+    #tools, #rpg, #furn { position:static; transform:none; margin:8px auto 0; width:calc(100% - 16px); max-width:none; }
+    #tools { justify-content:center; }
+    #rpg .sk { display:none; }
+    #rpg { font-size:12px; padding:6px 10px; }
+    #inv { display:none; top:40px; right:6px; min-width:110px; font-size:11px; padding:6px 8px; }
+    body.showinv #inv { display:block; }
+    .pill { font-size:11px; padding:2px 10px; border-width:2px; }
+    #bells { left:6px; top:6px; } #clock { left:6px; top:32px; }
+    #msg { bottom:6px; font-size:12px; padding:6px 12px; max-width:92%; }
+    #shop, #gear, #help { position:fixed; max-height:92vh; overflow:auto; width:min(94vw,440px); }
+    #touch { display:flex; justify-content:space-between; align-items:center; gap:8px; padding:12px 10px 0; }
+  }
 </style>
 </head>
 <body>
 <div id="wrap">
+  <div id="stage">
   <canvas id="c"></canvas>
   <div id="bells" class="pill"></div>
   <div id="clock" class="pill"></div>
   <div id="inv"></div>
-  <div id="tools"></div>
-  <div id="furn" hidden></div>
-  <div id="rpg" hidden></div>
   <div id="gear" hidden></div>
   <div id="msg" hidden></div>
   <div id="shop" hidden></div>
@@ -72,7 +98,24 @@
     <p>🌴 야생 지대(왼쪽 입구): 나무·돌 채집, V 먹이주기(길들이기), G 탈것</p>
     <p>I 장비 · K 캐릭터(스탯/스킬/동료) · C 제작</p>
     <p>🏪 상점에서 열매·물고기·곤충을 팔고 묘목을 사 보세요!</p>
-    <button id="start">시작하기</button>
+    <p>📱 폰에서는 화면 아래 버튼으로 조작해요 (🎒 = 주머니 보기)</p>
+    <button id="start">시작하기</button><button id="reset" style="background:#e8dcc0">새로 시작</button>
+  </div>
+  </div>
+  <div id="tools"></div>
+  <div id="rpg" hidden></div>
+  <div id="furn" hidden></div>
+  <div id="touch">
+    <div class="dpad">
+      <button data-k="ArrowUp ArrowLeft">↖</button><button data-k="ArrowUp">▲</button><button data-k="ArrowUp ArrowRight">↗</button>
+      <button data-k="ArrowLeft">◀</button><i></i><button data-k="ArrowRight">▶</button>
+      <button data-k="ArrowDown ArrowLeft">↙</button><button data-k="ArrowDown">▼</button><button data-k="ArrowDown ArrowRight">↘</button>
+    </div>
+    <div class="acts">
+      <div class="row2"><button data-k="KeyI">장비</button><button data-k="KeyK">캐릭터</button><button data-k="KeyC">제작</button><button id="tinv">🎒</button></div>
+      <div class="row2"><button class="td" data-k="KeyQ">Q</button><button class="td" data-k="KeyE">E</button><button class="td" data-k="KeyR">R</button><button class="td" data-k="KeyF">F</button><button class="tw" data-k="KeyV">V</button><button class="tw" data-k="KeyG">G</button><button class="th" data-k="KeyX">집기</button></div>
+      <button class="big" data-k="Space">A</button>
+    </div>
   </div>
 </div>
 
@@ -196,7 +239,8 @@ scatter(6, (x, y) => { if (seedTrees.some(t => t.x === x && t.y === y) || flower
 /* ---------- 상태 / 저장 ---------- */
 let S = { bells: 200, inv: { sapling: 1 }, trees: seedTrees, fin: { chair: 1, plant: 1 }, room: [] };
 try { const raw = localStorage.getItem("pokgeun-maeul"); if (raw) S = JSON.parse(raw); } catch (e) {}
-function save() { try { localStorage.setItem("pokgeun-maeul", JSON.stringify(S)); } catch (e) {} }
+let resetting = false;
+function save() { if (resetting) return; try { localStorage.setItem("pokgeun-maeul", JSON.stringify(S)); } catch (e) {} }
 S.fin = S.fin || {}; S.room = S.room || [];
 S.lv = S.lv || 1; S.xp = S.xp || 0; S.potions = S.potions ?? 2; S.bag = S.bag || []; S.best = S.best || 0;
 S.eq = S.eq || { weapon: { id: 1, slot: "weapon", e: "🗡️", n: "나무 칼", rar: 0, ilvl: 1, st: { dmg: 3 }, price: 10 }, armor: null, ring: null };
@@ -253,6 +297,7 @@ function add(id, n = 1) {
   S.inv[id] = (S.inv[id] || 0) + n; hud(); return true;
 }
 function hud() {
+  document.body.dataset.scene = scene === "dun" && dun && dun.kind === "wild" ? "wild" : scene;
   $("bells").textContent = `🔔 ${S.bells.toLocaleString()} 벨 · ⚔️ Lv.${S.lv}${S.pts + S.sp > 0 ? " ✨" : ""}`;
   const rows = Object.entries(S.inv).filter(([, v]) => v > 0).map(([k, v]) => `<div><span>${ITEMS[k].e} ${ITEMS[k].n}</span><span>×${v}</span></div>`).join("");
   $("inv").innerHTML = `<b>🎒 주머니 ${count()}/${CAP}</b>${rows}<div><span>🧪 물약</span><span>×${S.potions}</span></div>${matRow()}`;
@@ -731,6 +776,9 @@ function tryMove(e, vx, vy) { if (!blocked(e.x + vx, e.y + 8, 8, 6)) e.x += vx; 
 function updateDun(dt) {
   const P = player, st = pstats(), wild = dun.kind === "wild";
   for (const k of ["atkCd", "qCd", "eCd", "fCd", "rCd", "dash", "inv", "flash"]) P[k] = Math.max(0, P[k] - dt);
+  { const MW = dun.map[0].length, MH = dun.map.length, R = wild ? 10 : 7, px = P.x / T | 0, py = P.y / T | 0;
+    dun.seen ??= new Uint8Array(MW * MH);
+    for (let y = Math.max(0, py - R); y <= Math.min(MH - 1, py + R); y++) for (let x = Math.max(0, px - R); x <= Math.min(MW - 1, px + R); x++) if ((x - px) ** 2 + (y - py) ** 2 <= R * R) dun.seen[y * MW + x] = 1; }
   if (keys.has("Space") || keys.has("KeyZ")) attack();
   for (const m of dun.mons) {
     m.flash = Math.max(0, m.flash - dt); m.cd = Math.max(0, m.cd - dt);
@@ -767,7 +815,7 @@ function updateDun(dt) {
     for (const m of [...dun.mons]) if (!q.hit.has(m) && Math.hypot(m.x - q.x, m.y - q.y) < 22 + (m.boss ? 12 : 0)) { q.hit.add(m); hitMon(m, q.m); if (!q.pierce) { q.life = 0; break; } }
   }
   dun.proj = dun.proj.filter(q => q.life > 0);
-  for (let i = dun.regrow.length - 1; i >= 0; i--) { const r = dun.regrow[i]; r.t -= dt; if (r.t <= 0 && Math.floor(P.x / T) !== r.x) { dun.map[r.y][r.x] = r.c; dun.regrow.splice(i, 1); } }
+  for (let i = dun.regrow.length - 1; i >= 0; i--) { const r = dun.regrow[i]; r.t -= dt; if (r.t <= 0 && Math.hypot(P.x - (r.x + .5) * T, P.y - (r.y + .5) * T) > 30 && !dun.mons.some(m => Math.hypot(m.x - (r.x + .5) * T, m.y - (r.y + .5) * T) < 30)) { dun.map[r.y][r.x] = r.c; dun.regrow.splice(i, 1); } }
   if (wild && (dun.spawnT += dt) > 20) { dun.spawnT = 0; if (dun.mons.length < 32) spawnWild(dun, P); }
   for (let i = dun.loot.length - 1; i >= 0; i--) {
     const l = dun.loot[i], d = Math.hypot(P.x - l.x, P.y - l.y);
@@ -787,6 +835,20 @@ function updateDun(dt) {
   const near = p => Math.hypot(P.x - (p.x + .5) * T, P.y - (p.y + .5) * T) < 26;
   if (near(dun.exit)) leaveDungeon(false);
   else if (dun.stairs && near(dun.stairs)) { save(); enterDungeon(dun.depth + 1, true); heal(Math.round(pstats().maxhp * .25)); }
+}
+function drawMini() {
+  const MW = dun.map[0].length, MH = dun.map.length, wild = dun.kind === "wild", k = (wild ? 2 : 3) * (cv.clientWidth < 600 ? 1.5 : 1);
+  const ox = VW - MW * k - 12, oy = VH - MH * k - 12, seen = dun.seen, at = (x, y) => seen && seen[(y / T | 0) * MW + (x / T | 0)];
+  ctx.fillStyle = "rgba(10,8,20,.65)"; ctx.fillRect(ox - 3, oy - 3, MW * k + 6, MH * k + 6);
+  if (seen) for (let y = 0; y < MH; y++) for (let x = 0; x < MW; x++) {
+    if (!seen[y * MW + x]) continue; const c = dun.map[y][x];
+    ctx.fillStyle = c === "#" ? "#5a5470" : c === "w" ? "#4a9fd0" : c === "T" ? "#2f6b2f" : c === "R" ? "#999" : wild ? "#6aa84f" : "#8a86a8"; ctx.fillRect(ox + x * k, oy + y * k, k, k);
+  }
+  const dot = (x, y, col, r) => { ctx.fillStyle = col; ctx.beginPath(); ctx.arc(ox + x / T * k, oy + y / T * k, r, 0, 7); ctx.fill(); };
+  dot((dun.exit.x + .5) * T, (dun.exit.y + .5) * T, "#6ee7ff", k * .9);
+  if (dun.stairs && at((dun.stairs.x + .5) * T, (dun.stairs.y + .5) * T)) dot((dun.stairs.x + .5) * T, (dun.stairs.y + .5) * T, "#ffd34d", k * .9);
+  for (const m of dun.mons) if (at(m.x, m.y)) dot(m.x, m.y, m.boss ? "#ff9f1c" : m.wild && !m.hostile ? "#7be07b" : "#ff5a5a", k * (m.boss ? 1.4 : .8));
+  dot(player.x, player.y, "#ffffff", k * 1.1);
 }
 function drawDun() {
   const P = player, MW = dun.map[0].length, MH = dun.map.length, wild = dun.kind === "wild";
@@ -837,6 +899,7 @@ function drawDun() {
   ctx.restore();
   if (wild) { const d = darkness(); if (d > 0) { ctx.fillStyle = `rgba(14,22,78,${d})`; ctx.fillRect(0, 0, VW, VH); } }
   else { const g = ctx.createRadialGradient(P.x - cx, P.y - cy, 140, P.x - cx, P.y - cy, 420); g.addColorStop(0, "rgba(0,0,0,0)"); g.addColorStop(1, "rgba(5,3,15,.82)"); ctx.fillStyle = g; ctx.fillRect(0, 0, VW, VH); }
+  drawMini();
 }
 function catchFish() {
   const r = R();
@@ -855,28 +918,43 @@ function talk(v) {
 
 /* ---------- 입력 ---------- */
 const keys = new Set();
+function press(code) {
+  if (keys.has(code)) return;
+  keys.add(code);
+  if (!started) { if (code === "Space" || code === "Enter") begin(); return; }
+  if (code === "Escape" && modal) closeShop();
+  else if (code === "Space" || code === "KeyZ") act();
+  else if (scene === "dun" && code === "KeyQ") whirl();
+  else if (scene === "dun" && code === "KeyE") dash();
+  else if (scene === "dun" && code === "KeyF") drinkPotion();
+  else if (code === "KeyI") togglePanel("equip");
+  else if (code === "KeyK") togglePanel("char");
+  else if (code === "KeyC") togglePanel("craft");
+  else if (scene === "dun" && code === "KeyR") fireball();
+  else if (scene === "dun" && code === "KeyV") feed();
+  else if (scene === "dun" && code === "KeyG") toggleMount();
+  else if (code === "KeyX" && scene === "home") { const { tx, ty } = target(); if (pickUp(tx, ty)) save(); }
+  else if (code === "KeyT") { fast = !fast; if (!fast) { const d = new Date(); clock = d.getHours() + d.getMinutes() / 60; } say(fast ? "⏩ 시간이 빨리 흘러요 (T로 해제)" : "⏱️ 현재 시각으로 돌아왔어요"); }
+  else if (/^Digit[1-5]$/.test(code)) { player.tool = +code.slice(5) - 1; cancelFish(); hud(); }
+}
+function release(code) { keys.delete(code); }
 addEventListener("keydown", e => {
   if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space"].includes(e.code)) e.preventDefault();
   if (e.repeat) return;
-  keys.add(e.code);
-  if (!started) { if (e.code === "Space" || e.code === "Enter") begin(); return; }
-  if (e.code === "Escape" && modal) closeShop();
-  else if (e.code === "Space" || e.code === "KeyZ") act();
-  else if (scene === "dun" && e.code === "KeyQ") whirl();
-  else if (scene === "dun" && e.code === "KeyE") dash();
-  else if (scene === "dun" && e.code === "KeyF") drinkPotion();
-  else if (e.code === "KeyI") togglePanel("equip");
-  else if (e.code === "KeyK") togglePanel("char");
-  else if (e.code === "KeyC") togglePanel("craft");
-  else if (scene === "dun" && e.code === "KeyR") fireball();
-  else if (scene === "dun" && e.code === "KeyV") feed();
-  else if (scene === "dun" && e.code === "KeyG") toggleMount();
-  else if (e.code === "KeyX" && scene === "home") { const { tx, ty } = target(); if (pickUp(tx, ty)) save(); }
-  else if (e.code === "KeyT") { fast = !fast; if (!fast) { const d = new Date(); clock = d.getHours() + d.getMinutes() / 60; } say(fast ? "⏩ 시간이 빨리 흘러요 (T로 해제)" : "⏱️ 현재 시각으로 돌아왔어요"); }
-  else if (/^Digit[1-5]$/.test(e.code)) { player.tool = +e.code.slice(5) - 1; cancelFish(); hud(); }
+  press(e.code);
 });
-addEventListener("keyup", e => keys.delete(e.code));
+addEventListener("keyup", e => release(e.code));
 addEventListener("blur", () => keys.clear());
+document.querySelectorAll("#touch [data-k]").forEach(b => {
+  const codes = b.dataset.k.split(" ");
+  b.addEventListener("pointerdown", e => { e.preventDefault(); try { b.setPointerCapture(e.pointerId); } catch (_) {} b.classList.add("down"); codes.forEach(press); });
+  const up = () => { b.classList.remove("down"); codes.forEach(release); };
+  b.addEventListener("pointerup", up); b.addEventListener("pointercancel", up); b.addEventListener("lostpointercapture", up);
+});
+$("tinv").onclick = () => document.body.classList.toggle("showinv");
+$("reset").onclick = () => { if (confirm("저장 데이터를 지우고 새로 시작할까요?")) { resetting = true; try { localStorage.removeItem("pokgeun-maeul"); } catch (e) {} location.reload(); } };
+addEventListener("visibilitychange", () => { if (document.hidden) save(); });
+addEventListener("pagehide", save);
 function begin() { started = true; $("help").hidden = true; hud(); say("나무를 흔들고, 낚시하고, 곤충을 잡아 보세요!", 3500); }
 $("start").onclick = begin;
 
