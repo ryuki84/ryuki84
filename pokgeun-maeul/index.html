@@ -952,7 +952,11 @@ document.querySelectorAll("#touch [data-k]").forEach(b => {
   b.addEventListener("pointerup", up); b.addEventListener("pointercancel", up); b.addEventListener("lostpointercapture", up);
 });
 $("tinv").onclick = () => document.body.classList.toggle("showinv");
-$("reset").onclick = () => { if (confirm("저장 데이터를 지우고 새로 시작할까요?")) { resetting = true; try { localStorage.removeItem("pokgeun-maeul"); } catch (e) {} location.reload(); } };
+let resetArmed = false;
+$("reset").onclick = () => {
+  if (!resetArmed) { resetArmed = true; $("reset").textContent = "정말 지울까요? 한 번 더 누르세요"; setTimeout(() => { resetArmed = false; $("reset").textContent = "새로 시작"; }, 4000); return; }
+  resetting = true; try { localStorage.removeItem("pokgeun-maeul"); } catch (e) {} location.reload();
+};
 addEventListener("visibilitychange", () => { if (document.hidden) save(); });
 addEventListener("pagehide", save);
 function begin() { started = true; $("help").hidden = true; hud(); say("나무를 흔들고, 낚시하고, 곤충을 잡아 보세요!", 3500); }
