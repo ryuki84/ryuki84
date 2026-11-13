@@ -60,8 +60,9 @@
   #touch .row2 button { min-width:46px; height:38px; border-radius:10px; font-size:13px; padding:0 8px; }
   #touch .big { width:84px; height:84px; border-radius:50%; font-size:30px; }
   #touch button.down { filter:brightness(.82); transform:scale(.94); }
-  .td, .tw, .th { display:none; }
+  .td, .tw, .th, .tx { display:none; }
   body[data-scene="dun"] .td, body[data-scene="wild"] .td, body[data-scene="wild"] .tw, body[data-scene="home"] .th { display:block; }
+  body[data-scene="world"] .td, body[data-scene="world"] .tw, body[data-scene="world"] .th, body[data-scene="world"] .tx { display:block; }
   @media (max-width:760px), (pointer:coarse) {
     html, body { height:auto; min-height:100%; touch-action:manipulation; }
     #wrap { width:100%; aspect-ratio:auto; top:0; transform:none; margin:0; padding-bottom:16px; }
@@ -100,7 +101,7 @@
     <p>T: 시간 빨리감기 (낮/밤 구경용) · M: 소리 켜기/끄기</p>
     <p>🏠 집 문 앞에서 스페이스 → 실내 꾸미기 (가구는 상점에서 구매)</p>
     <p>⛰️ 던전 입구(오른쪽 위): 스페이스 공격 · Q 회전베기 · E 구르기 · F 물약 · R 화염구</p>
-    <p>🌴 야생 지대(왼쪽 입구): 나무·돌 채집, V 먹이주기(길들이기), G 탈것</p>
+    <p>🌍 오픈월드(왼쪽 입구): 끝없는 대륙 탐험 · 채집 · 건설(B) · 의뢰(J) · 지도(N) · V 길들이기 · G 탈것</p>
     <p>I 장비 · K 캐릭터(스탯/스킬/동료) · C 제작</p>
     <p>🏪 상점에서 열매·물고기·곤충을 팔고 묘목을 사 보세요!</p>
     <p>📱 폰에서는 화면 아래 버튼으로 조작해요 (🎒 = 주머니 보기)</p>
@@ -118,7 +119,7 @@
     </div>
     <div class="acts">
       <div class="row2"><button data-k="KeyI">장비</button><button data-k="KeyK">캐릭터</button><button data-k="KeyC">제작</button><button id="tinv">🎒</button></div>
-      <div class="row2"><button class="td" data-k="KeyQ">Q</button><button class="td" data-k="KeyE">E</button><button class="td" data-k="KeyR">R</button><button class="td" data-k="KeyF">F</button><button class="tw" data-k="KeyV">V</button><button class="tw" data-k="KeyG">G</button><button class="th" data-k="KeyX">집기</button></div>
+      <div class="row2"><button class="td" data-k="KeyQ">Q</button><button class="td" data-k="KeyE">E</button><button class="td" data-k="KeyR">R</button><button class="td" data-k="KeyF">F</button><button class="tw" data-k="KeyV">V</button><button class="tw" data-k="KeyG">G</button><button class="th" data-k="KeyX">집기</button><button class="tx" data-k="KeyB">건설</button><button class="tx" data-k="KeyN">지도</button><button class="tx" data-k="KeyJ">의뢰</button></div>
       <button class="big" data-k="Space">A</button>
     </div>
   </div>
@@ -173,7 +174,7 @@ const ri = n => Math.random() * n | 0;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 let uidN = Date.now(); const uid = () => ++uidN;
 const WILDG = { x: 0, y: 8, w: 2, h: 2 };
-const MAT = { wood: ["🪵", "나무"], stone: ["🪨", "돌"], fiber: ["🌿", "섬유"], berry: ["🫐", "열매"], meat: ["🥩", "고기"], hide: ["🐾", "가죽"], bone: ["🦴", "뼈"] };
+const MAT = { wood: ["🪵", "나무"], stone: ["🪨", "돌"], fiber: ["🌿", "섬유"], berry: ["🫐", "열매"], meat: ["🥩", "고기"], hide: ["🐾", "가죽"], bone: ["🦴", "뼈"], ore: ["🔩", "철광석"] };
 const DINOS = [
   { e: "🦎", n: "도마뱀", hp: 20, dmg: 4, spd: 90, xp: 5, tame: 3, ride: false },
   { e: "🐗", n: "멧돼지", hp: 45, dmg: 8, spd: 80, xp: 9, tame: 4, ride: true },
@@ -246,14 +247,15 @@ scatter(6, (x, y) => { if (seedTrees.some(t => t.x === x && t.y === y) || flower
 let S = { bells: 200, inv: { sapling: 1 }, trees: seedTrees, fin: { chair: 1, plant: 1 }, room: [] };
 try { const raw = localStorage.getItem("pokgeun-maeul"); if (raw) S = JSON.parse(raw); } catch (e) {}
 let resetting = false;
-function save() { if (resetting) return; try { localStorage.setItem("pokgeun-maeul", JSON.stringify(S)); } catch (e) {} }
+function save() { if (resetting) return; try { if (WORLD) { let q = ""; const d = WORLD.disc; for (let i = 0; i < d.length; i++) q += d[i] ? "1" : "0"; S.disc = q; } localStorage.setItem("pokgeun-maeul", JSON.stringify(S)); } catch (e) {} }
 S.fin = S.fin || {}; S.room = S.room || [];
 S.lv = S.lv || 1; S.xp = S.xp || 0; S.potions = S.potions ?? 2; S.bag = S.bag || []; S.best = S.best || 0;
 S.eq = S.eq || { weapon: { id: 1, slot: "weapon", e: "🗡️", n: "나무 칼", rar: 0, ilvl: 1, st: { dmg: 3 }, price: 10 }, armor: null, ring: null };
 if (!S.st) { S.st = { str: 0, dex: 0, vit: 0 }; S.sk = { whirl: 1, fire: 0, tough: 0, tamer: 0 }; S.pts = (S.lv - 1) * 5; S.sp = S.lv - 1; }
 S.mat = S.mat || { wood: 0, stone: 0, fiber: 0, berry: 0, meat: 0, hide: 0, bone: 0 }; S.pets = S.pets || []; S.petA = S.petA ?? -1;
+S.mat.ore = S.mat.ore || 0; S.wedits = S.wedits || {}; S.wreg = S.wreg || {}; S.wp = S.wp || {}; S.wopen = S.wopen || {}; S.wcl = S.wcl || {}; S.quests = S.quests || []; S.qoffer = S.qoffer || null; S.crops = S.crops || {}; S.disc = S.disc || "";
 const trees = S.trees;
-let scene = "out", furnSel = null, dun = null;
+let scene = "out", furnSel = null, dun = null, WORLD = null, buildSel = null;
 (() => { const z = (x, y) => (x >= 25 && x <= 28 && y >= 1 && y <= 5) || (x <= 3 && y >= 6 && y <= 12);
   for (let i = flowers.length - 1; i >= 0; i--) if (z(flowers[i].x, flowers[i].y)) flowers.splice(i, 1);
   for (let i = rocks.length - 1; i >= 0; i--) if (z(rocks[i].x, rocks[i].y)) rocks.splice(i, 1);
@@ -280,6 +282,7 @@ function roomSolid(x, y) {
 }
 function solidTile(x, y) {
   if (scene === "home") return roomSolid(x, y);
+  if (scene === "dun" && dun.kind === "world") return wsolid(x, y);
   if (scene === "dun") { const c = dun.map[y]?.[x]; return c === undefined || c === "#" || c === "w" || c === "T" || c === "R"; }
   if (x < 0 || y < 0 || x >= W || y >= H) return true;
   return terrain[y][x] === "w" || inRect(HOUSE, x, y) || inRect(SHOP, x, y) || inRect(CAVE, x, y) || inRect(WILDG, x, y) || !!treeAt(x, y) || !!rockAt(x, y);
@@ -303,7 +306,7 @@ function add(id, n = 1) {
   S.inv[id] = (S.inv[id] || 0) + n; hud(); return true;
 }
 function hud() {
-  document.body.dataset.scene = scene === "dun" && dun && dun.kind === "wild" ? "wild" : scene;
+  document.body.dataset.scene = scene === "dun" && dun ? (dun.kind === "wild" ? "wild" : dun.kind === "world" ? "world" : "dun") : scene;
   $("bells").textContent = `🔔 ${S.bells.toLocaleString()} 벨 · ⚔️ Lv.${S.lv}${S.pts + S.sp > 0 ? " ✨" : ""}`;
   const rows = Object.entries(S.inv).filter(([, v]) => v > 0).map(([k, v]) => `<div><span>${ITEMS[k].e} ${ITEMS[k].n}</span><span>×${v}</span></div>`).join("");
   $("inv").innerHTML = `<b>🎒 주머니 ${count()}/${CAP}</b>${rows}<div><span>🧪 물약</span><span>×${S.potions}</span></div>${matRow()}`;
@@ -391,7 +394,7 @@ function act() {
   if (v) return talk(v);
   if (inRect(SHOP, tx, ty)) return openShop();
   if (inRect(CAVE, tx, ty)) return enterDungeon(1);
-  if (inRect(WILDG, tx, ty)) return enterDungeon(1, false, "wild");
+  if (inRect(WILDG, tx, ty)) return enterWorld();
   if (inRect(HOUSE, tx, ty)) return enterHome();
   const tool = player.tool;
   if (tool === 0) {
@@ -509,6 +512,8 @@ const RECIPES = [
   { e: "🛡️", n: "뼈 갑옷 (희귀)", cost: { hide: 6, bone: 6, fiber: 4 }, make: () => genGear(craftIlvl(), 0, { slot: "armor", rar: 2, pre: "뼈" }) },
   { e: "💍", n: "뼈 반지 (희귀)", cost: { bone: 4, fiber: 2 }, make: () => genGear(craftIlvl(), 0, { slot: "ring", rar: 2, pre: "뼈" }) },
   { e: "🧪", n: "약초 물약", cost: { berry: 3, fiber: 1 }, make: null },
+  { e: "⚔️", n: "철 무기 (희귀)", cost: { ore: 6, wood: 2 }, make: () => genGear(craftIlvl() + 1, 0, { slot: "weapon", rar: 2, pre: "철" }) },
+  { e: "🛡️", n: "철 갑옷 (희귀)", cost: { ore: 8, hide: 4 }, make: () => genGear(craftIlvl() + 1, 0, { slot: "armor", rar: 2, pre: "철" }) },
   { e: "👑", n: "공룡왕의 장비 (전설)", cost: { hide: 12, bone: 12, stone: 10, wood: 10 }, make: () => genGear(craftIlvl() + 2, 0, { rar: 3, pre: "공룡왕의" }) },
 ];
 function craft(i) {
@@ -549,14 +554,20 @@ function bodyCraft() {
   }).join("");
 }
 function renderGear() {
-  const tabs = [["equip", "⚔️ 장비 (I)"], ["char", "📜 캐릭터 (K)"], ["craft", "🔨 제작 (C)"]].map(([k, l]) => `<button data-tab="${k}" style="margin:0 6px 8px 0;padding:3px 10px;${gearTab === k ? "background:#fff" : ""}">${l}</button>`).join("");
-  $("gear").innerHTML = tabs + (gearTab === "char" ? bodyChar() : gearTab === "craft" ? bodyCraft() : bodyEquip()) + `<button id="closeGear">닫기</button>`;
+  const tabs = [["equip", "⚔️ 장비 (I)"], ["char", "📜 캐릭터 (K)"], ["craft", "🔨 제작 (C)"], ["build", "🏗️ 건설 (B)"], ["quest", "📜 의뢰 (J)"], ["map", "🗺️ 지도 (N)"]].map(([k, l]) => `<button data-tab="${k}" style="margin:0 6px 8px 0;padding:3px 10px;${gearTab === k ? "background:#fff" : ""}">${l}</button>`).join("");
+  $("gear").innerHTML = tabs + (gearTab === "char" ? bodyChar() : gearTab === "craft" ? bodyCraft() : gearTab === "build" ? bodyBuild() : gearTab === "quest" ? bodyQuest() : gearTab === "map" ? bodyMap() : bodyEquip()) + `<button id="closeGear">닫기</button>`;
+  if (gearTab === "map") drawWorldMap();
 }
 $("gear").addEventListener("click", e => {
   const t = e.target, d = t.dataset || {};
   if (t.id === "closeGear") return closeShop();
   if (d.tab) { gearTab = d.tab; return renderGear(); }
   if (d.craft !== undefined) return craft(+d.craft);
+  if (t.id === "qreroll") { S.qoffer = genOffers(); return renderGear(); }
+  if (d.build !== undefined) { if (!(scene === "dun" && dun.kind === "world")) return say("🏗️ 건설은 오픈월드에서만 할 수 있어요.", 1800); buildSel = BUILD[+d.build]; closeShop(); say(`${buildSel.e} ${buildSel.n} — 스페이스: 놓기 · X: 철거 · B: 끄기 · 1~6: 조각 변경`, 3500); return; }
+  if (d.qacc) { const q = S.qoffer.find(o => o.id == d.qacc); if (q && S.quests.length < 4) { S.quests.push(q); S.qoffer = S.qoffer.filter(o => o !== q); sfx("pick"); hud(); } return renderGear(); }
+  if (d.qturn) { turnIn(+d.qturn); return renderGear(); }
+  if (d.warp) return warpTo(d.warp);
   if (d.stat) { if (S.pts > 0) { S.st[d.stat]++; S.pts--; } }
   else if (d.skill) { if (S.sp > 0 && S.sk[d.skill] < 10 && (d.skill !== "fire" || S.lv >= 3)) { S.sk[d.skill]++; S.sp--; } }
   else if (d.pet !== undefined) { const i = +d.pet; S.petA = S.petA === i ? -1 : i; if (scene === "dun" && dun) dun.pet = activePet() ? { x: player.x, y: player.y, cd: 0 } : null; }
@@ -580,12 +591,12 @@ function matRow() { const s = Object.entries(MAT).filter(([k]) => S.mat[k] > 0).
 function renderRpg() {
   const el = $("rpg");
   if (scene !== "dun" || !dun) { el.hidden = true; return; }
-  const st = pstats(), P = player, cd = v => v > 0 ? v.toFixed(1) + "s" : "준비", wild = dun.kind === "wild";
+  const st = pstats(), P = player, cd = v => v > 0 ? v.toFixed(1) + "s" : "준비", world = dun.kind === "world", wild = dun.kind === "wild" || world;
   el.hidden = false;
   el.innerHTML = `<div class="bar"><i class="hp" style="width:${clamp(P.hp / st.maxhp * 100, 0, 100)}%"></i><span>❤️ ${Math.max(0, Math.ceil(P.hp))}/${st.maxhp}</span></div>
     <div class="bar"><i class="xp" style="width:${S.xp / xpNeed(S.lv) * 100}%"></i><span>Lv.${S.lv} · ${S.xp}/${xpNeed(S.lv)}</span></div>
-    <div class="sk"><b>스페이스</b> 공격${wild ? "·채집" : ""} · <b>Q</b> 회전 ${cd(P.qCd)}<br><b>E</b> 구르기 ${cd(P.eCd)} · <b>R</b> 화염구 ${skLv("fire") ? cd(P.rCd) : "미습득"}<br><b>F</b> 🧪×${S.potions}${wild ? " · <b>V</b> 먹이주기 · <b>G</b> 탈것" : ""}<br><b>I</b> 장비 · <b>K</b> 캐릭터 · <b>C</b> 제작</div>
-    <div>${wild ? "🌴 야생 지대" : `🕳️ 지하 ${dun.depth}층`} · 몬스터 ${dun.mons.length}마리${S.pts + S.sp > 0 ? " · ✨포인트!" : ""}</div>`;
+    <div class="sk"><b>스페이스</b> 공격${wild ? "·채집" : ""} · <b>Q</b> 회전 ${cd(P.qCd)}<br><b>E</b> 구르기 ${cd(P.eCd)} · <b>R</b> 화염구 ${skLv("fire") ? cd(P.rCd) : "미습득"}<br><b>F</b> 🧪×${S.potions}${wild ? " · <b>V</b> 먹이주기 · <b>G</b> 탈것" : ""}<br><b>I</b> 장비 · <b>K</b> 캐릭터 · <b>C</b> 제작${world ? " · <b>B</b> 건설 · <b>N</b> 지도 · <b>J</b> 의뢰" : ""}</div>
+    <div>${world ? worldInfo() : wild ? "🌴 야생 지대" : `🕳️ 지하 ${dun.depth}층`} · 몬스터 ${dun.mons.length}마리${S.pts + S.sp > 0 ? " · ✨포인트!" : ""}</div>${questLine() ? `<div>${questLine()}</div>` : ""}`;
 }
 function newDun(o) { return { depth: 1, mons: [], loot: [], fx: [], arcs: [], proj: [], nhp: {}, regrow: [], spawnT: 0, stairs: null, pet: null, ...o }; }
 function genDun(depth) {
@@ -654,8 +665,8 @@ function genWild() {
   d.mons.push(mkDino(4, 5, (w - 6 + .5) * T, 5.5 * T, true));
   return d;
 }
-function enterDungeon(depth, keepHp, kind) {
-  cancelFish(); scene = "dun"; dun = kind === "wild" ? genWild() : genDun(depth); sfx("portal");
+function enterDungeon(depth, keepHp, kind, ret) {
+  cancelFish(); scene = "dun"; dun = kind === "wild" ? genWild() : genDun(depth); dun.ret = ret || null; camInit = false; sfx("portal");
   const P = player; P.x = (dun.exit.x + 1.5) * T; P.y = (dun.exit.y + .5) * T; P.dx = 1; P.dy = 0; P.mounted = false;
   P.atkCd = P.qCd = P.eCd = P.fCd = P.rCd = P.dash = P.inv = 0;
   if (!keepHp) P.hp = pstats().maxhp;
@@ -664,16 +675,21 @@ function enterDungeon(depth, keepHp, kind) {
   hud();
   say(kind === "wild" ? "🌴 야생 지대 — 나무·돌을 모으고 공룡을 길들여 보세요!" : depth % 5 === 0 ? `🐲 지하 ${depth}층 — 보스가 있어요!` : `🕳️ 지하 ${depth}층`, 3000);
 }
-function leaveDungeon(dead) {
-  const wild = dun.kind === "wild", P = player;
+function leaveDungeon(dead, village) {
+  const P = player, wild = dun.kind === "wild", world = dun.kind === "world", ret = dun.ret;
+  if ((world && !village) || ret) {   // 오픈월드로 복귀 (사망 시 리스폰 지점으로)
+    sfx(dead ? "die" : "portal"); P.hp = pstats().maxhp; let pos = ret || undefined;
+    if (dead) { S.bells = Math.floor(S.bells * .9); pos = S.wspawn || undefined; }
+    enterWorld(pos, dead ? "💀 쓰러졌어요… 벨의 10%를 잃고 리스폰 지점으로 돌아왔어요." : "🌍 오픈월드로 돌아왔어요."); save(); return;
+  }
   scene = "out"; dun = null; P.mounted = false;
-  if (wild) { P.x = 1 * T; P.y = 10.5 * T; } else { P.x = (CAVE.x + 1) * T; P.y = 4.5 * T; }
+  if (wild || world) { P.x = 1 * T; P.y = 10.5 * T; } else { P.x = (CAVE.x + 1) * T; P.y = 4.5 * T; }
   P.dx = 0; P.dy = 1; P.hp = pstats().maxhp;
   sfx(dead ? "die" : "portal");
   if (dead) { S.bells = Math.floor(S.bells * .9); say("💀 쓰러졌어요… 벨의 10%를 잃었어요."); } else say("마을로 돌아왔어요 🏡");
   hud(); save();
 }
-function fx(x, y, txt, col) { dun.fx.push({ x, y, txt, col, t: .9 }); }
+function fx(x, y, txt, col) { if (!dun) return; dun.fx.push({ x, y, txt, col, t: .9 }); }
 function heal(n) { const m = pstats().maxhp; player.hp = Math.min(m, player.hp + n); }
 function gainXp(n) {
   S.xp += n;
@@ -689,7 +705,7 @@ function petXp(n) {
   pe.xp += n * .6;
   while (pe.xp >= pe.lv * 40 && pe.lv < 20) { pe.xp -= pe.lv * 40; pe.lv++; say(`🐾 ${DINOS[pe.idx].e} 동료가 Lv.${pe.lv}이 되었어요!`, 2000); }
 }
-function matAdd(k, n) { S.mat[k] = (S.mat[k] || 0) + n; fx(player.x, player.y - 26 - (dun.fx.length % 4) * 14, `${MAT[k][0]}+${n}`, "#ffffff"); hud(); }
+function matAdd(k, n) { S.mat[k] = (S.mat[k] || 0) + n; fx(player.x, player.y - 26 - (dun.fx.length % 4) * 14, `${MAT[k][0]}+${n}`, "#ffffff"); qEvent("mat", k, n); hud(); }
 function hitMon(m, mult) {
   const st = pstats(), crit = Math.random() * 100 < st.crit, d = Math.max(1, Math.round(st.dmg * mult * (.85 + Math.random() * .3) * (crit ? 2 : 1)));
   m.hp -= d; m.flash = .12; m.kb = .12; if (m.wild) m.hostile = true;
@@ -706,11 +722,11 @@ function petHit(m, pe) {
 }
 function killMon(m) {
   const i = dun.mons.indexOf(m); if (i < 0) return;
-  dun.mons.splice(i, 1); gainXp(m.xp); if (dun.pet) petXp(m.xp);
+  dun.mons.splice(i, 1); gainXp(m.xp); if (dun.pet) petXp(m.xp); qEvent("kill", m); if (m.poi && !dun.mons.some(o => o.poi === m.poi)) clearPoi(m.poi);
   burst(m.x, m.y, m.boss ? 40 : 14, ["#fff", "#e8505a", "#5c5f6e"], m.boss ? 160 : 110, .6); sfx("kill"); if (m.boss) shake = Math.max(shake, 8);
   const wild = !!m.wild, sp = () => ({ x: m.x + (Math.random() - .5) * 30, y: m.y + (Math.random() - .5) * 30 });
-  dun.loot.push({ t: "bell", n: wild ? Math.round((2 + ri(4)) * (1 + m.tier * .4) * (m.boss ? 6 : 1)) : Math.round((3 + ri(6)) * (1 + dun.depth * .3) * (m.boss ? 6 : 1)), ...sp() });
-  const ilvl = Math.max(1, Math.round((wild ? 2 + m.tier * 2 : dun.depth * 1.5) + S.lv * .5));
+  dun.loot.push({ t: "bell", n: wild ? Math.round((2 + ri(4)) * (1 + m.tier * .4) * (m.boss ? 6 : 1)) : Math.round((3 + ri(6)) * (1 + (m.dpt || dun.depth) * .3) * (m.boss ? 6 : 1)), ...sp() });
+  const ilvl = Math.max(1, Math.round((wild ? 2 + m.tier * 2 : (m.dpt || dun.depth) * 1.5) + S.lv * .5));
   if (m.boss) for (let k = 0; k < 2; k++) dun.loot.push({ t: "gear", it: genGear(ilvl, 3), ...sp() });
   else if (Math.random() < (wild ? .12 : .2)) dun.loot.push({ t: "gear", it: genGear(ilvl), ...sp() });
   if (Math.random() < .07) dun.loot.push({ t: "pot", ...sp() });
@@ -737,11 +753,12 @@ function gatherNode() {
     return;
   }
 }
-function attack() {
+function attack(held) {
   if (scene !== "dun" || modal) return; const P = player, st = pstats();
+  if (dun.kind === "world") { if (!held && worldAct()) return; if (buildSel) return; }
   if (P.atkCd > 0) return; P.atkCd = .42 / st.as; sfx("swing"); dun.arcs.push({ a: Math.atan2(P.dy, P.dx), t: .15, r: 58, whirl: false });
   for (const m of [...dun.mons]) { const dx = m.x - P.x, dy = m.y - P.y, d = Math.hypot(dx, dy); if (d < 58 + (m.boss ? 12 : 0) && (dx * P.dx + dy * P.dy) / (d || 1) > .1) hitMon(m, 1); }
-  if (dun.kind === "wild") gatherNode();
+  if (dun.kind === "wild") gatherNode(); else if (dun.kind === "world") worldGather();
 }
 function whirl() {
   const P = player; if (scene !== "dun" || P.qCd > 0 || modal) return; const L = skLv("whirl"), r = 84 + 4 * (L - 1);
@@ -762,7 +779,7 @@ function drinkPotion() {
   sfx("potion"); burst(P.x, P.y, 10, ["#7bd88f", "#fff"], 60, .5, -60); S.potions--; P.fCd = 1; heal(Math.round(m * .45)); fx(P.x, P.y - 24, "+HP", "#7bd88f"); hud();
 }
 function feed() {
-  const P = player; if (scene !== "dun" || modal || dun.kind !== "wild") return;
+  const P = player; if (scene !== "dun" || modal || !(dun.kind === "wild" || dun.kind === "world")) return;
   const m = dun.mons.filter(m => m.tame && Math.hypot(m.x - P.x, m.y - P.y) < 80).sort((a, b) => Math.hypot(a.x - P.x, a.y - P.y) - Math.hypot(b.x - P.x, b.y - P.y))[0];
   if (!m) return say("가까이에 길들일 수 있는 공룡이 없어요. (V: 먹이주기)", 1800);
   if (m.hostile && m.hp > m.mhp * .5) return say(`${m.e} 너무 난폭해요! 체력을 절반 이하로 줄인 뒤 먹이를 주세요.`, 2500);
@@ -787,12 +804,12 @@ function toggleMount() {
 }
 function tryMove(e, vx, vy) { if (!blocked(e.x + vx, e.y + 8, 8, 6)) e.x += vx; if (!blocked(e.x, e.y + 8 + vy, 8, 6)) e.y += vy; }
 function updateDun(dt) {
-  const P = player, st = pstats(), wild = dun.kind === "wild";
+  const P = player, st = pstats(), wild = dun.kind === "wild", world = dun.kind === "world";
   for (const k of ["atkCd", "qCd", "eCd", "fCd", "rCd", "dash", "inv", "flash"]) P[k] = Math.max(0, P[k] - dt);
-  { const MW = dun.map[0].length, MH = dun.map.length, R = wild ? 10 : 7, px = P.x / T | 0, py = P.y / T | 0;
+  if (!world) { const MW = dun.map[0].length, MH = dun.map.length, R = wild ? 10 : 7, px = P.x / T | 0, py = P.y / T | 0;
     dun.seen ??= new Uint8Array(MW * MH);
     for (let y = Math.max(0, py - R); y <= Math.min(MH - 1, py + R); y++) for (let x = Math.max(0, px - R); x <= Math.min(MW - 1, px + R); x++) if ((x - px) ** 2 + (y - py) ** 2 <= R * R) dun.seen[y * MW + x] = 1; }
-  if (keys.has("Space") || keys.has("KeyZ")) attack();
+  if (keys.has("Space") || keys.has("KeyZ")) attack(true);
   for (const m of dun.mons) {
     m.flash = Math.max(0, m.flash - dt); m.cd = Math.max(0, m.cd - dt);
     const dx = P.x - m.x, dy = P.y - m.y, d = Math.hypot(dx, dy);
@@ -829,6 +846,7 @@ function updateDun(dt) {
   }
   dun.proj = dun.proj.filter(q => q.life > 0);
   for (let i = dun.regrow.length - 1; i >= 0; i--) { const r = dun.regrow[i]; r.t -= dt; if (r.t <= 0 && Math.hypot(P.x - (r.x + .5) * T, P.y - (r.y + .5) * T) > 30 && !dun.mons.some(m => Math.hypot(m.x - (r.x + .5) * T, m.y - (r.y + .5) * T) < 30)) { dun.map[r.y][r.x] = r.c; dun.regrow.splice(i, 1); } }
+  if (world) worldTick(dt);
   if (wild && (dun.spawnT += dt) > 20) { dun.spawnT = 0; if (dun.mons.length < 32) spawnWild(dun, P); }
   for (let i = dun.loot.length - 1; i >= 0; i--) {
     const l = dun.loot[i], d = Math.hypot(P.x - l.x, P.y - l.y);
@@ -846,7 +864,7 @@ function updateDun(dt) {
   for (const f of dun.fx) { f.t -= dt; f.y -= 22 * dt; } dun.fx = dun.fx.filter(f => f.t > 0);
   for (const a of dun.arcs) a.t -= dt; dun.arcs = dun.arcs.filter(a => a.t > 0);
   const near = p => Math.hypot(P.x - (p.x + .5) * T, P.y - (p.y + .5) * T) < 26;
-  if (near(dun.exit)) leaveDungeon(false);
+  if (dun.exit && near(dun.exit)) leaveDungeon(false);
   else if (dun.stairs && near(dun.stairs)) { save(); enterDungeon(dun.depth + 1, true); heal(Math.round(pstats().maxhp * .25)); }
 }
 function catchFish() {
@@ -881,9 +899,14 @@ function press(code) {
   else if (scene === "dun" && code === "KeyR") fireball();
   else if (scene === "dun" && code === "KeyV") feed();
   else if (scene === "dun" && code === "KeyG") toggleMount();
+  else if (code === "KeyB") { if (buildSel) { buildSel = null; say("건설 모드를 껐어요.", 1200); } else togglePanel("build"); }
+  else if (code === "KeyJ") togglePanel("quest");
+  else if (code === "KeyN") togglePanel("map");
+  else if (code === "KeyX" && scene === "dun" && dun.kind === "world") worldRemove();
   else if (code === "KeyX" && scene === "home") { const { tx, ty } = target(); if (pickUp(tx, ty)) save(); }
   else if (code === "KeyM") { setMute(!muted); sfx("ui"); }
   else if (code === "KeyT") { fast = !fast; if (!fast) { const d = new Date(); clock = d.getHours() + d.getMinutes() / 60; } say(fast ? "⏩ 시간이 빨리 흘러요 (T로 해제)" : "⏱️ 현재 시각으로 돌아왔어요"); }
+  else if (buildSel && scene === "dun" && /^Digit[1-6]$/.test(code)) { buildSel = BUILD[+code.slice(5) - 1]; say(`${buildSel.e} ${buildSel.n}`, 1200); }
   else if (/^Digit[1-5]$/.test(code)) { player.tool = +code.slice(5) - 1; cancelFish(); hud(); }
 }
 function release(code) { keys.delete(code); }
@@ -1009,17 +1032,17 @@ const Mu = c => { const m = new THREE.MeshToonMaterial({ color: c, gradientMap: 
 const M = c => { let m = MCACHE.get(c); if (!m) { m = new THREE.MeshToonMaterial({ color: c, gradientMap: gradTex }); MCACHE.set(c, m); } return m; };
 const uq = f => { UNIQ = true; try { return f(); } finally { UNIQ = false; } };
 const geo = (k, f) => GC[k] || (GC[k] = f());
-function add(par, geom, col, x = 0, y = 0, z = 0, o = {}) {
+function addM(par, geom, col, x = 0, y = 0, z = 0, o = {}) {
   const m = new THREE.Mesh(geom, UNIQ ? Mu(col) : M(col));
   m.position.set(x, y, z); if (o.s) m.scale.set(o.s[0], o.s[1], o.s[2]); if (o.r) m.rotation.set(o.r[0], o.r[1], o.r[2]);
   m.castShadow = o.cs !== false; m.receiveShadow = !!o.rs; par.add(m); return m;
 }
-const B = (p, w, h, d, c, x, y, z, o) => add(p, geo(`b${w},${h},${d}`, () => new THREE.BoxGeometry(w, h, d)), c, x, y, z, o);
-const Sp = (p, r, c, x, y, z, o) => add(p, geo(`s${r}`, () => new THREE.SphereGeometry(r, 12, 9)), c, x, y, z, o);
-const C = (p, rt, rb, h, c, x, y, z, n = 8, o) => add(p, geo(`c${rt},${rb},${h},${n}`, () => new THREE.CylinderGeometry(rt, rb, h, n)), c, x, y, z, o);
-const K = (p, r, h, c, x, y, z, n = 7, o) => add(p, geo(`k${r},${h},${n}`, () => new THREE.ConeGeometry(r, h, n)), c, x, y, z, o);
-const I = (p, r, c, x, y, z, o) => add(p, geo(`i${r}`, () => new THREE.IcosahedronGeometry(r, 0)), c, x, y, z, o);
-const TR = (p, r, t, c, x, y, z, o) => add(p, geo(`t${r},${t}`, () => new THREE.TorusGeometry(r, t, 6, 14)), c, x, y, z, o);
+const B = (p, w, h, d, c, x, y, z, o) => addM(p, geo(`b${w},${h},${d}`, () => new THREE.BoxGeometry(w, h, d)), c, x, y, z, o);
+const Sp = (p, r, c, x, y, z, o) => addM(p, geo(`s${r}`, () => new THREE.SphereGeometry(r, 12, 9)), c, x, y, z, o);
+const C = (p, rt, rb, h, c, x, y, z, n = 8, o) => addM(p, geo(`c${rt},${rb},${h},${n}`, () => new THREE.CylinderGeometry(rt, rb, h, n)), c, x, y, z, o);
+const K = (p, r, h, c, x, y, z, n = 7, o) => addM(p, geo(`k${r},${h},${n}`, () => new THREE.ConeGeometry(r, h, n)), c, x, y, z, o);
+const I = (p, r, c, x, y, z, o) => addM(p, geo(`i${r}`, () => new THREE.IcosahedronGeometry(r, 0)), c, x, y, z, o);
+const TR = (p, r, t, c, x, y, z, o) => addM(p, geo(`t${r},${t}`, () => new THREE.TorusGeometry(r, t, 6, 14)), c, x, y, z, o);
 const HALF = Math.PI / 2;
 const OUTM = new THREE.MeshBasicMaterial({ color: INK, side: THREE.BackSide });
 function outline(g, t = 1.1) {
@@ -1335,7 +1358,7 @@ function groups() {
   G.pts = new THREE.Points(pg, new THREE.PointsMaterial({ size: .14, vertexColors: true, sizeAttenuation: true, transparent: true })); G.pts.frustumCulled = false; S3.add(G.pts);
   return G;
 }
-function showScene(k) { const g = groups(); if (g.cur !== k) { g.cur = k; camInit = false; } g.village.visible = k === "village"; g.home.visible = k === "home"; g.dyn.visible = k === "dun"; g.far.visible = k === "village" || k === "wild"; }
+function showScene(k) { const g = groups(); if (g.wgrp) { g.wgrp.visible = false; g.sea.visible = false; } if (g.cur !== k) { g.cur = k; camInit = false; } g.village.visible = k === "village"; g.home.visible = k === "home"; g.dyn.visible = k === "dun"; g.far.visible = k === "village" || k === "wild"; }
 
 /* ----- 라벨 · 파티클 · 환경 ----- */
 function labelT(text, x, z, h, col) { labels.push({ t: text, x, z, h, col: col || "#fff3d6", box: true }); }
@@ -1452,7 +1475,7 @@ function drawVillage() {
   }
   if (night) { for (const wx of [-.9, .9]) light(HOUSE.x + HOUSE.w / 2 + wx, HOUSE.y + HOUSE.h / 2 + 1.1, 4.5, 0xffd870, .8, 1.3); light(SHOP.x + SHOP.w / 2, SHOP.y + SHOP.h / 2 + 1.2, 5, 0xffd870, 1, 1.4); light(G.gateX - .75, G.gateZ, 4, 0xffa534, 2, 1.3); light(G.gateX + .75, G.gateZ, 4, 0xffa534, 2, 1.3); }
   PL0.x = P.x / T; PL0.z = pz; PL0.r = night ? 6 : 3; PL0.i = night ? 1.5 : .0; PL0.h = 1.8; PL0.c = 0xffd9a0;
-  labelT("내 집", HOUSE.x + HOUSE.w / 2, HOUSE.y + HOUSE.h + .3, .3); labelT("다람쥐 상점", SHOP.x + SHOP.w / 2, SHOP.y + SHOP.h + .3, .3); labelT("던전 입구", CAVE.x + CAVE.w / 2, CAVE.y + CAVE.h + .35, .3); labelT("야생 지대", G.gateX, G.gateZ + .3, .3);
+  labelT("내 집", HOUSE.x + HOUSE.w / 2, HOUSE.y + HOUSE.h + .3, .3); labelT("다람쥐 상점", SHOP.x + SHOP.w / 2, SHOP.y + SHOP.h + .3, .3); labelT("던전 입구", CAVE.x + CAVE.w / 2, CAVE.y + CAVE.h + .35, .3); labelT("오픈월드", G.gateX, G.gateZ + .3, .3);
   if (started && !modal) { const { tx, ty } = target(); cursorAt(tx, ty, terrain[ty] && terrain[ty][tx] === "w" ? -.1 : .03); } else G.cursor.visible = false;
   follow(P.x / T, pz, W, H, D); finish(D); overlay();
 }
@@ -1488,6 +1511,7 @@ function drawHome() {
 
 /* ----- 던전 · 야생 ----- */
 function drawMini() {
+  if (dun.kind === "world") return drawMiniWorld();
   const MW = dun.map[0].length, MH = dun.map.length, wild = dun.kind === "wild", k = (wild ? 2 : 3) * (ov.clientWidth < 600 ? 1.5 : 1);
   const ox = VW - MW * k - 12, oy = VH - MH * k - 12, seen = dun.seen, at = (x, y) => seen && seen[(y / T | 0) * MW + (x / T | 0)];
   ctx.fillStyle = "rgba(10,8,20,.65)"; ctx.fillRect(ox - 3, oy - 3, MW * k + 6, MH * k + 6);
@@ -1519,10 +1543,11 @@ function buildDun() {
   d3.name = "dun3"; G.dyn.add(d3); dun.g3 = d3; dun.dyn = new THREE.Group(); G.dyn.add(dun.dyn);
 }
 function drawDun() {
-  const g = groups(), P = player, MW = dun.map[0].length, MH = dun.map.length, wild = dun.kind === "wild";
-  if (!dun.g3) buildDun();
+  const g = groups(), P = player, world = dun.kind === "world", MW = world ? WN : dun.map[0].length, MH = world ? WN : dun.map.length, wild = dun.kind === "wild" || world;
+  if (!world && !dun.g3) buildDun();
   showScene("dun"); setEnv(wild ? "wild" : "dun");
   const D = (wild ? 21 : 19) / (Z > 1 ? 1.55 : 1), pz = (P.y + 8) / T, dk = darkness(), fr = vtime;
+  if (world) drawWorldTerrain(); else {
   G.dyn.children.forEach(c => { if (c.name === "dun3") c.visible = c === dun.g3; });
   if (dun.terr.userData.water) dun.terr.userData.water.position.y = Math.sin(vtime * 1.6) * .02;
   if (wild) for (const n of dun.nodes) { const on = dun.map[n.y][n.x] === n.c; n.m.visible = on; if (on) { const w = dun.wob && dun.wob.t > 0 && dun.wob.x === n.x && dun.wob.y === n.y; n.m.position.x = n.x + .5 + (w ? Math.sin(vtime * 50) * .06 : 0); } }
@@ -1531,6 +1556,8 @@ function drawDun() {
   const pp = dun.exit3.userData.parts; pp[0].rotation.z = vtime * 2; pp[1].rotation.z = -vtime * 3; pp[2].material.opacity = .4 + .15 * Math.sin(vtime * 5);
   light(dun.exit.x + .5, dun.exit.y + .5, 5, 0x6ee7ff, 1, 1.4); if (dun.stairs) { light(dun.stairs.x + .5, dun.stairs.y + .5, 4, 0xffd34d, .5, 1); labelT("다음 층", dun.stairs.x + .5, dun.stairs.y + .5, 1, "#ffd34d"); }
   labelT("마을", dun.exit.x + .5, dun.exit.y + .5, 2, "#8fefff");
+  }
+  if (world) drawWorldEnts(g, P, pz);
   for (const l of dun.loot) {
     const e = ent(l, () => {
       const gg = new THREE.Group(), inner = new THREE.Group(); gg.add(inner);
@@ -1572,10 +1599,472 @@ function drawDun() {
   for (const f of dun.fx) otextT(f.txt, f.x / T, (f.y + 8) / T, 1.4 + (.9 - f.t) * 1.2, f.col, Math.min(1, f.t * 2), 15);
   PL0.x = P.x / T; PL0.z = pz; PL0.c = wild ? 0xffe6c0 : 0xffe0b0; PL0.i = wild ? (dk > .25 ? 1.4 : 0) : 1.2; PL0.r = wild ? 9 : 11; PL0.h = 2.4;
   if (started && !modal) G.cursor.visible = false;
+  if (world) worldCursor();
   follow(P.x / T, pz, MW, MH, D); finish(D); overlay(drawMini);
 }
 
 function draw() { if (!R3) return; frameNo++; groups(); G.cursor.visible = false; if (scene === "home") drawHome(); else if (scene === "dun") drawDun(); else drawVillage(); }
+
+/* ---------- 오픈월드 ---------- */
+const WN = 320, CHK = 16, DN = WN / 4;
+const BIO = { OCEAN: 0, BEACH: 1, PLAINS: 2, FOREST: 3, DESERT: 4, SNOW: 5, SWAMP: 6, HIGH: 7, TOWN: 8, ROAD: 9 };
+const BIO_N = ["바다", "해변", "초원", "숲", "사막", "설원", "늪", "고원", "마을", "길"];
+const BIO_E = ["🌊", "🏖️", "🌾", "🌲", "🏜️", "❄️", "🪷", "⛰️", "🏘️", "🛤️"];
+const BIO_C = [0xb9a56c, 0xead9a0, 0x78c455, 0x4f9a3e, 0xe6cf8a, 0xeaf2f8, 0x5f7f4a, 0x8f939f, 0x9ad070, 0xcfa870];
+const BIO_CS = BIO_C.map(c => "#" + c.toString(16).padStart(6, "0"));
+const CELL = { TREE: 1, ROCK: 2, BUSH: 3, ORE: 4, CACT: 5, STRUCT: 10, PILLAR: 11, WALL: 12, FLOOR: 13, FIRE: 14, BED: 15, CHEST: 16, BOARD: 17, FARM: 18, CLIFF: 20, SWALL: 21 };
+const SOLIDC = new Uint8Array(256); [1, 2, 4, 5, 10, 11, 12, 14, 15, 16, 17, 20, 21].forEach(c => SOLIDC[c] = 1);
+const TOWN_NAMES = ["별빛 마을", "이끼 언덕", "바람 항구", "솔잎 마을", "붉은 모래촌", "눈꽃 마을", "달무리 나루", "구름 정거장", "노을 마을", "은행나무 촌", "금빛 들판", "고래 포구"];
+const BIOSPAWN = {
+  1: { d: [["d", 0]], n: [["m", 0], ["m", 2]] },
+  2: { d: [["d", 0], ["d", 1], ["m", 0]], n: [["m", 4], ["m", 2], ["m", 1]] },
+  3: { d: [["d", 1], ["d", 4], ["m", 2]], n: [["m", 4], ["m", 3], ["m", 2]] },
+  4: { d: [["d", 0], ["m", 2], ["d", 4]], n: [["m", 3], ["m", 2], ["m", 5]] },
+  5: { d: [["d", 2], ["d", 1], ["m", 3]], n: [["m", 3], ["m", 5], ["m", 1]] },
+  6: { d: [["d", 3], ["m", 4], ["m", 2]], n: [["m", 4], ["m", 1], ["m", 3]] },
+  7: { d: [["d", 4], ["m", 5], ["m", 1]], n: [["m", 5], ["m", 3], ["m", 1]] },
+  9: { d: [["d", 0]], n: [["m", 0]] },
+};
+const BUILD = [
+  { id: "wall", n: "나무 벽", e: "🧱", code: 12, cost: { wood: 2 } }, { id: "swall", n: "돌 벽", e: "🪨", code: 21, cost: { stone: 3 } },
+  { id: "floor", n: "나무 바닥", e: "🟫", code: 13, cost: { wood: 1 } }, { id: "fire", n: "모닥불", e: "🔥", code: 14, cost: { wood: 3, stone: 2 } },
+  { id: "bed", n: "침대 (리스폰)", e: "🛏️", code: 15, cost: { hide: 3, fiber: 4 } }, { id: "farm", n: "밭", e: "🌱", code: 18, cost: { fiber: 2 } },
+];
+
+/* ----- 노이즈 ----- */
+function hash2(x, y, s) { let h = (x * 374761393 + y * 668265263 + s * 2147483647) | 0; h = (h ^ (h >>> 13)) * 1274126177 | 0; return ((h ^ (h >>> 16)) >>> 0) / 4294967296; }
+function vnoise(x, y, s) {
+  const xi = Math.floor(x), yi = Math.floor(y), xf = x - xi, yf = y - yi, u = xf * xf * (3 - 2 * xf), v = yf * yf * (3 - 2 * yf);
+  const a = hash2(xi, yi, s), b = hash2(xi + 1, yi, s), c = hash2(xi, yi + 1, s), d = hash2(xi + 1, yi + 1, s);
+  return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v;
+}
+function fbm(x, y, s, o = 4) { let a = .5, f = 1, t = 0, n = 0; for (let i = 0; i < o; i++) { t += a * vnoise(x * f, y * f, s + i * 31); n += a; a *= .5; f *= 2; } return t / n; }
+
+/* ----- 월드 생성 (시드 고정: 항상 같은 대륙) ----- */
+function genWorld() {
+  const N = WN, seed = 4242, bio = new Uint8Array(N * N), cell = new Uint8Array(N * N), inter = new Map(), pois = [], ix = (x, y) => y * N + x;
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    const nx = x / N * 2 - 1, ny = y / N * 2 - 1, d = Math.hypot(nx, ny);
+    const e = fbm(x / 70, y / 70, seed) + .14 - Math.pow(d, 3) * .5, m = fbm(x / 55 + 100, y / 55 + 100, seed + 7);
+    const t = clamp(y / N + (fbm(x / 80, y / 80, seed + 13) - .5) * .45, 0, 1);
+    let b;
+    if (e < .3) b = 0; else if (e < .335) b = 1; else if (e > .74) b = 7;
+    else if (t < .27) b = 5; else if (t > .68 && m < .5) b = 4; else if (m > .66 && e < .52) b = 6; else if (m > .5) b = 3; else b = 2;
+    bio[ix(x, y)] = b; if (b === 7 && e > .85) cell[ix(x, y)] = CELL.CLIFF;
+  }
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    const i = ix(x, y), b = bio[i]; if (b < 1 || b > 7 || cell[i]) continue;
+    const r = hash2(x, y, seed + 5), cl = .35 + 1.3 * vnoise(x / 7, y / 7, seed + 21); let c = 0;
+    switch (b) {
+      case 3: c = r < .28 * cl ? 1 : r < .3 ? 2 : r < .34 ? 3 : 0; break;
+      case 2: c = r < .035 * cl ? 1 : r < .045 ? 2 : r < .08 ? 3 : 0; break;
+      case 4: c = r < .03 * cl ? 5 : r < .04 ? 2 : r < .046 ? 1 : 0; break;
+      case 5: c = r < .13 * cl ? 1 : r < .15 ? 2 : r < .16 ? 3 : 0; break;
+      case 6: c = r < .15 * cl ? 1 : r < .2 ? 3 : r < .21 ? 2 : 0; break;
+      case 7: c = r < .07 ? 2 : r < .095 ? 4 : r < .105 ? 1 : 0; break;
+      case 1: c = r < .004 ? 2 : r < .02 ? 3 : 0; break;
+    }
+    cell[i] = c;
+  }
+  const isLand = (x, y) => x > 3 && y > 3 && x < N - 4 && y < N - 4 && bio[ix(x, y)] >= 2 && bio[ix(x, y)] !== 7;
+  const okArea = (cx, cy, r) => { for (let a = 0; a < 8; a++) if (!isLand(Math.round(cx + Math.cos(a * .785) * r), Math.round(cy + Math.sin(a * .785) * r))) return false; return isLand(cx, cy); };
+  const disc = (cx, cy, r, b) => { for (let y = cy - r; y <= cy + r; y++) for (let x = cx - r; x <= cx + r; x++) if (x >= 0 && y >= 0 && x < N && y < N && (x - cx) ** 2 + (y - cy) ** 2 <= r * r && bio[ix(x, y)] > 0) { if (b != null) bio[ix(x, y)] = b; if (cell[ix(x, y)] !== CELL.CLIFF) cell[ix(x, y)] = 0; } };
+  const struct = (x, y, w, h, poi, code = CELL.STRUCT) => { for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) { cell[ix(x + i, y + j)] = code; inter.set(ix(x + i, y + j), poi); } };
+  const add = p => { pois.push(p); return p; };
+  const towns = [];
+  const mkTown = (cx, cy, name) => {
+    const t = add({ id: "t" + towns.length, type: "town", name, x: cx, y: cy, r: 12, tier: 0, w: 1, h: 1 }); towns.push(t); disc(cx, cy, 11, BIO.TOWN);
+    const sub = (k, type, nm, ox, oy, w, h, code) => { const p = add({ id: t.id + k, type, name: nm, x: cx + ox, y: cy + oy, w, h, town: t, tier: 0 }); struct(p.x, p.y, w, h, p, code); return p; };
+    sub("s", "shop", "상점", -5, -4, 3, 2); sub("i", "inn", "여관", 2, -4, 3, 2); sub("b", "board", "의뢰 게시판", -1, 3, 1, 1, CELL.BOARD);
+    const sh = sub("w", "shrine", name + " 이동석", 0, -1, 1, 1, CELL.PILLAR); sh.wp = true;
+    return t;
+  };
+  let sx = N / 2, sy = N / 2, found = false;
+  for (let r = 0; r < 90 && !found; r += 3) for (let a = 0; a < 12 && !found; a++) { const px = Math.round(N / 2 + Math.cos(a * .5236) * r), py = Math.round(N / 2 + Math.sin(a * .5236) * r); if (okArea(px, py, 11)) { sx = px; sy = py; found = true; } }
+  const spawnT = mkTown(sx, sy, TOWN_NAMES[0]);
+  { const p = add({ id: "portal", type: "portal", name: "포근 마을 포털", x: sx + 6, y: sy + 3, w: 1, h: 1, town: spawnT, tier: 0 }); struct(p.x, p.y, 1, 1, p, CELL.PILLAR); }
+  const guard = [];
+  for (let ry = 0; ry < 8; ry++) for (let rx = 0; rx < 8; rx++) {
+    const h = hash2(rx, ry, seed + 99), cx = rx * 40 + 6 + Math.floor(hash2(rx, ry, seed + 1) * 28), cy = ry * 40 + 6 + Math.floor(hash2(rx, ry, seed + 2) * 28), dist = Math.hypot(cx - sx, cy - sy);
+    if (dist < 28) continue;
+    const tier = Math.min(4, Math.floor(dist / 55)), id = "p" + rx + "_" + ry;
+    if (h < .26 && okArea(cx, cy, 11) && towns.every(t => Math.hypot(t.x - cx, t.y - cy) > 48)) { mkTown(cx, cy, TOWN_NAMES[towns.length % TOWN_NAMES.length]); continue; }
+    if (!okArea(cx, cy, 5)) continue;
+    if (h < .46) { disc(cx, cy, 3); const p = add({ id, type: "cave", name: "동굴", x: cx, y: cy, w: 2, h: 2, tier }); struct(cx, cy, 2, 2, p); }
+    else if (h < .66) { disc(cx, cy, 5); const p = add({ id, type: "camp", name: "몬스터 야영지", x: cx, y: cy, w: 1, h: 1, tier }); const c = add({ id: id + "c", type: "chest", name: "보물상자", x: cx, y: cy, w: 1, h: 1, tier, par: p }); struct(cx, cy, 1, 1, c, CELL.CHEST); guard.push(p); }
+    else if (h < .78) { disc(cx, cy, 5); const p = add({ id, type: "ruin", name: "고대 유적", x: cx, y: cy, w: 1, h: 1, tier }); const c = add({ id: id + "c", type: "chest", name: "유적 상자", x: cx, y: cy, w: 1, h: 1, tier, par: p }); struct(cx, cy, 1, 1, c, CELL.CHEST); guard.push(p); }
+    else if (h < .9) { disc(cx, cy, 2); const p = add({ id, type: "shrine", name: "이동석", x: cx, y: cy, w: 1, h: 1, tier, wp: true }); struct(cx, cy, 1, 1, p, CELL.PILLAR); }
+    else if (h < .97 && dist > 80) { disc(cx, cy, 7); const p = add({ id, type: "lair", name: "용의 소굴", x: cx, y: cy, w: 1, h: 1, tier: 4 }); const c = add({ id: id + "c", type: "chest", name: "용의 보물", x: cx, y: cy, w: 1, h: 1, tier: 4, par: p }); struct(cx, cy, 1, 1, c, CELL.CHEST); guard.push(p); }
+  }
+  let sn = 0; pois.forEach(p => { if (p.type === "shrine" && !p.town) p.name = "이동석 #" + (++sn); });
+  const road = (a, b) => {
+    let x = a.x, y = a.y; const st = (nx, ny) => { if (nx >= 0 && ny >= 0 && nx < N && ny < N) { const i = ix(nx, ny), bb = bio[i]; if (bb >= 1 && bb !== 7 && bb !== 8 && !inter.has(i)) { bio[i] = BIO.ROAD; cell[i] = 0; } } };
+    while (x !== b.x) { x += Math.sign(b.x - x); st(x, y); st(x, y + 1); } while (y !== b.y) { y += Math.sign(b.y - y); st(x, y); st(x + 1, y); }
+  };
+  towns.forEach((t, i) => { if (!i) return; let best = null, bd = 1e9; for (let j = 0; j < i; j++) { const d = Math.hypot(towns[j].x - t.x, towns[j].y - t.y); if (d < bd) { bd = d; best = towns[j]; } } road(t, best); });
+  for (const p of pois) if (p.type !== "town" && p.type !== "chest" && !p.town) p.dist = Math.hypot(p.x - sx, p.y - sy);
+  S.wedits = S.wedits || {};
+  const W = { N, bio, cell, inter, pois, towns, guard, spawn: { x: sx, y: sy }, ed: S.wedits, chunks: new Map(), disc: new Uint8Array(DN * DN), regrow: [], first: true, byId: new Map(pois.map(p => [p.id, p])) };
+  for (let i = 0; i < Math.min(S.disc.length, DN * DN); i++) W.disc[i] = S.disc.charCodeAt(i) === 49 ? 1 : 0;
+  for (const k in S.wreg) W.regrow.push({ k: +k, t: S.wreg[k] });
+  return W;
+}
+function getWorld() { return WORLD || (WORLD = genWorld()); }
+function wc(x, y) { if (x < 0 || y < 0 || x >= WN || y >= WN) return 255; const k = y * WN + x, e = WORLD.ed[k]; return e !== undefined ? e : WORLD.cell[k]; }
+function wb(x, y) { return x < 0 || y < 0 || x >= WN || y >= WN ? 0 : WORLD.bio[y * WN + x]; }
+function wsolid(x, y) { return x < 0 || y < 0 || x >= WN || y >= WN || WORLD.bio[y * WN + x] === 0 || SOLIDC[wc(x, y)] === 1; }
+function markDirty(x, y) { for (const [dx, dy] of [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]]) { const ch = WORLD.chunks.get(Math.floor((y + dy) / CHK) * 100 + Math.floor((x + dx) / CHK)); if (ch) ch.dirty = true; } }
+function setCell(x, y, code, regrow) {
+  const k = y * WN + x; if (WORLD.cell[k] === code) delete WORLD.ed[k]; else WORLD.ed[k] = code;
+  if (regrow) { const t = Date.now() + 420000 + Math.random() * 120000; S.wreg[k] = t; WORLD.regrow.push({ k, t }); }
+  markDirty(x, y);
+}
+const wTier = (x, y) => Math.min(4, Math.floor(Math.hypot(x - WORLD.spawn.x, y - WORLD.spawn.y) / 55));
+function inTown(x, y) { return WORLD.towns.find(t => Math.hypot(t.x - x, t.y - y) < t.r) || null; }
+
+/* ----- 모델 (인스턴싱용으로 합쳐서 구움) ----- */
+function bake(group) {
+  group.updateMatrixWorld(true); const P = [], Nn = [], Cc = [];
+  group.traverse(m => {
+    if (!m.isMesh) return; const g = (m.geometry.index ? m.geometry.toNonIndexed() : m.geometry.clone()); g.applyMatrix4(m.matrixWorld);
+    const col = m.material.color || new THREE.Color(1, 1, 1), pa = g.attributes.position.array, na = g.attributes.normal.array;
+    for (let i = 0; i < pa.length; i++) { P.push(pa[i]); Nn.push(na[i]); } for (let i = 0; i < pa.length / 3; i++) Cc.push(col.r, col.g, col.b);
+  });
+  const bg = new THREE.BufferGeometry(); bg.setAttribute("position", new THREE.Float32BufferAttribute(P, 3)); bg.setAttribute("normal", new THREE.Float32BufferAttribute(Nn, 3)); bg.setAttribute("color", new THREE.Float32BufferAttribute(Cc, 3));
+  bg.userData.shared = 1; return bg;
+}
+const BAKED = {};
+const baked = (n, mk) => BAKED[n] || (BAKED[n] = bake(mk()));
+const grpOf = f => { const g = new THREE.Group(); f(g); return g; };
+const MK = {
+  oak: () => grpOf(g => { C(g, .1, .15, .8, 0x7d5433, 0, .4, 0, 7); Sp(g, .62, 0x3d8444, 0, 1.1, 0); Sp(g, .46, 0x4a9a4a, -.32, 1.38, .1); Sp(g, .4, 0x5aa84a, .3, 1.32, -.1); Sp(g, .3, 0x6dbb4f, 0, 1.6, 0); }),
+  pine: () => grpOf(g => { C(g, .09, .13, .5, 0x7d5433, 0, .25, 0, 6); for (let k = 0; k < 3; k++) K(g, .62 - k * .14, .75, k % 2 ? 0x3d8444 : 0x2f6b3a, 0, .8 + k * .5, 0, 7); g.scale.setScalar(.95); }),
+  spine: () => grpOf(g => { C(g, .09, .13, .5, 0x7d5433, 0, .25, 0, 6); for (let k = 0; k < 3; k++) { K(g, .62 - k * .14, .75, 0x3d8444, 0, .8 + k * .5, 0, 7); K(g, .5 - k * .12, .4, 0xf2f7fb, 0, .98 + k * .5, 0, 7); } g.scale.setScalar(.95); }),
+  dead: () => grpOf(g => { C(g, .07, .11, 1, 0x8a7050, 0, .5, 0, 5); B(g, .5, .07, .07, 0x8a7050, .2, .8, 0, { r: [0, 0, .7] }); B(g, .4, .06, .06, 0x8a7050, -.15, .6, 0, { r: [0, 0, -.8] }); }),
+  willow: () => grpOf(g => { C(g, .1, .15, .8, 0x6a5238, 0, .4, 0, 6); Sp(g, .62, 0x4a6a3a, 0, 1.05, 0, { s: [1.2, .8, 1.2] }); for (const [x, z] of [[.5, 0], [-.5, .1], [0, .5], [0, -.5], [.35, .35], [-.35, -.35]]) B(g, .06, .5, .06, 0x6f8a5a, x, .65, z); Sp(g, .1, 0x7a5a9a, .3, 1.35, .2); }),
+  cactus: () => grpOf(g => { C(g, .13, .15, .95, 0x4a9a4a, 0, .48, 0, 7); C(g, .08, .08, .4, 0x4a9a4a, .26, .55, 0, 6); B(g, .2, .08, .08, 0x4a9a4a, .15, .45, 0); Sp(g, .07, 0xe8508a, 0, .98, 0); }),
+  rock: () => grpOf(g => { I(g, .42, 0x8a8e9e, 0, .22, 0, { s: [1.1, .7, 1], r: [.2, .6, 0] }); I(g, .22, 0xb8bcc8, -.2, .2, .15, { s: [1, .7, 1] }); }),
+  ore: () => grpOf(g => { I(g, .42, 0x6c7080, 0, .22, 0, { s: [1.1, .7, 1], r: [.2, .6, 0] }); K(g, .1, .4, 0x6ee7ff, .15, .5, .05, 4, { r: [.2, 0, -.3] }); K(g, .08, .3, 0xf0a23c, -.15, .45, -.05, 4, { r: [-.2, 0, .3] }); K(g, .07, .25, 0x6ee7ff, .0, .45, .2, 4); }),
+  bush: () => grpOf(g => { Sp(g, .38, 0x3d8444, 0, .25, 0, { s: [1.2, .75, 1] }); Sp(g, .28, 0x6dbb4f, -.1, .38, .1); for (const [x, y, z] of [[.3, .3, .25], [-.25, .25, .3], [.1, .5, .2], [.35, .2, -.1]]) Sp(g, .06, 0x6b4a9e, x, y, z); }),
+  tuft: () => grpOf(g => { for (const [x, z, s] of [[0, 0, 1], [.1, .05, .7], [-.08, .06, .8]]) K(g, .05, .28 * s, 0x4f9a3e, x, .13 * s, z, 4); }),
+  wall: () => grpOf(g => { B(g, .98, 1.3, .98, 0x9a7048, 0, .65, 0); B(g, 1.02, .12, 1.02, 0x7d5433, 0, 1.3, 0); for (const y of [.35, .75, 1.1]) B(g, 1, .05, 1, 0x7d5433, 0, y, 0); }),
+  swall: () => grpOf(g => { B(g, .98, 1.3, .98, 0x8a8e9e, 0, .65, 0); B(g, 1.02, .12, 1.02, 0xb8bcc8, 0, 1.3, 0); for (const y of [.4, .85]) B(g, 1, .05, 1, 0x6c7080, 0, y, 0); }),
+};
+const treeVar = (b, x, y) => b === 5 ? "spine" : b === 4 ? "dead" : b === 6 ? "willow" : b === 3 ? (hash2(x, y, 3) < .62 ? "pine" : "oak") : b === 7 ? "pine" : "oak";
+
+/* ----- 구조물 모델 ----- */
+function mkShrine() { const g = new THREE.Group(); B(g, 1, .18, 1, 0x8a8e9e, 0, .09, 0); C(g, .2, .26, 1.3, 0xb8bcc8, 0, .8, 0, 6); const cr = new THREE.Mesh(geo("shc", () => new THREE.OctahedronGeometry(.26)), new THREE.MeshBasicMaterial({ color: 0x6ee7ff })); cr.position.y = 1.7; g.add(cr); g.userData.spin = cr; g.traverse(m => { if (m.isMesh) m.castShadow = true; }); return g; }
+function mkBoard() { const g = new THREE.Group(); for (const x of [-.4, .4]) B(g, .1, 1.3, .1, 0x7d5433, x, .65, 0); B(g, 1.1, .7, .08, 0xa87645, 0, 1.0, 0); for (const [x, y] of [[-.28, 1.1], [.1, 1.05], [.3, .9]]) B(g, .25, .3, .02, 0xfff3d6, x, y, .06); B(g, 1.2, .08, .14, 0x7d5433, 0, 1.4, 0); return g; }
+function mkTent(c) { const g = new THREE.Group(); K(g, .85, 1.2, c, 0, .6, 0, 4, { r: [0, .78, 0] }); B(g, .35, .6, .05, 0x2a1c14, 0, .3, .5); return g; }
+function mkChest(open) { const g = new THREE.Group(); B(g, .8, .4, .5, 0x8a5a34, 0, .2, 0); B(g, .82, .06, .52, 0xe8b84a, 0, .1, 0); const lid = new THREE.Group(); lid.position.set(0, .4, -.25); B(lid, .8, .2, .5, 0x9a6a3e, 0, .1, .25); B(lid, .1, .12, .06, 0xf5d142, 0, .05, .5); lid.rotation.x = open ? -1.1 : 0; g.add(lid); if (open) B(g, .6, .06, .3, 0xf5d142, 0, .42, 0); g.traverse(m => { if (m.isMesh) m.castShadow = true; }); return g; }
+function mkPillar(h) { const g = new THREE.Group(); C(g, .2, .24, h, 0xb8bcc8, 0, h / 2, 0, 7); B(g, .6, .12, .6, 0x8a8e9e, 0, .06, 0); if (h > 1.2) B(g, .55, .12, .55, 0x8a8e9e, 0, h + .05, 0); return g; }
+function mkCampfire() { const g = new THREE.Group(); for (let i = 0; i < 6; i++) { const a = i * 1.047; Sp(g, .1, 0x6c7080, Math.cos(a) * .32, .08, Math.sin(a) * .32, { s: [1, .7, 1] }); } B(g, .5, .08, .08, 0x5a3a22, 0, .1, 0, { r: [0, .6, 0] }); B(g, .5, .08, .08, 0x5a3a22, 0, .1, 0, { r: [0, -.6, 0] }); const f = flame(g, 0, .3, 0, 1.6); g.userData.flame = f; return g; }
+function mkFarm(stage, kind) { const g = new THREE.Group(); B(g, .96, .1, .96, 0x6a4a2a, 0, .05, 0, { cs: false }); if (stage >= 0) for (const [x, z] of [[-.25, -.25], [.25, -.25], [-.25, .25], [.25, .25]]) { C(g, .02, .03, .12 + stage * .18, 0x4a9a4a, x, .12 + (.06 + stage * .09), z, 4); if (stage > 0) Sp(g, .08 + stage * .02, 0x6dbb4f, x, .22 + stage * .2, z, { s: [1.3, .6, 1.3] }); if (stage >= 2) Sp(g, .06, 0xe8508a, x + .05, .42, z); } return g; }
+
+/* ----- 청크 ----- */
+const WM = {};
+function wmats() { if (!WM.top) { WM.top = VMAT(); WM.side = VMAT(); WM.water = new THREE.MeshToonMaterial({ color: 0xffffff, vertexColors: true, transparent: true, opacity: .82, gradientMap: gradTex }); WM.inst = new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: gradTex }); } return WM; }
+function biomeCol(b, x, y) { return new THREE.Color(BIO_C[b]).offsetHSL(0, 0, (rn(x, y, 1) - .5) * (b === 5 ? .03 : .07)); }
+const cropStage = k => { const c = S.crops[k]; return c ? Math.min(2, Math.floor((Date.now() - c.t0) / 40000)) : -1; };
+function buildChunk(cx, cy) {
+  const W = WORLD, M_ = wmats(), grp = new THREE.Group(), top = new GB(), side = new GB(), water = new GB(), inst = {}, ch = { grp, cx, cy, dirty: false, lit: [], flames: [], spins: [], crops: [], water: null };
+  const x0 = cx * CHK, y0 = cy * CHK, hgt = (x, y) => wb(x, y) === 0 ? -.32 : wc(x, y) === CELL.CLIFF ? 1.3 : 0;
+  const pushI = (name, x, y, h, sc = 1) => { (inst[name] ||= []).push([x, y, h, sc]); };
+  const wcol = new THREE.Color(0x4a94d8), dirt = new THREE.Color(0x8a6a44), cliff = new THREE.Color(0x8a7d62);
+  for (let y = y0; y < y0 + CHK; y++) for (let x = x0; x < x0 + CHK; x++) {
+    if (x >= WN || y >= WN) continue;
+    const b = wb(x, y), c = wc(x, y), H = hgt(x, y); let col = biomeCol(b, x, y);
+    if (c === CELL.FLOOR) col = new THREE.Color(0xc2945e).offsetHSL(0, 0, (rn(x, y, 2) - .5) * .06); else if (c === CELL.FARM) col = new THREE.Color(0x6a4a2a);
+    top.quad([x, H, y], [x, H, y + 1], [x + 1, H, y + 1], [x + 1, H, y], col, [0, 1, 0]);
+    if (b === 0) water.quad([x, -.12, y], [x, -.12, y + 1], [x + 1, -.12, y + 1], [x + 1, -.12, y], wcol, [0, 1, 0]);
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const H2 = hgt(x + dx, y + dy); if (H2 >= H) continue; const ex = dx > 0 ? x + 1 : x, ez = dy > 0 ? y + 1 : y;
+      const a = dx ? [ex, H2, y] : [x, H2, ez], bb = dx ? [ex, H, y] : [x, H, ez], c3 = dx ? [ex, H, y + 1] : [x + 1, H, ez], d = dx ? [ex, H2, y + 1] : [x + 1, H2, ez];
+      side.quad(a, bb, c3, d, H > 0 ? cliff : dirt, [dx, 0, dy]);
+    }
+    if (c === CELL.TREE) pushI(treeVar(b, x, y), x, y, H, .85 + rn(x, y, 6) * .45);
+    else if (c === CELL.ROCK) pushI("rock", x, y, H, .8 + rn(x, y, 6) * .6); else if (c === CELL.BUSH) pushI("bush", x, y, H, .9 + rn(x, y, 6) * .3);
+    else if (c === CELL.ORE) pushI("ore", x, y, H, 1); else if (c === CELL.CACT) pushI("cactus", x, y, H, .8 + rn(x, y, 6) * .5);
+    else if (c === CELL.WALL) pushI("wall", x, y, H, 1); else if (c === CELL.SWALL) pushI("swall", x, y, H, 1);
+    else if (c === 0 && (b === 2 || b === 3 || b === 8) && rn(x, y, 4) < .4) pushI("tuft", x + rn(x, y, 5) * .8 - .4, y + rn(x, y, 9) * .8 - .4, H, .8 + rn(x, y, 10) * .5);
+    else if (c === CELL.FIRE) { const m = mkCampfire(); m.position.set(x + .5, H, y + .5); grp.add(m); ch.flames.push(m.userData.flame); ch.lit.push({ x: x + .5, z: y + .5, c: 0xffa040, r: 7, h: 1, i: 1.4 }); }
+    else if (c === CELL.BED) { const m = mkFurn("bed"); m.position.set(x + .5, H, y + .5); grp.add(m); }
+    else if (c === CELL.FARM) { const st = cropStage(y * WN + x), m = mkFarm(st); m.position.set(x + .5, H, y + .5); grp.add(m); ch.crops.push({ k: y * WN + x, st }); }
+  }
+  grp.add(top.build(M_.top)); if (side.p.length) grp.add(side.build(M_.side)); if (water.p.length) { const m = water.build(M_.water, false); grp.add(m); ch.water = m; }
+  const mm = new THREE.Matrix4(), q = new THREE.Quaternion(), sv = new THREE.Vector3(), pv = new THREE.Vector3(), eu = new THREE.Euler();
+  for (const nm in inst) {
+    const list = inst[nm], im = new THREE.InstancedMesh(baked(nm, MK[nm === "spine" || nm === "pine" || nm === "oak" || nm === "dead" || nm === "willow" ? nm : nm]), M_.inst, list.length);
+    list.forEach(([x, y, h, sc], i) => { eu.set(0, rn(Math.floor(x), Math.floor(y), 8) * 6.283, 0); q.setFromEuler(eu); sv.set(sc, sc, sc); pv.set(x + .5, h, y + .5); if (nm === "tuft") pv.set(x + .5, h, y + .5); mm.compose(pv, q, sv); im.setMatrixAt(i, mm); });
+    im.castShadow = nm !== "tuft"; im.frustumCulled = false; grp.add(im);
+  }
+  for (const p of W.pois) {
+    if (p.x < x0 || p.x >= x0 + CHK || p.y < y0 || p.y >= y0 + CHK) continue;
+    const put = (m, ox, oz, ry = 0) => { m.position.set(p.x + ox, 0, p.y + oz); m.rotation.y = ry; grp.add(m); return m; }, night = true;
+    if (p.type === "shop") { put(mkShop(), 1.5, 1.1); ch.lit.push({ x: p.x + 1.5, z: p.y + 2.3, c: 0xffd870, r: 5, h: 1, i: 1.3, night }); }
+    else if (p.type === "inn") { put(mkHouse(), 1.5, 1.1); ch.lit.push({ x: p.x + 1.5, z: p.y + 2.3, c: 0xffd870, r: 5, h: 1, i: 1.3, night }); }
+    else if (p.type === "board") put(mkBoard(), .5, .5); else if (p.type === "portal") { const m = put(mkPortal(), .5, .5); m.scale.setScalar(1.3); ch.spins.push(m); ch.lit.push({ x: p.x + .5, z: p.y + .5, c: 0x6ee7ff, r: 6, h: 1.2, i: 1.2 }); }
+    else if (p.type === "shrine") { const m = put(mkShrine(), .5, .5); ch.spins.push(m.userData.spin); ch.lit.push({ x: p.x + .5, z: p.y + .5, c: 0x6ee7ff, r: 6, h: 1.6, i: 1.1 }); }
+    else if (p.type === "cave") put(mkCave(), 1, 1.1);
+    else if (p.type === "chest") { put(mkChest(!!S.wopen[p.id]), .5, .5); }
+    else if (p.type === "camp") { [[-3, -1, 0xc8553d, .5], [3, -2, 0x3d6ed0, -.6], [-1, 3, 0x4a9a4a, 2.4]].forEach(([ox, oz, c, r]) => put(mkTent(c), ox + .5, oz + .5, r)); const f = put(mkCampfire(), 2.5, 1.5); ch.flames.push(f.userData.flame); ch.lit.push({ x: p.x + 2.5, z: p.y + 1.5, c: 0xffa040, r: 7, h: 1, i: 1.3 }); }
+    else if (p.type === "ruin") { for (let i = 0; i < 7; i++) { const a = i * .9; put(mkPillar(i % 3 ? 1.6 : .7), Math.cos(a) * 4 + .5, Math.sin(a) * 4 + .5); } }
+    else if (p.type === "lair") { for (let i = 0; i < 8; i++) { const a = i * .785; const m = put(mkPillar(2.2), Math.cos(a) * 6 + .5, Math.sin(a) * 6 + .5); m.traverse(o => { if (o.isMesh) o.material = M(0x5c4a5a); }); } ch.lit.push({ x: p.x + .5, z: p.y + .5, c: 0xff6a3a, r: 9, h: 1.5, i: 1.4 }); }
+  }
+  return ch;
+}
+function disposeChunk(ch) { ch.grp.traverse(m => { if (m.geometry && !m.geometry.userData.shared) m.geometry.dispose(); }); }
+const WFOG = new THREE.Fog(0x9fdcf5, 36, 70);
+function drawWorldTerrain() {
+  const W = WORLD, P = player, pcx = Math.floor(P.x / T / CHK), pcy = Math.floor(P.y / T / CHK), R = 3, NC = WN / CHK;
+  if (!G.wgrp) { G.wgrp = new THREE.Group(); S3.add(G.wgrp); const sea = new THREE.Mesh(new THREE.PlaneGeometry(900, 900), new THREE.MeshToonMaterial({ color: 0x4a94d8, gradientMap: gradTex })); sea.rotation.x = -HALF; G.sea = sea; S3.add(sea); }
+  G.wgrp.visible = true; G.sea.visible = true; G.sea.position.set(camT.x, -.2, camT.z);
+  const need = []; for (let dy = -R; dy <= R; dy++) for (let dx = -R; dx <= R; dx++) { const cx = pcx + dx, cy = pcy + dy; if (cx >= 0 && cy >= 0 && cx < NC && cy < NC) need.push([dx * dx + dy * dy, cx, cy]); }
+  need.sort((a, b) => a[0] - b[0]); let budget = W.first ? 30 : 2;
+  for (const [d2, cx, cy] of need) {
+    const key = cy * 100 + cx; let ch = W.chunks.get(key);
+    if (!ch) { if (budget <= 0) continue; budget--; ch = buildChunk(cx, cy); W.chunks.set(key, ch); G.wgrp.add(ch.grp); }
+    else if (ch.dirty) { if (d2 > 4 && budget <= 0) continue; budget--; G.wgrp.remove(ch.grp); disposeChunk(ch); ch = buildChunk(cx, cy); W.chunks.set(key, ch); G.wgrp.add(ch.grp); }
+  }
+  W.first = false; const night = darkness() > .2;
+  for (const [key, ch] of W.chunks) {
+    if (Math.abs(ch.cx - pcx) > R + 1 || Math.abs(ch.cy - pcy) > R + 1) { G.wgrp.remove(ch.grp); disposeChunk(ch); W.chunks.delete(key); continue; }
+    if (ch.water) ch.water.position.y = Math.sin(vtime * 1.6) * .02;
+    ch.flames.forEach((f, i) => f.scale.setScalar(1.6 + Math.sin(vtime * 12 + i * 2) * .25)); ch.spins.forEach(s => s.rotation.y += DT * 1.5);
+    for (const L of ch.lit) if ((!L.night || night) && Math.abs(L.x - camT.x) < 18 && Math.abs(L.z - camT.z) < 14) light(L.x, L.z, L.r, L.c, L.h, L.i);
+    if (ch.crops.length && frameNo % 90 === 0) for (const c of ch.crops) if (cropStage(c.k) !== c.st) ch.dirty = true;
+  }
+  S3.fog = WFOG; WFOG.color.copy(S3.background);
+}
+
+/* ----- 월드 게임플레이 ----- */
+const NET = { connected: false, others: new Map(), send() {} };    // 서버 연결 지점 (다음 단계)
+function newWorldDun() { return newDun({ kind: "world", exit: null, stairs: null, vil: [], pet: null, areaB: -1, tick: 0, spawnT: 0, discT: 0, saveT: 0, regT: 0, healT: 0, guardT: 0 }); }
+function enterWorld(pos, msg) {
+  const W = getWorld(); cancelFish(); scene = "dun"; dun = newWorldDun(); W.first = true; camInit = false; sfx("portal");
+  if (!S.wspawn) S.wspawn = { x: (W.spawn.x + .5) * T, y: (W.spawn.y + 4.5) * T };
+  const P = player, p = pos || S.wpos || { x: (W.spawn.x + .5) * T, y: (W.spawn.y + 4.5) * T };
+  P.x = p.x; P.y = p.y; P.dx = 0; P.dy = 1; P.mounted = false; P.atkCd = P.qCd = P.eCd = P.fCd = P.rCd = P.dash = P.inv = 0; P.hp = Math.max(P.hp, 1);
+  if (wsolid(Math.floor(P.x / T), Math.floor((P.y + 8) / T))) { for (let r = 1; r < 8; r++) { let ok = false; for (let a = 0; a < 8 && !ok; a++) { const x = Math.floor(P.x / T + Math.cos(a * .785) * r), y = Math.floor((P.y + 8) / T + Math.sin(a * .785) * r); if (!wsolid(x, y)) { P.x = (x + .5) * T; P.y = (y + .5) * T - 8; ok = true; } } if (ok) break; } }
+  W.towns.forEach((t, i) => { for (let k = 0; k < 2; k++) { const v = VILLAGERS[(i * 2 + k) % 4], x = (t.x + (k ? 4 : -4) + .5) * T, y = (t.y + 2.5) * T; dun.vil.push({ ...v, x, y, hx: x, hy: y, vx: 0, vy: 0, t: 0, talk: 0, line: 0 }); } });
+  dun.pet = activePet() ? { x: P.x - 20, y: P.y, cd: 0 } : null; S.wpos = { x: P.x, y: P.y }; hud();
+  say(msg || "🌍 오픈월드 — 어디로든 갈 수 있어요. 마을·동굴·이동석을 찾아보세요! (B 건설 · N 지도 · J 의뢰)", 4500);
+}
+function mkMonT(i, depth, x, y) { const b = MONS[i], sc = 1 + .3 * (depth - 1), hp = Math.round(b.hp * sc); return { ...b, x, y, hp, mhp: hp, dmg: Math.round(b.dmg * sc), xp: Math.round(b.xp * sc), cd: 0, flash: 0, kb: 0, kx: 0, ky: 0, boss: false, dpt: depth, tier: Math.floor((depth - 1) / 2), world: true }; }
+function spawnNear() {
+  const P = player, a = Math.random() * 6.283, d = 16 + Math.random() * 11, x = Math.floor(P.x / T + Math.cos(a) * d), y = Math.floor((P.y + 8) / T + Math.sin(a) * d);
+  if (x < 2 || y < 2 || x >= WN - 2 || y >= WN - 2) return; const b = wb(x, y); if (b < 1 || b === 8 || wsolid(x, y)) return;
+  if (WORLD.towns.some(t => Math.hypot(t.x - x, t.y - y) < 19)) return;
+  const tier = wTier(x, y), night = darkness() > .25, tb = BIOSPAWN[b] || BIOSPAWN[2], list = night ? tb.n : tb.d, [kind, idx] = list[ri(list.length)], px = (x + .5) * T, py = (y + .5) * T - 8;
+  const m = kind === "d" ? mkDino(idx, tier, px, py, false) : mkMonT(idx, 1 + tier * 2, px, py); m.world = true; m.tier = tier; dun.mons.push(m);
+}
+function spawnGuards(p) {
+  const cx = (p.x + .5) * T, cy = (p.y + .5) * T, tier = p.tier, n = p.type === "lair" ? 3 : 4 + tier;
+  if (p.type === "lair") { const b = mkMon(6 + tier, cx, cy - 40, true); b.world = true; b.poi = p.id; b.tier = 4; b.dpt = 6 + tier; dun.mons.push(b); }
+  for (let i = 0; i < n; i++) {
+    const a = i / n * 6.283, x = cx + Math.cos(a) * (3.5 * T), y = cy + Math.sin(a) * (3.5 * T) - 8; let m;
+    if (p.type === "ruin" || p.type === "lair") m = mkMonT([3, 4, 2, 5][ri(4)], 1 + tier * 2 + 1, x, y); else { m = Math.random() < .5 ? mkDino(Math.min(4, 1 + ri(4)), tier, x, y, false) : mkMonT([2, 3, 5][ri(3)], 1 + tier * 2, x, y); }
+    m.hostile = true; m.world = true; m.poi = p.id; m.tier = tier; dun.mons.push(m);
+  }
+}
+function clearPoi(pid) {
+  const p = WORLD.byId.get(pid); if (!p || S.wcl[pid]) return; S.wcl[pid] = 1; say(`🏆 ${p.name} 소탕 완료! 상자를 열어 보세요.`, 3500); sfx("lvl"); qEvent("lair", null);
+  const P = player; dun.loot.push({ t: "gear", it: genGear(Math.max(2, 3 + p.tier * 3 + Math.round(S.lv * .4)), 2), x: (p.x + .5) * T + 30, y: (p.y + .5) * T }); gainXp(40 + p.tier * 30);
+}
+function discoverWp(poi) {
+  if (S.wp[poi.id]) return; S.wp[poi.id] = 1; sfx("lvl"); say(`📍 ${poi.name} 발견! (N 지도에서 이동할 수 있어요)`, 3000); burst(player.x, player.y, 24, ["#6ee7ff", "#fff"], 100, .9, -40, 1.2);
+  gainXp(25 + (poi.tier || 0) * 20); qEvent("disc", null);
+}
+function worldTick(dt) {
+  const P = player, W = WORLD, px = Math.floor(P.x / T), py = Math.floor((P.y + 8) / T);
+  dun.spawnT += dt; const cap = darkness() > .25 ? 30 : 22;
+  if (dun.spawnT > 1.6) { dun.spawnT = 0; if (dun.mons.length < cap) spawnNear(); }
+  dun.mons = dun.mons.filter(m => !m.world || m.poi || Math.hypot(m.x - P.x, m.y - P.y) < 46 * T);
+  dun.guardT += dt; if (dun.guardT > .5) {
+    dun.guardT = 0;
+    for (const p of W.guard) { if (S.wcl[p.id]) continue; const d = Math.hypot((p.x + .5) * T - P.x, (p.y + .5) * T - P.y) / T; if (d < 30 && !p.spawned) { p.spawned = true; spawnGuards(p); say(`⚠️ ${p.name}이(가) 가까워요!`, 2200); } else if (d > 75 && p.spawned) { p.spawned = false; dun.mons = dun.mons.filter(m => m.poi !== p.id); } }
+    for (const p of W.pois) if (p.wp && !S.wp[p.id] && Math.hypot(p.x - px, p.y - py) < 4) discoverWp(p);
+    const tw = inTown(px, py); if (tw && dun.inTown !== tw.id) say(`🏘️ ${tw.name} — 안전지대예요`, 2500); dun.inTown = tw ? tw.id : null;
+    const b = wb(px, py); if (b !== dun.areaB && !tw) { dun.areaB = b; if (b > 0) say(`${BIO_E[b]} ${BIO_N[b]} · 위험도 ${"★".repeat(wTier(px, py) + 1)}`, 2200); }
+  }
+  dun.discT += dt; if (dun.discT > .5) { dun.discT = 0; const cx = px >> 2, cy = py >> 2; for (let j = -3; j <= 3; j++) for (let i = -3; i <= 3; i++) { const x = cx + i, y = cy + j; if (x >= 0 && y >= 0 && x < DN && y < DN && i * i + j * j <= 10) W.disc[y * DN + x] = 1; } }
+  dun.regT += dt; if (dun.regT > 2) { dun.regT = 0; const now = Date.now(); for (let i = W.regrow.length - 1; i >= 0; i--) { const r = W.regrow[i]; if (now > r.t) { if (W.ed[r.k] === 0) { delete W.ed[r.k]; markDirty(r.k % WN, Math.floor(r.k / WN)); } delete S.wreg[r.k]; W.regrow.splice(i, 1); } } }
+  dun.healT += dt; if (dun.healT > .5) { dun.healT = 0; let near = false; for (const ch of W.chunks.values()) for (const L of ch.lit) if (L.c === 0xffa040 && Math.hypot(L.x * T - P.x, L.z * T - P.y) < 4 * T) near = true; if (near && P.hp < pstats().maxhp) heal(2); }
+  dun.saveT += dt; if (dun.saveT > 5) { dun.saveT = 0; S.wpos = { x: P.x, y: P.y }; save(); }
+  for (const v of dun.vil) {
+    if (Math.hypot(v.x - P.x, v.y - P.y) > 40 * T) continue; if (v.talk > 0) { v.talk -= dt; continue; }
+    v.t -= dt; if (v.t <= 0) { v.t = 1 + Math.random() * 2.5; const a = Math.random() < .35 ? null : Math.random() * 6.283; v.vx = a === null ? 0 : Math.cos(a) * 28; v.vy = a === null ? 0 : Math.sin(a) * 28; if (Math.hypot(v.x - v.hx, v.y - v.hy) > 6 * T) { const b2 = Math.atan2(v.hy - v.y, v.hx - v.x); v.vx = Math.cos(b2) * 28; v.vy = Math.sin(b2) * 28; } }
+    tryMove(v, v.vx * dt, v.vy * dt);
+  }
+  if (fishing) { fishing.t -= dt; if (fishing.t <= 0) { if (fishing.state === "wait") { fishing.state = "bite"; fishing.t = .9; sfx("ui"); } else { say("놓쳤어요…"); fishing = null; } } }
+}
+function worldGather() {
+  const P = player;
+  for (const o of [26, 38]) {
+    const tx = Math.floor((P.x + P.dx * o) / T), ty = Math.floor((P.y + 8 + P.dy * o) / T), c = wc(tx, ty);
+    if (c < 1 || c > 5) continue; const key = ty * WN + tx, hp = (dun.nhp[key] ?? (c === 3 ? 2 : c === 4 ? 5 : 3)) - 1, b = wb(tx, ty);
+    sfx("chop"); shake = Math.max(shake, 1); burst((tx + .5) * T, (ty + .5) * T - 8, 6, c === 2 || c === 4 ? ["#b8bcc8", "#8a8e9e"] : c === 1 ? ["#a87645", "#7d5433", "#3d8444"] : ["#6dbb4f", "#3d8444"], 80, .4, 160, 1);
+    if (hp > 0) { dun.nhp[key] = hp; return; }
+    delete dun.nhp[key]; setCell(tx, ty, 0, true);
+    if (c === 1) { matAdd("wood", 2 + ri(2)); if (b === 5 && Math.random() < .2) matAdd("hide", 1); } else if (c === 2) { matAdd("stone", 2 + ri(2)); if (Math.random() < .15) matAdd("bone", 1); }
+    else if (c === 3) { matAdd("fiber", 1 + ri(2)); if (Math.random() < .6) matAdd("berry", 1 + ri(2)); } else if (c === 4) { matAdd("ore", 1 + ri(2)); matAdd("stone", 1); } else { matAdd("fiber", 2); if (Math.random() < .5) matAdd("berry", 1); }
+    return;
+  }
+}
+function worldAct() {
+  const P = player, fx_ = P.x + P.dx * 26, fy_ = P.y + 8 + P.dy * 26, tx = Math.floor(fx_ / T), ty = Math.floor(fy_ / T);
+  if (fishing) { if (fishing.state === "bite") catchFish(); else say("너무 일렀어요… 찌가 움직일 때까지 기다려요."); fishing = null; return true; }
+  const v = dun.vil.find(v => Math.hypot(v.x - fx_, v.y + 8 - fy_) < 40); if (v) { talk(v); return true; }
+  if (buildSel) { buildPlace(tx, ty); return true; }
+  if (winteract(tx, ty)) return true;
+  if (wb(tx, ty) === 0 && !inTown(tx, ty)) { fishing = { tx, ty, state: "wait", t: 1.5 + R() * 3 }; sfx("splash"); burst((tx + .5) * T, (ty + .6) * T, 6, ["#a8dcf5", "#fff"], 40, .3, 160, .3); say("찌를 던졌어요…", 1200); return true; }
+  return false;
+}
+function sleepAt(pos, name) {
+  S.wspawn = pos; player.hp = pstats().maxhp; sfx("potion"); const night = clock >= 19 || clock < 6;
+  if (night) { clock = 7; say(`😴 ${name}에서 푹 잤어요. 아침이 밝았어요! (리스폰 지점 저장)`, 3000); } else say(`🛏️ ${name} — 체력을 회복하고 리스폰 지점을 저장했어요.`, 2800); save();
+}
+function winteract(tx, ty) {
+  const k = ty * WN + tx, poi = WORLD.inter.get(k), c = wc(tx, ty);
+  if (poi) {
+    if (poi.type === "shop") { openShop(); return true; }
+    if (poi.type === "inn") { sleepAt({ x: (poi.x + 1.5) * T, y: (poi.y + 3) * T }, "여관"); return true; }
+    if (poi.type === "board") { togglePanel("quest"); return true; }
+    if (poi.type === "shrine") { discoverWp(poi); togglePanel("map"); return true; }
+    if (poi.type === "portal") { leaveDungeon(false, true); return true; }
+    if (poi.type === "cave") { const depth = clamp(1 + Math.floor(Math.hypot(poi.x - WORLD.spawn.x, poi.y - WORLD.spawn.y) / 45), 1, 12), ret = { x: (poi.x + 1) * T, y: (poi.y + 3) * T }; S.wpos = ret; save(); enterDungeon(depth, false, undefined, ret); return true; }
+    if (poi.type === "chest") { openChest(poi); return true; }
+    return false;
+  }
+  if (c === CELL.BED) { sleepAt({ x: (tx + .5) * T, y: (ty + 1.5) * T }, "내 침대"); return true; }
+  if (c === CELL.FARM) { farmAct(tx, ty); return true; }
+  if (c === CELL.FIRE) { say("🔥 모닥불 — 가까이 있으면 체력이 천천히 회복돼요.", 2200); return true; }
+  return false;
+}
+function openChest(p) {
+  if (S.wopen[p.id]) return say("텅 빈 상자예요.", 1500);
+  S.wopen[p.id] = 1; markDirty(p.x, p.y); sfx("gear"); burst((p.x + .5) * T, (p.y + .5) * T, 20, ["#f5d142", "#fff", "#f0a23c"], 110, .8, 100, 1);
+  const tier = p.tier || 0, n = 1 + (tier >= 2 ? 1 : 0) + (p.par && p.par.type === "lair" ? 2 : 0), ilvl = Math.max(2, 3 + tier * 3 + Math.round(S.lv * .4));
+  for (let i = 0; i < n; i++) dun.loot.push({ t: "gear", it: genGear(ilvl, 1.5), x: (p.x + .5) * T + (i - n / 2) * 24, y: (p.y + 1.6) * T });
+  dun.loot.push({ t: "bell", n: 60 + tier * 60 + ri(60), x: (p.x + .5) * T, y: (p.y + 1.4) * T }); dun.loot.push({ t: "pot", x: (p.x - .3) * T, y: (p.y + 1.5) * T });
+  say(`🎁 ${p.name}를 열었어요!`, 2500);
+}
+function farmAct(tx, ty) {
+  const k = ty * WN + tx, st = cropStage(k);
+  if (st < 0) { if ((S.mat.berry || 0) < 1) return say("🌱 열매 1개를 씨앗으로 심을 수 있어요. 덤불에서 열매를 구해 보세요.", 2500); S.mat.berry--; S.crops[k] = { t0: Date.now() }; sfx("place"); markDirty(tx, ty); hud(); say("🌱 씨앗을 심었어요! 약 2분 뒤에 수확해요.", 2200); }
+  else if (st < 2) say("🌿 아직 자라는 중이에요.", 1500);
+  else { delete S.crops[k]; sfx("coin"); markDirty(tx, ty); matAdd("berry", 3 + ri(2)); matAdd("fiber", 1); burst((tx + .5) * T, (ty + .5) * T, 10, ["#e8508a", "#6dbb4f"], 70, .5, 120, .6); say("🧺 수확했어요!", 1500); }
+}
+const PIECE_OWN = new Set([12, 13, 14, 15, 18, 21]);
+function canAfford(cost) { return Object.entries(cost).every(([k, v]) => (S.mat[k] || 0) >= v); }
+function buildPlace(tx, ty) {
+  const b = buildSel; if (!b) return;
+  if (tx < 1 || ty < 1 || tx >= WN - 1 || ty >= WN - 1 || wb(tx, ty) === 0 || wc(tx, ty) !== 0) return say("여기에는 지을 수 없어요.", 1400);
+  if (inTown(tx, ty)) return say("마을 안에는 지을 수 없어요.", 1400);
+  const ptx = Math.floor(player.x / T), pty = Math.floor((player.y + 8) / T);
+  if (SOLIDC[b.code] && ptx === tx && pty === ty) return say("서 있는 자리에는 지을 수 없어요.", 1400);
+  if (SOLIDC[b.code] && dun.mons.some(m => Math.floor(m.x / T) === tx && Math.floor((m.y + 8) / T) === ty)) return say("몬스터가 있어요!", 1200);
+  if (!canAfford(b.cost)) return say("재료가 부족해요. (I 키가 아니라 상단 주머니의 재료를 확인하세요)", 2000);
+  for (const k in b.cost) S.mat[k] -= b.cost[k]; setCell(tx, ty, b.code, false); sfx("place"); burst((tx + .5) * T, (ty + .5) * T, 8, ["#d9b07c", "#fff"], 60, .4, 160, .5); hud(); save();
+}
+function worldRemove() {
+  const P = player, tx = Math.floor((P.x + P.dx * 26) / T), ty = Math.floor((P.y + 8 + P.dy * 26) / T), c = wc(tx, ty);
+  if (!PIECE_OWN.has(c)) return say("직접 지은 건물만 철거할 수 있어요.", 1400);
+  const b = BUILD.find(b => b.code === c); if (b) for (const k in b.cost) S.mat[k] = (S.mat[k] || 0) + Math.floor(b.cost[k] / 2);
+  delete S.crops[ty * WN + tx]; setCell(tx, ty, 0, false); sfx("pick"); burst((tx + .5) * T, (ty + .5) * T, 8, ["#d9b07c", "#fff"], 60, .4, 160, .5); hud(); save();
+}
+function worldCursor() {
+  const c = G.cursor; if (!buildSel || modal) { c.visible = false; return; }
+  const P = player, tx = Math.floor((P.x + P.dx * 26) / T), ty = Math.floor((P.y + 8 + P.dy * 26) / T), ok = wb(tx, ty) !== 0 && wc(tx, ty) === 0 && !inTown(tx, ty) && canAfford(buildSel.cost);
+  cursorAt(tx, ty, .06); c.material.color.setHex(ok ? 0x9bff9b : 0xff6a6a);
+}
+
+/* ----- 퀘스트 ----- */
+const QMATS = ["wood", "stone", "fiber", "hide", "bone", "meat", "ore", "berry"];
+function genOffers() {
+  const o = [], mk = (type, need, label, reward) => ({ id: uid(), type, need, have: 0, label, reward });
+  const n1 = 6 + ri(8); o.push(mk("kill", n1, `몬스터 ${n1}마리 처치`, { bells: n1 * 22, xp: n1 * 10 }));
+  const n2 = 4 + ri(5); o.push(mk("dino", n2, `야생 공룡 ${n2}마리 사냥`, { bells: n2 * 35, xp: n2 * 14 }));
+  const mt = QMATS[ri(QMATS.length)], n3 = 10 + ri(14); o.push(mk("mat:" + mt, n3, `${MAT[mt][1]} ${n3}개 모으기`, { bells: n3 * 12, xp: n3 * 6 }));
+  if (ri(2)) o.push(mk("disc", 2, "새 이동석 2곳 발견하기", { bells: 300, xp: 150, gear: true })); else o.push(mk("lair", 1, "몬스터 소굴 1곳 소탕하기", { bells: 600, xp: 300, gear: true }));
+  return o;
+}
+function qEvent(type, a, n = 1) {
+  let ch = false;
+  for (const q of S.quests) {
+    if (q.have >= q.need) continue; let ok = false;
+    if (q.type === "kill" && type === "kill") ok = true; else if (q.type === "dino" && type === "kill" && a && a.wild) ok = true; else if (q.type === "disc" && type === "disc") ok = true;
+    else if (q.type === "lair" && type === "lair") ok = true; else if (q.type.startsWith("mat:") && type === "mat" && q.type.slice(4) === a) ok = true;
+    if (ok) { q.have = Math.min(q.need, q.have + n); ch = true; if (q.have >= q.need) { say(`✅ 퀘스트 완료: ${q.label} — J 의뢰창에서 보상을 받으세요!`, 3500); sfx("gear"); } }
+  }
+  if (ch) hud();
+}
+function turnIn(id) {
+  const i = S.quests.findIndex(q => q.id === id), q = S.quests[i]; if (!q || q.have < q.need) return;
+  S.quests.splice(i, 1); S.bells += q.reward.bells; sfx("coin"); gainXp(q.reward.xp);
+  if (q.reward.gear) { if (S.bag.length < BAGCAP) { const it = genGear(Math.max(2, Math.round(S.lv * 1.2 + 3)), 1.5); S.bag.push(it); say(`🎁 보상: ${it.e} ${it.n}!`, 3000); } else say("가방이 가득 차서 장비 보상은 받지 못했어요.", 2500); }
+  else say(`🔔 ${q.reward.bells}벨 · 경험치 ${q.reward.xp} 보상!`, 2500);
+  hud(); save();
+}
+function questLine() { const q = S.quests[0]; return q ? `📜 ${q.label} (${q.have}/${q.need})` : ""; }
+
+/* ----- 패널: 건설 · 의뢰 · 지도 ----- */
+function costHtml(cost) { return Object.entries(cost).map(([k, v]) => `<span style="color:${(S.mat[k] || 0) >= v ? "inherit" : "#c0392b"}">${MAT[k][0]}${v}</span>`).join(" "); }
+function bodyBuild() {
+  return `<h2>🏗️ 건설</h2><div><small>오픈월드에서 조각을 고른 뒤 바라보는 칸에 스페이스로 놓아요 · X: 철거(절반 환급) · B: 건설 모드 끄기 · 마을 안은 지을 수 없어요.</small></div>` +
+    BUILD.map((b, i) => `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:3px 0"><span>${b.e} ${b.n}<br><small>${costHtml(b.cost)}</small></span><button style="margin:0;padding:2px 12px" data-build="${i}" ${canAfford(b.cost) ? "" : "disabled"}>${buildSel === b ? "선택됨" : "선택"}</button></div>`).join("");
+}
+function bodyQuest() {
+  if (!S.qoffer || !S.qoffer.length) S.qoffer = genOffers();
+  const act = S.quests.map(q => `<div style="padding:3px 0"><b>${q.label}</b> <small>(${q.have}/${q.need})</small><br><small>🔔${q.reward.bells} · ✨${q.reward.xp}${q.reward.gear ? " · 🎁장비" : ""}</small> ${q.have >= q.need ? `<button style="margin:0 0 0 6px;padding:1px 10px" data-qturn="${q.id}">보상 받기</button>` : ""}</div>`).join("") || "<div><small>진행 중인 의뢰가 없어요.</small></div>";
+  const off = S.qoffer.map(q => `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:3px 0"><span>${q.label}<br><small>🔔${q.reward.bells} · ✨${q.reward.xp}${q.reward.gear ? " · 🎁장비" : ""}</small></span><button style="margin:0;padding:2px 12px" data-qacc="${q.id}" ${S.quests.length >= 4 ? "disabled" : ""}>수락</button></div>`).join("");
+  return `<h2>📜 의뢰 게시판</h2><h3>진행 중 (${S.quests.length}/4)</h3>${act}<h3>새 의뢰</h3>${off}<button id="qreroll" style="margin-top:6px">의뢰 새로고침</button>`;
+}
+function bodyMap() {
+  const W = getWorld(), wps = W.pois.filter(p => p.wp && S.wp[p.id]);
+  return `<h2>🗺️ 월드 맵</h2><canvas id="wmap" width="${DN * 3}" height="${DN * 3}" style="width:100%;max-width:${DN * 3}px;image-rendering:pixelated;border:3px solid var(--ink);border-radius:8px;background:#14121c"></canvas>
+    <h3>이동석 (${wps.length}) — 발견한 곳으로 바로 이동</h3>` + (wps.map(p => `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:2px 0"><span>${p.town ? "🏘️" : "🔷"} ${p.name}</span><button style="margin:0;padding:1px 12px" data-warp="${p.id}">이동</button></div>`).join("") || "<div><small>이동석에 가까이 가면 발견돼요. 마을마다 하나씩 있어요.</small></div>");
+}
+function drawWorldMap() {
+  const cvm = document.getElementById("wmap"); if (!cvm) return; const x = cvm.getContext("2d"), W = getWorld(), k = 3; x.fillStyle = "#14121c"; x.fillRect(0, 0, cvm.width, cvm.height);
+  for (let y = 0; y < DN; y++) for (let xx = 0; xx < DN; xx++) { if (!W.disc[y * DN + xx]) continue; x.fillStyle = BIO_CS[W.bio[(y * 4 + 2) * WN + xx * 4 + 2]]; x.fillRect(xx * k, y * k, k, k); }
+  for (const p of W.pois) { if (!(W.disc[(p.y >> 2) * DN + (p.x >> 2)])) continue; const c = { town: "#ffd34d", cave: "#7a5a9a", shrine: "#6ee7ff", camp: "#e8505a", ruin: "#b8bcc8", lair: "#ff7a1a", portal: "#6ee7ff" }[p.type]; if (!c) continue; x.fillStyle = c; x.fillRect(p.x / 4 * k - 2, p.y / 4 * k - 2, 5, 5); }
+  if (scene === "dun" && dun && dun.kind === "world") { x.fillStyle = "#fff"; x.fillRect(player.x / T / 4 * k - 2, player.y / T / 4 * k - 2, 5, 5); }
+}
+function warpTo(id) {
+  const p = getWorld().byId.get(id); if (!p || !S.wp[id]) return;
+  if (scene === "dun" && dun.kind !== "world") return say("던전 안에서는 이동할 수 없어요.", 1800);
+  closeShop(); const pos = { x: (p.x + .5) * T, y: (p.y + 2.5) * T };
+  if (scene === "dun") { player.x = pos.x; player.y = pos.y; camInit = false; dun.mons = dun.mons.filter(m => m.poi); getWorld().first = true; sfx("portal"); burst(pos.x, pos.y, 20, ["#6ee7ff", "#fff"], 100, .7, -30, 1); say(`📍 ${p.name}(으)로 이동했어요.`, 2000); }
+  else { S.wpos = pos; enterWorld(pos, `📍 ${p.name}(으)로 이동했어요.`); }
+}
+
+/* ----- 월드용 엔티티 그리기 / 미니맵 ----- */
+function drawWorldEnts(g, P, pz) {
+  for (const v of dun.vil) {
+    if (Math.abs(v.x / T - camT.x) > 22 || Math.abs((v.y + 8) / T - camT.z) > 16) continue;
+    const e = ent(v, () => mkAnimal(v.e), g.dyn), mv = v.talk <= 0 && (v.vx || v.vy);
+    e.g.position.set(v.x / T, 0, (v.y + 8) / T); if (mv) face(e.g, v.vx, v.vy); else if (v.talk > 0) face(e.g, P.x - v.x, P.y - v.y); animE(e, mv, 8, .5);
+    if (Math.hypot(v.x - P.x, v.y - P.y) < 90) labelT(v.name, v.x / T, (v.y + 8) / T, 2, "#fff3d6");
+  }
+  for (const o of NET.others.values()) { const e = ent(o, mkPlayer, g.dyn); e.g.position.set(o.x / T, 0, (o.y + 8) / T); face(e.g, o.dx || 0, o.dy || 1); animE(e, true, 10, .7); labelT(o.name || "모험가", o.x / T, (o.y + 8) / T, 2.1, "#9be39b"); }
+  if (fishing) { const be = ent(fishing, () => ({ g: mkBobber() }), g.dyn); be.g.position.set(fishing.tx + .5, -.05 + (fishing.state === "bite" ? Math.abs(Math.sin(vtime * 20)) * .2 : Math.sin(vtime * 3) * .03), fishing.ty + .7); labelT(fishing.state === "bite" ? "❗" : "…", P.x / T, pz, 2.4, fishing.state === "bite" ? "#ff6a6a" : "#ffffff"); }
+  for (const p of WORLD.pois) { if (Math.abs(p.x - camT.x) > 12 || Math.abs(p.y - camT.z) > 9) continue; if (p.type === "shop" || p.type === "inn") labelT(p.name, p.x + 1.5, p.y + 2.3, .3); else if (p.type === "board" || p.type === "shrine" || p.type === "portal") labelT(p.name, p.x + .5, p.y + 1.3, .4, p.type === "board" ? "#fff3d6" : "#8fefff"); else if (p.type === "cave") labelT("동굴 (깊이 " + clamp(1 + Math.floor(p.dist / 45), 1, 12) + ")", p.x + 1, p.y + 2.5, .3); else if (p.type === "chest") labelT(S.wopen[p.id] ? "빈 상자" : p.name, p.x + .5, p.y + 1.2, .3, "#f5d142"); }
+}
+function drawMiniWorld() {
+  const W = WORLD, P = player, px = Math.floor(P.x / T), py = Math.floor((P.y + 8) / T), hw = 26, hh = 18, k = 3 * (ov.clientWidth < 600 ? 1.4 : 1);
+  const ox = VW - hw * 2 * k - 12, oy = VH - hh * 2 * k - 12;
+  ctx.fillStyle = "rgba(10,8,20,.7)"; ctx.fillRect(ox - 3, oy - 3, hw * 2 * k + 6, hh * 2 * k + 6);
+  for (let j = -hh; j < hh; j++) for (let i = -hw; i < hw; i++) {
+    const x = px + i, y = py + j; if (x < 0 || y < 0 || x >= WN || y >= WN) continue; const c = wc(x, y);
+    ctx.fillStyle = c === 1 ? "#2f6b2f" : c === 20 || c === 2 || c === 4 || (c >= 10 && c !== 13 && c !== 18) ? "#7a7e8c" : BIO_CS[W.bio[y * WN + x]]; ctx.fillRect(ox + (i + hw) * k, oy + (j + hh) * k, k + .4, k + .4);
+  }
+  const dot = (x, y, col, r) => { const sx = ox + (x / T - px + hw) * k, sy = oy + (y / T - py + hh) * k; if (sx < ox || sy < oy || sx > ox + hw * 2 * k || sy > oy + hh * 2 * k) return; ctx.fillStyle = col; ctx.fillRect(sx - r, sy - r, r * 2, r * 2); };
+  for (const p of W.pois) { const c = { town: "#ffd34d", cave: "#b58aff", shrine: "#6ee7ff", camp: "#e8505a", ruin: "#d8dce8", lair: "#ff7a1a", portal: "#6ee7ff" }[p.type]; if (c) dot((p.x + .5) * T, (p.y + .5) * T, c, k * 1.2); }
+  for (const m of dun.mons) dot(m.x, m.y, m.boss ? "#ff9f1c" : m.wild && !m.hostile ? "#7be07b" : "#ff5a5a", k * (m.boss ? 1.3 : .7));
+  dot(P.x, P.y + 8, "#ffffff", k * 1.1);
+}
+function worldInfo() { const px = Math.floor(player.x / T), py = Math.floor((player.y + 8) / T), b = wb(px, py); return `${BIO_E[b]} ${BIO_N[b]} ${"★".repeat(wTier(px, py) + 1)} (${px},${py})`; }
 
 /* ---------- 효과음 (WebAudio, 파일 없이 합성) ---------- */
 let AC = null, muted = false;
@@ -1615,7 +2104,7 @@ player.hp = pstats().maxhp;
 resize(); hud(); $("clock").textContent = clockText(); setMute(muted);
 $("snd").onclick = () => { setMute(!muted); sfx("ui"); };
 requestAnimationFrame(frame);
-window.__game = { setClock: v => { clock = v; }, fireball, feed, toggleMount, craft, togglePanel, enterDungeon, get dun() { return dun; }, pstats, genGear, attack, scene: () => scene, furnSelSet: v => { furnSel = v; renderFurn(); }, player, trees, S, keys, act, get fishing() { return fishing; }, bugs, villagers }; // 디버그/테스트용
+window.__game = { spawnNear, worldTick, killMon, setBuild: i => { buildSel = i == null ? null : BUILD[i]; }, farmAct, winteract, genOffers, turnIn, warpTo, worldAct, enterWorld, getWorld, get WORLD() { return WORLD; }, get dun() { return dun; }, wc, wb, setClock: v => { clock = v; }, fireball, feed, toggleMount, craft, togglePanel, enterDungeon, get dun() { return dun; }, pstats, genGear, attack, scene: () => scene, furnSelSet: v => { furnSel = v; renderFurn(); }, player, trees, S, keys, act, get fishing() { return fishing; }, bugs, villagers }; // 디버그/테스트용
 </script>
 </body>
 </html>
