@@ -13,6 +13,10 @@
   #c { background:#1c1420; }
   #o { position:absolute; left:0; top:0; pointer-events:none; }
   #snd { left:12px; top:82px; cursor:pointer; }
+  #online { left:12px; top:118px; }
+  #chat { position:absolute; left:12px; top:158px; width:min(300px,46%); font-size:clamp(11px,1.5vw,14px); pointer-events:none; }
+  #chatlog div { background:rgba(28,20,32,.72); color:#fff3d6; padding:2px 8px; border-radius:8px; margin-top:3px; width:fit-content; max-width:100%; word-break:break-all; }
+  #chatin { pointer-events:auto; width:100%; margin-top:5px; padding:5px 9px; border-radius:9px; border:3px solid var(--ink); font:inherit; background:var(--paper); color:var(--ink); }
   .pill { position:absolute; background:var(--paper); border:3px solid var(--ink); border-radius:999px; padding:4px 14px; font-weight:700; font-size:clamp(11px,1.8vw,18px); box-shadow:0 3px 0 rgba(0,0,0,.25); }
   #bells { left:12px; top:10px; }
   #clock { left:12px; top:46px; }
@@ -32,6 +36,8 @@
   button { font:inherit; font-weight:700; background:var(--accent); color:var(--ink); border:3px solid var(--ink); border-radius:12px; padding:6px 14px; margin:8px 6px 0 0; cursor:pointer; }
   button:disabled { opacity:.45; cursor:default; }
   #help p { margin:4px 0; }
+  #shop, #gear, #help { z-index:30; }
+  #help { max-height:94%; overflow:auto; }
   #shop, #gear { max-height:88%; overflow:auto; }
   #gear h3 { margin:10px 0 2px; }
   #shop h3 { margin:10px 0 2px; }
@@ -74,7 +80,7 @@
     #inv { display:none; top:40px; right:6px; min-width:110px; font-size:11px; padding:6px 8px; }
     body.showinv #inv { display:block; }
     .pill { font-size:11px; padding:2px 10px; border-width:2px; }
-    #bells { left:6px; top:6px; } #clock { left:6px; top:32px; } #snd { left:6px; top:58px; }
+    #bells { left:6px; top:6px; } #clock { left:6px; top:32px; } #snd { left:6px; top:58px; } #online { left:6px; top:84px; } #chat { top:114px; }
     #msg { bottom:6px; font-size:12px; padding:6px 12px; max-width:92%; }
     #shop, #gear, #help { position:fixed; max-height:92vh; overflow:auto; width:min(94vw,440px); }
     #touch { display:flex; justify-content:space-between; align-items:center; gap:8px; padding:12px 10px 0; }
@@ -87,11 +93,13 @@
   <canvas id="c"></canvas>
   <canvas id="o"></canvas>
   <div id="snd" class="pill" title="소리 켜기/끄기 (M)">🔊</div>
+  <div id="online" class="pill" hidden></div>
   <div id="bells" class="pill"></div>
   <div id="clock" class="pill"></div>
   <div id="inv"></div>
   <div id="gear" hidden></div>
   <div id="msg" hidden></div>
+  <div id="chat" hidden><div id="chatlog"></div><input id="chatin" hidden maxlength="120" autocomplete="off" placeholder="메시지 입력 · Enter 전송 · Esc 취소"></div>
   <div id="shop" hidden></div>
   <div id="help">
     <h2>🌳 포근 마을에 오신 걸 환영해요</h2>
@@ -105,6 +113,7 @@
     <p>I 장비 · K 캐릭터(스탯/스킬/동료) · C 제작</p>
     <p>🏪 상점에서 열매·물고기·곤충을 팔고 묘목을 사 보세요!</p>
     <p>📱 폰에서는 화면 아래 버튼으로 조작해요 (🎒 = 주머니 보기)</p>
+    <p id="nickrow" hidden>🌐 닉네임 <input id="nick" maxlength="12" placeholder="모험가" style="font:inherit;padding:3px 8px;border:2px solid var(--ink);border-radius:8px;width:9em"></p>
     <button id="start">시작하기</button><button id="reset" style="background:#e8dcc0">새로 시작</button>
   </div>
   </div>
@@ -119,7 +128,7 @@
     </div>
     <div class="acts">
       <div class="row2"><button data-k="KeyI">장비</button><button data-k="KeyK">캐릭터</button><button data-k="KeyC">제작</button><button id="tinv">🎒</button></div>
-      <div class="row2"><button class="td" data-k="KeyQ">Q</button><button class="td" data-k="KeyE">E</button><button class="td" data-k="KeyR">R</button><button class="td" data-k="KeyF">F</button><button class="tw" data-k="KeyV">V</button><button class="tw" data-k="KeyG">G</button><button class="th" data-k="KeyX">집기</button><button class="tx" data-k="KeyB">건설</button><button class="tx" data-k="KeyN">지도</button><button class="tx" data-k="KeyJ">의뢰</button></div>
+      <div class="row2"><button class="td" data-k="KeyQ">Q</button><button class="td" data-k="KeyE">E</button><button class="td" data-k="KeyR">R</button><button class="td" data-k="KeyF">F</button><button class="tw" data-k="KeyV">V</button><button class="tw" data-k="KeyG">G</button><button class="th" data-k="KeyX">집기</button><button class="tx" data-k="KeyB">건설</button><button class="tx" data-k="KeyN">지도</button><button class="tx" data-k="KeyJ">의뢰</button><button class="tx" id="tchat">채팅</button></div>
       <button class="big" data-k="Space">A</button>
     </div>
   </div>
@@ -899,6 +908,7 @@ function press(code) {
   else if (scene === "dun" && code === "KeyR") fireball();
   else if (scene === "dun" && code === "KeyV") feed();
   else if (scene === "dun" && code === "KeyG") toggleMount();
+  else if (code === "Enter") openChat();
   else if (code === "KeyB") { if (buildSel) { buildSel = null; say("건설 모드를 껐어요.", 1200); } else togglePanel("build"); }
   else if (code === "KeyJ") togglePanel("quest");
   else if (code === "KeyN") togglePanel("map");
@@ -911,6 +921,7 @@ function press(code) {
 }
 function release(code) { keys.delete(code); }
 addEventListener("keydown", e => {
+  if (e.target && e.target.tagName === "INPUT") return;
   if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space"].includes(e.code)) e.preventDefault();
   if (e.repeat) return;
   press(e.code);
@@ -1704,7 +1715,7 @@ function genWorld() {
   towns.forEach((t, i) => { if (!i) return; let best = null, bd = 1e9; for (let j = 0; j < i; j++) { const d = Math.hypot(towns[j].x - t.x, towns[j].y - t.y); if (d < bd) { bd = d; best = towns[j]; } } road(t, best); });
   for (const p of pois) if (p.type !== "town" && p.type !== "chest" && !p.town) p.dist = Math.hypot(p.x - sx, p.y - sy);
   S.wedits = S.wedits || {};
-  const W = { N, bio, cell, inter, pois, towns, guard, spawn: { x: sx, y: sy }, ed: S.wedits, chunks: new Map(), disc: new Uint8Array(DN * DN), regrow: [], first: true, byId: new Map(pois.map(p => [p.id, p])) };
+  const W = { N, bio, cell, inter, pois, towns, guard, spawn: { x: sx, y: sy }, ed: NET.on ? NET.ed : S.wedits, chunks: new Map(), disc: new Uint8Array(DN * DN), regrow: [], first: true, byId: new Map(pois.map(p => [p.id, p])) };
   for (let i = 0; i < Math.min(S.disc.length, DN * DN); i++) W.disc[i] = S.disc.charCodeAt(i) === 49 ? 1 : 0;
   for (const k in S.wreg) W.regrow.push({ k: +k, t: S.wreg[k] });
   return W;
@@ -1716,7 +1727,8 @@ function wsolid(x, y) { return x < 0 || y < 0 || x >= WN || y >= WN || WORLD.bio
 function markDirty(x, y) { for (const [dx, dy] of [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]]) { const ch = WORLD.chunks.get(Math.floor((y + dy) / CHK) * 100 + Math.floor((x + dx) / CHK)); if (ch) ch.dirty = true; } }
 function setCell(x, y, code, regrow) {
   const k = y * WN + x; if (WORLD.cell[k] === code) delete WORLD.ed[k]; else WORLD.ed[k] = code;
-  if (regrow) { const t = Date.now() + 420000 + Math.random() * 120000; S.wreg[k] = t; WORLD.regrow.push({ k, t }); }
+  if (regrow && !NET.on) { const t = Date.now() + 420000 + Math.random() * 120000; S.wreg[k] = t; WORLD.regrow.push({ k, t }); }
+  if (NET.on) NET.send({ t: "edit", k, c: WORLD.cell[k] === code ? null : code, rg: regrow ? 1 : 0 });
   markDirty(x, y);
 }
 const wTier = (x, y) => Math.min(4, Math.floor(Math.hypot(x - WORLD.spawn.x, y - WORLD.spawn.y) / 55));
@@ -1838,7 +1850,61 @@ function drawWorldTerrain() {
 }
 
 /* ----- 월드 게임플레이 ----- */
-const NET = { connected: false, others: new Map(), send() {} };    // 서버 연결 지점 (다음 단계)
+/* ----- 멀티플레이 (server/server.js 와 통신) ----- */
+const NET = {
+  on: false, ws: null, id: null, col: 0x3d6ed0, name: "", others: new Map(), ed: {}, away: true, posT: 0, retryT: 0, count: 1, mySay: "", mySayT: 0,
+  url: (() => { try { const q = new URLSearchParams(location.search), sv = q.get("server"); if (sv) return sv; if (q.has("online") && /^https?:/.test(location.protocol)) return location.origin.replace(/^http/, "ws"); } catch (e) {} return null; })(),
+  send(m) { if (this.ws && this.ws.readyState === 1) this.ws.send(JSON.stringify(m)); },
+};
+function useEdits(o) { if (!WORLD) return; WORLD.ed = o; for (const ch of WORLD.chunks.values()) ch.dirty = true; }
+function addChat(name, text, sys) {
+  const el = document.createElement("div"); el.textContent = sys ? text : `${name}: ${text}`; if (sys) el.style.opacity = ".75";
+  const log = $("chatlog"); log.appendChild(el); while (log.children.length > 8) log.firstChild.remove(); setTimeout(() => el.remove(), 14000); $("chat").hidden = false;
+}
+function netPlayer(p) {
+  let o = NET.others.get(p.id);
+  if (!o) { o = { id: p.id, name: p.name, col: p.col, x: p.x, y: p.y, tx: p.x, ty: p.y, dx: p.dx, dy: p.dy, mv: 0, say: "", sayT: 0 }; NET.others.set(p.id, o); }
+  o.name = p.name ?? o.name; o.col = p.col ?? o.col; o.tx = p.x; o.ty = p.y; o.dx = p.dx; o.dy = p.dy; o.mv = p.mv;
+}
+function netMsg(m) {
+  switch (m.t) {
+    case "hello": NET.on = true; NET.id = m.id; NET.col = m.col; NET.name = m.name; NET.ed = m.edits || {}; NET.count = m.count || 1; NET.others.clear(); for (const p of m.players) netPlayer(p);
+      useEdits(NET.ed); $("online").hidden = false; addChat("", `🌐 ${m.name}(으)로 접속했어요 · ${NET.count}명 접속 중`, true); break;
+    case "state": for (const p of m.ps) netPlayer(p); break;
+    case "away": NET.others.delete(m.id); break;
+    case "count": NET.count = m.n; break;
+    case "chat": addChat(m.name, m.text, !!m.sys); { const o = NET.others.get(m.id); if (o && !m.sys) { o.say = m.text; o.sayT = 6; } } break;
+    case "edit": if (m.c === null) delete NET.ed[m.k]; else NET.ed[m.k] = m.c; if (WORLD) markDirty(m.k % WN, Math.floor(m.k / WN)); break;
+  }
+}
+function netConnect() {
+  if (!NET.url || NET.ws) return; let ws; try { ws = new WebSocket(NET.url); } catch (e) { return; } NET.ws = ws;
+  ws.onopen = () => { let nm = ""; try { nm = ($("nick").value || localStorage.getItem("pokgeun-nick") || "").trim(); localStorage.setItem("pokgeun-nick", nm); } catch (e) {} NET.send({ t: "join", name: nm }); };
+  ws.onmessage = ev => { let m; try { m = JSON.parse(ev.data); } catch (e) { return; } netMsg(m); };
+  ws.onclose = () => { const was = NET.on; NET.ws = null; NET.on = false; NET.others.clear(); NET.away = true; useEdits(S.wedits); NET.retryT = 4; $("online").hidden = true; if (was) { addChat("", "서버 연결이 끊겼어요. 다시 연결하는 중…", true); say("🌐 서버 연결이 끊겼어요 (혼자 하기 모드로 전환)", 3000); } };
+  ws.onerror = () => {};
+}
+function netTick(dt) {
+  if (!NET.url || !started) return;
+  if (!NET.ws && !NET.on) { NET.retryT -= dt; if (NET.retryT <= 0) { NET.retryT = 5; netConnect(); } return; }
+  if (!NET.on) return;
+  const inWorld = scene === "dun" && dun && dun.kind === "world";
+  if (inWorld) { NET.away = false; NET.posT -= dt; if (NET.posT <= 0) { NET.posT = .1; const P = player; NET.send({ t: "pos", x: Math.round(P.x), y: Math.round(P.y), dx: Math.round(P.dx * 100) / 100, dy: Math.round(P.dy * 100) / 100, mv: P.mv ? 1 : 0 }); } }
+  else if (!NET.away) { NET.away = true; NET.send({ t: "away" }); }
+  const k = Math.min(1, dt * 10); for (const o of NET.others.values()) { o.x += (o.tx - o.x) * k; o.y += (o.ty - o.y) * k; if (o.sayT > 0) o.sayT -= dt; }
+  if (NET.mySayT > 0) NET.mySayT -= dt; $("online").textContent = `🌐 ${NET.count}명 접속 중`;
+}
+function openChat() {
+  if (!NET.on || !(scene === "dun" && dun && dun.kind === "world") || modal) return;
+  const i = $("chatin"); $("chat").hidden = false; i.hidden = false; i.value = ""; i.focus(); keys.clear();
+}
+$("chatin").addEventListener("keydown", e => {
+  e.stopPropagation();
+  if (e.key === "Enter") { const v = e.target.value.trim(); if (v) { NET.send({ t: "chat", text: v.slice(0, 120) }); NET.mySay = v.slice(0, 120); NET.mySayT = 6; } e.target.hidden = true; e.target.blur(); }
+  else if (e.key === "Escape") { e.target.hidden = true; e.target.blur(); }
+});
+$("tchat").onclick = openChat;
+if (NET.url) { $("nickrow").hidden = false; try { $("nick").value = localStorage.getItem("pokgeun-nick") || ""; } catch (e) {} }
 function newWorldDun() { return newDun({ kind: "world", exit: null, stairs: null, vil: [], pet: null, areaB: -1, tick: 0, spawnT: 0, discT: 0, saveT: 0, regT: 0, healT: 0, guardT: 0 }); }
 function enterWorld(pos, msg) {
   const W = getWorld(); cancelFish(); scene = "dun"; dun = newWorldDun(); W.first = true; camInit = false; sfx("portal");
@@ -2047,7 +2113,11 @@ function drawWorldEnts(g, P, pz) {
     e.g.position.set(v.x / T, 0, (v.y + 8) / T); if (mv) face(e.g, v.vx, v.vy); else if (v.talk > 0) face(e.g, P.x - v.x, P.y - v.y); animE(e, mv, 8, .5);
     if (Math.hypot(v.x - P.x, v.y - P.y) < 90) labelT(v.name, v.x / T, (v.y + 8) / T, 2, "#fff3d6");
   }
-  for (const o of NET.others.values()) { const e = ent(o, mkPlayer, g.dyn); e.g.position.set(o.x / T, 0, (o.y + 8) / T); face(e.g, o.dx || 0, o.dy || 1); animE(e, true, 10, .7); labelT(o.name || "모험가", o.x / T, (o.y + 8) / T, 2.1, "#9be39b"); }
+  for (const o of NET.others.values()) {
+    const e = ent(o, () => uq(() => mkHuman({ shirt: o.col || 0x3d6ed0, pants: 0x2c3e78, skin: 0xf2c79a, hair: 0x5a3a22 })), g.dyn); e.g.position.set(o.x / T, 0, (o.y + 8) / T); face(e.g, o.dx || 0, o.dy || 1); animE(e, !!o.mv, 10, .75);
+    labelT(o.name || "모험가", o.x / T, (o.y + 8) / T, 2.1, "#9be39b"); if (o.sayT > 0) labelT(o.say, o.x / T, (o.y + 8) / T, 2.7, "#ffffff");
+  }
+  if (NET.on) { labelT(NET.name, P.x / T, pz, 2.1, "#ffe27a"); if (NET.mySayT > 0) labelT(NET.mySay, P.x / T, pz, 2.7, "#ffffff"); }
   if (fishing) { const be = ent(fishing, () => ({ g: mkBobber() }), g.dyn); be.g.position.set(fishing.tx + .5, -.05 + (fishing.state === "bite" ? Math.abs(Math.sin(vtime * 20)) * .2 : Math.sin(vtime * 3) * .03), fishing.ty + .7); labelT(fishing.state === "bite" ? "❗" : "…", P.x / T, pz, 2.4, fishing.state === "bite" ? "#ff6a6a" : "#ffffff"); }
   for (const p of WORLD.pois) { if (Math.abs(p.x - camT.x) > 12 || Math.abs(p.y - camT.z) > 9) continue; if (p.type === "shop" || p.type === "inn") labelT(p.name, p.x + 1.5, p.y + 2.3, .3); else if (p.type === "board" || p.type === "shrine" || p.type === "portal") labelT(p.name, p.x + .5, p.y + 1.3, .4, p.type === "board" ? "#fff3d6" : "#8fefff"); else if (p.type === "cave") labelT("동굴 (깊이 " + clamp(1 + Math.floor(p.dist / 45), 1, 12) + ")", p.x + 1, p.y + 2.5, .3); else if (p.type === "chest") labelT(S.wopen[p.id] ? "빈 상자" : p.name, p.x + .5, p.y + 1.2, .3, "#f5d142"); }
 }
@@ -2062,6 +2132,7 @@ function drawMiniWorld() {
   const dot = (x, y, col, r) => { const sx = ox + (x / T - px + hw) * k, sy = oy + (y / T - py + hh) * k; if (sx < ox || sy < oy || sx > ox + hw * 2 * k || sy > oy + hh * 2 * k) return; ctx.fillStyle = col; ctx.fillRect(sx - r, sy - r, r * 2, r * 2); };
   for (const p of W.pois) { const c = { town: "#ffd34d", cave: "#b58aff", shrine: "#6ee7ff", camp: "#e8505a", ruin: "#d8dce8", lair: "#ff7a1a", portal: "#6ee7ff" }[p.type]; if (c) dot((p.x + .5) * T, (p.y + .5) * T, c, k * 1.2); }
   for (const m of dun.mons) dot(m.x, m.y, m.boss ? "#ff9f1c" : m.wild && !m.hostile ? "#7be07b" : "#ff5a5a", k * (m.boss ? 1.3 : .7));
+  for (const o of NET.others.values()) dot(o.x, o.y + 8, "#8affb0", k * 1.1);
   dot(P.x, P.y + 8, "#ffffff", k * 1.1);
 }
 function worldInfo() { const px = Math.floor(player.x / T), py = Math.floor((player.y + 8) / T), b = wb(px, py); return `${BIO_E[b]} ${BIO_N[b]} ${"★".repeat(wTier(px, py) + 1)} (${px},${py})`; }
@@ -2095,7 +2166,7 @@ function setMute(m) { muted = m; try { localStorage.setItem("pokgeun-mute", m ? 
 let last = performance.now(), hudT = 0, rpgT = 0;
 function frame(now) {
   const dt = Math.min(.05, (now - last) / 1000); last = now;
-  update(dt); stepParts(dt); draw();
+  update(dt); netTick(dt); stepParts(dt); draw();
   if ((hudT += dt) > .5) { hudT = 0; $("clock").textContent = clockText(); }
   if (scene === "dun" && (rpgT += dt) > .1) { rpgT = 0; renderRpg(); }
   requestAnimationFrame(frame);
@@ -2104,7 +2175,7 @@ player.hp = pstats().maxhp;
 resize(); hud(); $("clock").textContent = clockText(); setMute(muted);
 $("snd").onclick = () => { setMute(!muted); sfx("ui"); };
 requestAnimationFrame(frame);
-window.__game = { spawnNear, worldTick, killMon, setBuild: i => { buildSel = i == null ? null : BUILD[i]; }, farmAct, winteract, genOffers, turnIn, warpTo, worldAct, enterWorld, getWorld, get WORLD() { return WORLD; }, get dun() { return dun; }, wc, wb, setClock: v => { clock = v; }, fireball, feed, toggleMount, craft, togglePanel, enterDungeon, get dun() { return dun; }, pstats, genGear, attack, scene: () => scene, furnSelSet: v => { furnSel = v; renderFurn(); }, player, trees, S, keys, act, get fishing() { return fishing; }, bugs, villagers }; // 디버그/테스트용
+window.__game = { NET, spawnNear, worldTick, killMon, setBuild: i => { buildSel = i == null ? null : BUILD[i]; }, farmAct, winteract, genOffers, turnIn, warpTo, worldAct, enterWorld, getWorld, get WORLD() { return WORLD; }, get dun() { return dun; }, wc, wb, setClock: v => { clock = v; }, fireball, feed, toggleMount, craft, togglePanel, enterDungeon, get dun() { return dun; }, pstats, genGear, attack, scene: () => scene, furnSelSet: v => { furnSel = v; renderFurn(); }, player, trees, S, keys, act, get fishing() { return fishing; }, bugs, villagers }; // 디버그/테스트용
 </script>
 </body>
 </html>
