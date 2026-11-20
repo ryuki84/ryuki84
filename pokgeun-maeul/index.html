@@ -110,6 +110,7 @@
     <p>🏠 집 문 앞에서 스페이스 → 실내 꾸미기 (가구는 상점에서 구매)</p>
     <p>⛰️ 던전 입구(오른쪽 위): 스페이스 공격 · Q 회전베기 · E 구르기 · F 물약 · R 화염구</p>
     <p>🌍 오픈월드(왼쪽 입구): 끝없는 대륙 탐험 · 채집 · 건설(B) · 의뢰(J) · 지도(N) · V 길들이기 · G 탈것</p>
+    <p>⚔️ 마을 위쪽 아레나(또는 Y): 웨이브 서바이벌 — 자동 공격 · 경험치 구슬 · 3택1 강화 · 보스 · 랭킹</p>
     <p>👑 왕도의 국왕에게 왕명을 받고(L) 북쪽 마왕성의 대마왕을 물리쳐 보세요!</p>
     <p>I 장비 · K 캐릭터(스탯/스킬/동료) · C 제작</p>
     <p>🏪 상점에서 열매·물고기·곤충을 팔고 묘목을 사 보세요!</p>
@@ -263,10 +264,10 @@ S.lv = S.lv || 1; S.xp = S.xp || 0; S.potions = S.potions ?? 2; S.bag = S.bag ||
 S.eq = S.eq || { weapon: { id: 1, slot: "weapon", e: "🗡️", n: "나무 칼", rar: 0, ilvl: 1, st: { dmg: 3 }, price: 10 }, armor: null, ring: null };
 if (!S.st) { S.st = { str: 0, dex: 0, vit: 0 }; S.sk = { whirl: 1, fire: 0, tough: 0, tamer: 0 }; S.pts = (S.lv - 1) * 5; S.sp = S.lv - 1; }
 S.mat = S.mat || { wood: 0, stone: 0, fiber: 0, berry: 0, meat: 0, hide: 0, bone: 0 }; S.pets = S.pets || []; S.petA = S.petA ?? -1;
-S.mat.ore = S.mat.ore || 0; S.story = S.story || { stage: 0, p: {}, notified: false, demon: 0, known: false }; S.fame = S.fame || 0; S.wedits = S.wedits || {}; S.wreg = S.wreg || {}; S.wp = S.wp || {}; S.wopen = S.wopen || {}; S.wcl = S.wcl || {}; S.quests = S.quests || []; S.qoffer = S.qoffer || null; S.crops = S.crops || {}; S.disc = S.disc || "";
+S.mat.ore = S.mat.ore || 0; S.arena = S.arena || { best: 0, kills: 0, runs: 0, style: "sword", own: ["sword"], up: { atk: 0, hp: 0, xp: 0 }, rank: [], start: 1 }; S.idleT = S.idleT || Date.now(); S.daily = S.daily || null; S.story = S.story || { stage: 0, p: {}, notified: false, demon: 0, known: false }; S.fame = S.fame || 0; S.wedits = S.wedits || {}; S.wreg = S.wreg || {}; S.wp = S.wp || {}; S.wopen = S.wopen || {}; S.wcl = S.wcl || {}; S.quests = S.quests || []; S.qoffer = S.qoffer || null; S.crops = S.crops || {}; S.disc = S.disc || "";
 const trees = S.trees;
 let scene = "out", furnSel = null, dun = null, WORLD = null, buildSel = null;
-(() => { const z = (x, y) => (x >= 25 && x <= 28 && y >= 1 && y <= 5) || (x <= 3 && y >= 6 && y <= 12);
+(() => { const z = (x, y) => (x >= 25 && x <= 28 && y >= 1 && y <= 5) || (x >= 20 && x <= 24 && y >= 0 && y <= 5) || (x <= 3 && y >= 6 && y <= 12);
   for (let i = flowers.length - 1; i >= 0; i--) if (z(flowers[i].x, flowers[i].y)) flowers.splice(i, 1);
   for (let i = rocks.length - 1; i >= 0; i--) if (z(rocks[i].x, rocks[i].y)) rocks.splice(i, 1);
   for (let i = trees.length - 1; i >= 0; i--) if (z(trees[i].x, trees[i].y)) trees.splice(i, 1); })();
@@ -295,7 +296,7 @@ function solidTile(x, y) {
   if (scene === "dun" && dun.kind === "world") return wsolid(x, y);
   if (scene === "dun") { const c = dun.map[y]?.[x]; return c === undefined || c === "#" || c === "w" || c === "T" || c === "R"; }
   if (x < 0 || y < 0 || x >= W || y >= H) return true;
-  return terrain[y][x] === "w" || inRect(HOUSE, x, y) || inRect(SHOP, x, y) || inRect(CAVE, x, y) || inRect(WILDG, x, y) || !!treeAt(x, y) || !!rockAt(x, y);
+  return terrain[y][x] === "w" || inRect(HOUSE, x, y) || inRect(SHOP, x, y) || inRect(CAVE, x, y) || inRect(WILDG, x, y) || inRect(ARENA, x, y) || !!treeAt(x, y) || !!rockAt(x, y);
 }
 function blocked(cx, cy, hw, hh) {
   for (const [ox, oy] of [[-hw, -hh], [hw, -hh], [-hw, hh], [hw, hh]])
@@ -403,6 +404,7 @@ function act() {
   const v = villagers.find(v => Math.hypot(v.x - px, v.y - py) < 30);
   if (v) return talk(v);
   if (inRect(SHOP, tx, ty)) return openShop();
+  if (inRect(ARENA, tx, ty)) return togglePanel("arena");
   if (inRect(CAVE, tx, ty)) return enterDungeon(1);
   if (inRect(WILDG, tx, ty)) return enterWorld();
   if (inRect(HOUSE, tx, ty)) return enterHome();
@@ -499,7 +501,7 @@ function statTxt(st) {
 const activePet = () => S.pets[S.petA] || null;
 const skLv = k => S.sk[k] || 0;
 function setCounts() { const c = {}; for (const it of Object.values(S.eq)) if (it?.set) c[it.set] = (c[it.set] || 0) + 1; return c; }
-function pstats() {
+function pstatsBase() {
   const t = { dmg: 0, hp: 0, armor: 0, crit: 0, as: 0, ms: 0, ls: 0 }, cnt = setCounts();
   for (const it of Object.values(S.eq)) if (it) for (const k in it.st) t[k] += it.st[k];
   for (const id in cnt) if (cnt[id] >= 2) for (const k in SETS[id].bonus) t[k] += SETS[id].bonus[k] * (cnt[id] >= 3 ? 1 : .5);
@@ -564,8 +566,8 @@ function bodyCraft() {
   }).join("");
 }
 function renderGear() {
-  const tabs = [["equip", "⚔️ 장비 (I)"], ["char", "📜 캐릭터 (K)"], ["craft", "🔨 제작 (C)"], ["build", "🏗️ 건설 (B)"], ["quest", "📜 의뢰 (J)"], ["map", "🗺️ 지도 (N)"], ["king", "👑 왕국 (L)"]].map(([k, l]) => `<button data-tab="${k}" style="margin:0 6px 8px 0;padding:3px 10px;${gearTab === k ? "background:#fff" : ""}">${l}</button>`).join("");
-  $("gear").innerHTML = (gearTab === "ending" ? "" : tabs) + (gearTab === "char" ? bodyChar() : gearTab === "craft" ? bodyCraft() : gearTab === "build" ? bodyBuild() : gearTab === "quest" ? bodyQuest() : gearTab === "map" ? bodyMap() : gearTab === "king" ? bodyKing() : gearTab === "ending" ? bodyEnding() : bodyEquip()) + `<button id="closeGear">닫기</button>`;
+  const tabs = [["equip", "⚔️ 장비 (I)"], ["char", "📜 캐릭터 (K)"], ["craft", "🔨 제작 (C)"], ["build", "🏗️ 건설 (B)"], ["quest", "📜 의뢰 (J)"], ["map", "🗺️ 지도 (N)"], ["king", "👑 왕국 (L)"], ["arena", "⚔️ 아레나 (Y)"]].map(([k, l]) => `<button data-tab="${k}" style="margin:0 6px 8px 0;padding:3px 10px;${gearTab === k ? "background:#fff" : ""}">${l}</button>`).join("");
+  $("gear").innerHTML = (["ending", "perk", "arenaend"].includes(gearTab) ? "" : tabs) + (gearTab === "char" ? bodyChar() : gearTab === "craft" ? bodyCraft() : gearTab === "build" ? bodyBuild() : gearTab === "quest" ? bodyQuest() : gearTab === "map" ? bodyMap() : gearTab === "king" ? bodyKing() : gearTab === "ending" ? bodyEnding() : gearTab === "arena" ? bodyArena() : gearTab === "perk" ? bodyPerk() : gearTab === "arenaend" ? bodyArenaEnd() : bodyEquip()) + (gearTab === "perk" ? "" : `<button id="closeGear">닫기</button>`);
   if (gearTab === "map") drawWorldMap();
 }
 $("gear").addEventListener("click", e => {
@@ -580,6 +582,13 @@ $("gear").addEventListener("click", e => {
   if (d.warp) return warpTo(d.warp);
   if (d.sreport !== undefined) { reportStory(); return renderGear(); }
   if (d.kwarp !== undefined) return warpTo("t0w");
+  if (d.astart !== undefined) return startArena();
+  if (d.aend !== undefined) return closeShop();
+  if (d.apick) { S.arena.start = +d.apick; return renderGear(); }
+  if (d.astyle) { const st = STYLES[d.astyle]; if (S.arena.own.includes(d.astyle)) S.arena.style = d.astyle; else if (S.bells >= st.cost) { S.bells -= st.cost; S.arena.own.push(d.astyle); S.arena.style = d.astyle; sfx("coin"); hud(); } return renderGear(); }
+  if (d.aup) { const k = d.aup, lv = S.arena.up[k], cost = upCost(lv); if (lv < 20 && S.bells >= cost) { S.bells -= cost; S.arena.up[k]++; sfx("gear"); hud(); } return renderGear(); }
+  if (d.aidle !== undefined) { const st = idleStored(); if (st > 0) { S.bells += st; S.idleT = Date.now(); sfx("coin"); say(`💤 방치 보상 ${st}벨을 받았어요!`, 2500); hud(); } return renderGear(); }
+  if (d.adaily !== undefined) { const i = +d.adaily, dl = dailyTouch(), m = DAILY[i]; if (!dl.claimed[i] && m.get(dl) >= m.need) { dl.claimed[i] = 1; S.bells += m.bells; sfx("coin"); hud(); } return renderGear(); }
   if (d.end) { const home = d.end === "home" && scene === "dun" && dun.demon; closeShop(); if (home) leaveDungeon(false); return; }
   if (d.stat) { if (S.pts > 0) { S.st[d.stat]++; S.pts--; } }
   else if (d.skill) { if (S.sp > 0 && S.sk[d.skill] < 10 && (d.skill !== "fire" || S.lv >= 3)) { S.sk[d.skill]++; S.sp--; } }
@@ -588,12 +597,14 @@ $("gear").addEventListener("click", e => {
     const g = t.closest(".g"); if (!g) return;
     if (g.dataset.eq !== undefined) { const it = S.bag[+g.dataset.eq]; const old = S.eq[it.slot]; S.eq[it.slot] = it; S.bag.splice(+g.dataset.eq, 1); if (old) S.bag.push(old); }
     else if (g.dataset.un) { if (S.bag.length >= BAGCAP) return say("가방이 가득 찼어요."); S.bag.push(S.eq[g.dataset.un]); S.eq[g.dataset.un] = null; }
+    else if (g.dataset.perk) { choosePerk(g.dataset.perk); return; }
     else return;
   }
   player.hp = Math.min(player.hp, pstats().maxhp); renderGear(); hud();
 });
 function togglePanel(tab) {
   if (!started) return;
+  if (gearTab === "perk" && !$("gear").hidden) return;
   if (!$("gear").hidden) { if (gearTab === tab) return closeShop(); gearTab = tab; return renderGear(); }
   if (modal) return;
   gearTab = tab; modal = true; renderGear(); $("gear").hidden = false;
@@ -609,7 +620,7 @@ function renderRpg() {
   el.innerHTML = `<div class="bar"><i class="hp" style="width:${clamp(P.hp / st.maxhp * 100, 0, 100)}%"></i><span>❤️ ${Math.max(0, Math.ceil(P.hp))}/${st.maxhp}</span></div>
     <div class="bar"><i class="xp" style="width:${S.xp / xpNeed(S.lv) * 100}%"></i><span>Lv.${S.lv} · ${S.xp}/${xpNeed(S.lv)}</span></div>
     <div class="sk"><b>스페이스</b> 공격${wild ? "·채집" : ""} · <b>Q</b> 회전 ${cd(P.qCd)}<br><b>E</b> 구르기 ${cd(P.eCd)} · <b>R</b> 화염구 ${skLv("fire") ? cd(P.rCd) : "미습득"}<br><b>F</b> 🧪×${S.potions}${wild ? " · <b>V</b> 먹이주기 · <b>G</b> 탈것" : ""}<br><b>I</b> 장비 · <b>K</b> 캐릭터 · <b>C</b> 제작${world ? " · <b>B</b> 건설 · <b>N</b> 지도 · <b>J</b> 의뢰" : ""}</div>
-    <div>${world ? worldInfo() : wild ? "🌴 야생 지대" : dun.demon ? `😈 마왕성 ${dun.depth - DEMON_BASE + 1}층` : `🕳️ 지하 ${dun.depth}층`} · 몬스터 ${dun.mons.length}마리${S.pts + S.sp > 0 ? " · ✨포인트!" : ""}</div>${questLine() ? `<div>${questLine()}</div>` : ""}${dun.demon ? bossBar() : ""}`;
+    <div>${dun.arena ? arenaInfo() : world ? worldInfo() : wild ? "🌴 야생 지대" : dun.demon ? `😈 마왕성 ${dun.depth - DEMON_BASE + 1}층` : `🕳️ 지하 ${dun.depth}층`} · 몬스터 ${dun.mons.length}마리${S.pts + S.sp > 0 ? " · ✨포인트!" : ""}</div>${questLine() ? `<div>${questLine()}</div>` : ""}${dun.demon ? bossBar() : ""}`;
 }
 function newDun(o) { return { depth: 1, mons: [], loot: [], fx: [], arcs: [], proj: [], tele: [], eproj: [], nhp: {}, regrow: [], spawnT: 0, stairs: null, pet: null, ...o }; }
 function genDun(depth) {
@@ -679,24 +690,25 @@ function genWild() {
   return d;
 }
 function enterDungeon(depth, keepHp, kind, ret) {
-  cancelFish(); scene = "dun"; dun = kind === "wild" ? genWild() : genDun(depth); dun.ret = ret || null; camInit = false; sfx("portal"); if (kind === "demon") { dun.demon = true; if (depth >= DEMON_TOP) finalizeDemon(); }
+  cancelFish(); scene = "dun"; dun = kind === "arena" ? genArena(depth) : kind === "wild" ? genWild() : genDun(depth); dun.ret = ret || null; camInit = false; sfx("portal"); if (kind === "demon") { dun.demon = true; if (depth >= DEMON_TOP) finalizeDemon(); }
   const P = player; P.x = (dun.exit.x + 1.5) * T; P.y = (dun.exit.y + .5) * T; P.dx = 1; P.dy = 0; P.mounted = false;
   P.atkCd = P.qCd = P.eCd = P.fCd = P.rCd = P.dash = P.inv = 0;
   if (!keepHp) P.hp = pstats().maxhp;
   dun.pet = activePet() ? { x: P.x - 20, y: P.y, cd: 0 } : null;
-  if (kind !== "wild") S.best = Math.max(S.best, depth);
+  if (kind !== "wild" && kind !== "arena") S.best = Math.max(S.best, depth); if (kind === "arena") startWave(depth);
   hud();
-  say(kind === "demon" ? (depth >= DEMON_TOP ? "😈 마왕성 최상층 — 대마왕이 기다리고 있다!" : `😈 마왕성 ${depth - DEMON_BASE + 1}층`) : kind === "wild" ? "🌴 야생 지대 — 나무·돌을 모으고 공룡을 길들여 보세요!" : depth % 5 === 0 ? `🐲 지하 ${depth}층 — 보스가 있어요!` : `🕳️ 지하 ${depth}층`, 3000);
+  say(kind === "arena" ? "⚔️ 서바이벌 아레나 — 이동만 하면 자동으로 공격해요! 구슬을 모아 강해지세요" : kind === "demon" ? (depth >= DEMON_TOP ? "😈 마왕성 최상층 — 대마왕이 기다리고 있다!" : `😈 마왕성 ${depth - DEMON_BASE + 1}층`) : kind === "wild" ? "🌴 야생 지대 — 나무·돌을 모으고 공룡을 길들여 보세요!" : depth % 5 === 0 ? `🐲 지하 ${depth}층 — 보스가 있어요!` : `🕳️ 지하 ${depth}층`, 3000);
 }
 function leaveDungeon(dead, village) {
-  const P = player, wild = dun.kind === "wild", world = dun.kind === "world", ret = dun.ret;
+  const P = player, wild = dun.kind === "wild", world = dun.kind === "world", ret = dun.ret, arena = !!dun.arena;
+  if (arena) { finishArena(dead); dead = false; }
   if ((world && !village) || ret) {   // 오픈월드로 복귀 (사망 시 리스폰 지점으로)
     sfx(dead ? "die" : "portal"); P.hp = pstats().maxhp; let pos = ret || undefined;
     if (dead) { S.bells = Math.floor(S.bells * .9); pos = S.wspawn || undefined; }
     enterWorld(pos, dead ? "💀 쓰러졌어요… 벨의 10%를 잃고 리스폰 지점으로 돌아왔어요." : "🌍 오픈월드로 돌아왔어요."); save(); return;
   }
   scene = "out"; dun = null; P.mounted = false;
-  if (wild || world) { P.x = 1 * T; P.y = 10.5 * T; } else { P.x = (CAVE.x + 1) * T; P.y = 4.5 * T; }
+  if (wild || world) { P.x = 1 * T; P.y = 10.5 * T; } else if (arena) { P.x = (ARENA.x + 1.5) * T; P.y = (ARENA.y + ARENA.h + 1.6) * T; } else { P.x = (CAVE.x + 1) * T; P.y = 4.5 * T; }
   P.dx = 0; P.dy = 1; P.hp = pstats().maxhp;
   sfx(dead ? "die" : "portal");
   if (dead) { S.bells = Math.floor(S.bells * .9); say("💀 쓰러졌어요… 벨의 10%를 잃었어요."); } else say("마을로 돌아왔어요 🏡");
@@ -735,8 +747,9 @@ function petHit(m, pe) {
 }
 function killMon(m) {
   const i = dun.mons.indexOf(m); if (i < 0) return;
-  dun.mons.splice(i, 1); gainXp(m.xp); if (dun.pet) petXp(m.xp); qEvent("kill", m); if (m.poi && !dun.mons.some(o => o.poi === m.poi)) clearPoi(m.poi); if (m.demon) onDemonDefeat(m);
+  dun.mons.splice(i, 1); gainXp(dun.arena ? Math.ceil(m.xp * .3) : m.xp); dailyTouch().kills++; if (dun.pet) petXp(m.xp); qEvent("kill", m); if (m.poi && !dun.mons.some(o => o.poi === m.poi)) clearPoi(m.poi); if (m.demon && !dun.arena) onDemonDefeat(m);
   burst(m.x, m.y, m.boss ? 40 : 14, ["#fff", "#e8505a", "#5c5f6e"], m.boss ? 160 : 110, .6); sfx("kill"); if (m.boss) shake = Math.max(shake, 8);
+  if (dun.arena) { arenaKill(m); return; }
   const wild = !!m.wild, sp = () => ({ x: m.x + (Math.random() - .5) * 30, y: m.y + (Math.random() - .5) * 30 });
   dun.loot.push({ t: "bell", n: wild ? Math.round((2 + ri(4)) * (1 + m.tier * .4) * (m.boss ? 6 : 1)) : Math.round((3 + ri(6)) * (1 + (m.dpt || dun.depth) * .3) * (m.boss ? 6 : 1)), ...sp() });
   const ilvl = Math.max(1, Math.round((wild ? 2 + m.tier * 2 : (m.dpt || dun.depth) * 1.5) + S.lv * .5));
@@ -770,7 +783,7 @@ function attack(held) {
   if (scene !== "dun" || modal) return; const P = player, st = pstats();
   if (dun.kind === "world") { if (!held && worldAct()) return; if (buildSel) return; }
   if (P.atkCd > 0) return; P.atkCd = .42 / st.as; sfx("swing"); dun.arcs.push({ a: Math.atan2(P.dy, P.dx), t: .15, r: 58, whirl: false });
-  for (const m of [...dun.mons]) { const dx = m.x - P.x, dy = m.y - P.y, d = Math.hypot(dx, dy); if (d < 58 + (m.boss ? 12 : 0) && (dx * P.dx + dy * P.dy) / (d || 1) > .1) hitMon(m, 1); }
+  for (const m of [...dun.mons]) { const dx = m.x - P.x, dy = m.y - P.y, d = Math.hypot(dx, dy); if (d < 58 + (dun.arena ? 12 * (dun.run.perk.multi || 0) : 0) + (m.boss ? 12 : 0) && (dx * P.dx + dy * P.dy) / (d || 1) > .1) hitMon(m, 1); }
   if (dun.kind === "wild") gatherNode(); else if (dun.kind === "world") worldGather();
 }
 function whirl() {
@@ -832,7 +845,7 @@ function updateDun(dt) {
       if (m.wt <= 0) { m.wt = 1 + Math.random() * 2.5; const a = Math.random() < .4 ? null : Math.random() * 6.28; m.wvx = a === null ? 0 : Math.cos(a) * 28; m.wvy = a === null ? 0 : Math.sin(a) * 28; }
       tryMove(m, m.wvx * dt, m.wvy * dt); continue;
     }
-    if (d < 260 && d > 24) tryMove(m, dx / d * m.spd * dt, dy / d * m.spd * dt);
+    if (d < (m.hunt || 260) && d > 24) tryMove(m, dx / d * m.spd * dt, dy / d * m.spd * dt);
     if (d < 32 && m.cd <= 0) {
       m.cd = 1;
       if (P.inv <= 0) { const n = Math.max(1, Math.round(m.dmg * (100 / (100 + st.armor)) * (.9 + Math.random() * .2))); P.hp -= n; P.inv = .35; P.flash = .15; shake = Math.max(shake, 4); burst(P.x, P.y, 6, ["#e8505a", "#a8323c"], 80, .35); sfx("hurt"); fx(P.x, P.y - 20, "-" + n, "#ff6b6b"); }
@@ -864,12 +877,15 @@ function updateDun(dt) {
   dun.eproj = dun.eproj.filter(q => q.life > 0);
   for (let i = dun.regrow.length - 1; i >= 0; i--) { const r = dun.regrow[i]; r.t -= dt; if (r.t <= 0 && Math.hypot(P.x - (r.x + .5) * T, P.y - (r.y + .5) * T) > 30 && !dun.mons.some(m => Math.hypot(m.x - (r.x + .5) * T, m.y - (r.y + .5) * T) < 30)) { dun.map[r.y][r.x] = r.c; dun.regrow.splice(i, 1); } }
   if (world) worldTick(dt);
+  if (dun.arena) arenaTick(dt);
   if (wild && (dun.spawnT += dt) > 20) { dun.spawnT = 0; if (dun.mons.length < 32) spawnWild(dun, P); }
   for (let i = dun.loot.length - 1; i >= 0; i--) {
     const l = dun.loot[i], d = Math.hypot(P.x - l.x, P.y - l.y);
+    if (l.t === "gem") { l.age = (l.age || 0) + dt; if (l.age > 1 || d < 140 * (1 + .5 * ((dun.run && dun.run.perk.magnet) || 0))) { l.x += (P.x - l.x) / (d || 1) * 340 * dt; l.y += (P.y - l.y) / (d || 1) * 340 * dt; } }
     if (l.t === "bell" && d < 110) { l.x += (P.x - l.x) / d * 200 * dt; l.y += (P.y - l.y) / d * 200 * dt; }
     if (d > 26) continue;
     if (l.t === "bell") { sfx("coin"); S.bells += l.n; fx(P.x, P.y - 24, `+${l.n}🔔`, "#ffe27a"); }
+    else if (l.t === "gem") { sfx("pick"); gemGain(l.n); }
     else if (l.t === "pot") { sfx("pick"); S.potions++; fx(P.x, P.y - 24, "🧪 +1", "#7bd88f"); }
     else if (l.t === "furn") { S.fin[l.id] = (S.fin[l.id] || 0) + 1; say(`${FURN[l.id].e} ${obj(FURN[l.id].n)} 주웠어요! 집에 놓아 보세요.`); }
     else if (l.t === "gear") {
@@ -905,7 +921,7 @@ function press(code) {
   if (keys.has(code)) return;
   keys.add(code);
   if (!started) { if (code === "Space" || code === "Enter") begin(); return; }
-  if (code === "Escape" && modal) closeShop();
+  if (code === "Escape" && modal && gearTab !== "perk") closeShop();
   else if (code === "Space" || code === "KeyZ") act();
   else if (scene === "dun" && code === "KeyQ") whirl();
   else if (scene === "dun" && code === "KeyE") dash();
@@ -920,6 +936,7 @@ function press(code) {
   else if (code === "KeyB") { if (buildSel) { buildSel = null; say("건설 모드를 껐어요.", 1200); } else togglePanel("build"); }
   else if (code === "KeyJ") togglePanel("quest");
   else if (code === "KeyL") togglePanel("king");
+  else if (code === "KeyY") togglePanel("arena");
   else if (code === "KeyN") togglePanel("map");
   else if (code === "KeyX" && scene === "dun" && dun.kind === "world") worldRemove();
   else if (code === "KeyX" && scene === "home") { const { tx, ty } = target(); if (pickUp(tx, ty)) save(); }
@@ -951,7 +968,7 @@ $("reset").onclick = () => {
 };
 addEventListener("visibilitychange", () => { if (document.hidden) save(); });
 addEventListener("pagehide", save);
-function begin() { started = true; $("help").hidden = true; hud(); say("나무를 흔들고, 낚시하고, 곤충을 잡아 보세요!", 3500); }
+function begin() { started = true; $("help").hidden = true; hud(); say("나무를 흔들고, 낚시하고, 곤충을 잡아 보세요!", 3500); setTimeout(idleToast, 4000); }
 $("start").onclick = begin;
 
 /* ---------- 업데이트 ---------- */
@@ -1419,7 +1436,7 @@ function setEnv(kind) {
   } else if (kind === "home") {
     S3.background = new THREE.Color(0x1c1420); S3.fog = null; amb.color.setHex(0xffe9cc).lerp(new THREE.Color(0x6a5a9a), dk * .8); amb.intensity = .42 - dk * .12; hemi.intensity = .12; sun.intensity = .34 * (1 - dk * .8); sun.color.setHex(0xfff2d6);
   } else {
-    S3.background = new THREE.Color(0x07050f); S3.fog = FOGD; amb.color.setHex(dun && dun.demon ? 0xb07aa8 : 0x8a9ad0); amb.intensity = .52; hemi.intensity = .15; sun.intensity = .3; sun.color.setHex(0xaab0ff);
+    S3.background = new THREE.Color(0x07050f); S3.fog = FOGD; amb.color.setHex(dun && dun.demon ? 0xb07aa8 : 0x8a9ad0); amb.intensity = dun && dun.arena ? .85 : .52; hemi.intensity = .15; sun.intensity = .3; sun.color.setHex(0xaab0ff);
   }
   WIN.emissiveIntensity = kind === "home" ? clamp(dk * 1.2, 0, 1) : clamp(dk * 1.6, 0, 1);
 }
@@ -1459,7 +1476,7 @@ function buildVillage() {
   VBUILT = true; const g = G.village;
   g.add(G.vterr = terrainGroup(W, H, (x, y) => terrain[y] && terrain[y][x], "village"));
   const put = (m, r, ox = 0) => { m.position.set(r.x + r.w / 2 + ox, 0, r.y + r.h / 2 + .1); g.add(m); return m; };
-  put(mkHouse(), HOUSE); put(mkShop(), SHOP); put(mkCave(), CAVE); put(mkGate(), WILDG, .0);
+  put(mkHouse(), HOUSE); put(mkShop(), SHOP); put(mkCave(), CAVE); put(mkGate(), WILDG, .0); put(mkArena(), ARENA);
   G.gateX = WILDG.x + WILDG.w / 2; G.gateZ = WILDG.y + WILDG.h / 2 + .1;
 }
 function drawVillage() {
@@ -1495,7 +1512,7 @@ function drawVillage() {
   }
   if (night) { for (const wx of [-.9, .9]) light(HOUSE.x + HOUSE.w / 2 + wx, HOUSE.y + HOUSE.h / 2 + 1.1, 4.5, 0xffd870, .8, 1.3); light(SHOP.x + SHOP.w / 2, SHOP.y + SHOP.h / 2 + 1.2, 5, 0xffd870, 1, 1.4); light(G.gateX - .75, G.gateZ, 4, 0xffa534, 2, 1.3); light(G.gateX + .75, G.gateZ, 4, 0xffa534, 2, 1.3); }
   PL0.x = P.x / T; PL0.z = pz; PL0.r = night ? 6 : 3; PL0.i = night ? 1.5 : .0; PL0.h = 1.8; PL0.c = 0xffd9a0;
-  labelT("내 집", HOUSE.x + HOUSE.w / 2, HOUSE.y + HOUSE.h + .3, .3); labelT("다람쥐 상점", SHOP.x + SHOP.w / 2, SHOP.y + SHOP.h + .3, .3); labelT("던전 입구", CAVE.x + CAVE.w / 2, CAVE.y + CAVE.h + .35, .3); labelT("오픈월드", G.gateX, G.gateZ + .3, .3);
+  labelT("내 집", HOUSE.x + HOUSE.w / 2, HOUSE.y + HOUSE.h + .3, .3); labelT("다람쥐 상점", SHOP.x + SHOP.w / 2, SHOP.y + SHOP.h + .3, .3); labelT("던전 입구", CAVE.x + CAVE.w / 2, CAVE.y + CAVE.h + .35, .3); labelT("오픈월드", G.gateX, G.gateZ + .3, .3); labelT("서바이벌 아레나", ARENA.x + 1.5, ARENA.y + ARENA.h + .3, .3);
   if (started && !modal) { const { tx, ty } = target(); cursorAt(tx, ty, terrain[ty] && terrain[ty][tx] === "w" ? -.1 : .03); } else G.cursor.visible = false;
   follow(P.x / T, pz, W, H, D); finish(D); overlay();
 }
@@ -1582,6 +1599,7 @@ function drawDun() {
     const e = ent(l, () => {
       const gg = new THREE.Group(), inner = new THREE.Group(); gg.add(inner);
       if (l.t === "gear") { const c = RARITY[l.it.rar].c, col = new THREE.Color(c); inner.add(mkGearModel(l.it.e)); const beam = new THREE.Mesh(geo("beam", () => new THREE.CylinderGeometry(.1, .1, 2.4, 8, 1, true)), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: .35, depthWrite: false })); beam.position.y = 1.2; gg.add(beam); const rg = new THREE.Mesh(geo("lring", () => new THREE.RingGeometry(.25, .38, 20)), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: .8, side: THREE.DoubleSide })); rg.rotation.x = -HALF; rg.position.y = .03; gg.add(rg); }
+      else if (l.t === "gem") { inner.add(new THREE.Mesh(geo("gem", () => new THREE.OctahedronGeometry(.17)), new THREE.MeshBasicMaterial({ color: 0x5affc8 }))); }
       else if (l.t === "bell") { C(inner, .14, .14, .05, 0xf5d142, 0, 0, 0, 12, { r: [HALF, 0, 0] }); C(inner, .09, .09, .06, 0xfff3d6, 0, 0, 0, 12, { r: [HALF, 0, 0] }); }
       else if (l.t === "pot") { Sp(inner, .13, 0xe8505a, 0, 0, 0); C(inner, .04, .05, .12, 0xfff3d6, 0, .15, 0, 6); }
       else { inner.add(mkFurn(l.id)); inner.scale.setScalar(.5); }
@@ -1611,7 +1629,11 @@ function drawDun() {
   e.g.visible = !(P.inv > 0 && Math.floor(vtime * 20) % 2);
   const wp = S.eq.weapon && S.eq.weapon.e; if (e.wk !== wp) { if (e.wm) e.ra.remove(e.wm); e.wk = wp; e.wm = wp ? outline(weaponModel(wp)) : null; if (e.wm) e.ra.add(e.wm); }
   if (e.wm && !P.mounted) { const sw = P.atkCd > 0 ? 1 - P.atkCd / (.42 / pstats().as) : 1; e.ra.rotation.x = P.atkCd > 0 ? -2.3 + sw * 3.2 : e.ra.rotation.x; }
-  for (const q of dun.proj) { const pr = ent(q, () => { const gg = new THREE.Group(), s = new THREE.Mesh(geo("fbs", () => new THREE.SphereGeometry(.2, 10, 8)), new THREE.MeshBasicMaterial({ color: 0xffa534 })); gg.add(s); const s2 = new THREE.Mesh(geo("fbs2", () => new THREE.SphereGeometry(.11, 8, 6)), new THREE.MeshBasicMaterial({ color: 0xfff3a0 })); gg.add(s2); return { g: gg }; }, g.dyn); pr.g.position.set(q.x / T, .7, (q.y + 8) / T); light(q.x / T, (q.y + 8) / T, 5, 0xffa534, .8, 1.6); if (Math.random() < .5) { parts.push({ x: q.x / T, z: (q.y + 8) / T, h: .7, vx: (Math.random() - .5), vz: (Math.random() - .5), vh: .3, g: 0, l: .25, c: new THREE.Color(Math.random() < .5 ? 0xf5d142 : 0xe8913a) }); } }
+  for (const q of dun.proj) { const pr = ent(q, () => { const gg = new THREE.Group(), s = new THREE.Mesh(geo("fbs", () => new THREE.SphereGeometry(.2, 10, 8)), new THREE.MeshBasicMaterial({ color: 0xffa534 })); gg.add(s); const s2 = new THREE.Mesh(geo("fbs2", () => new THREE.SphereGeometry(.11, 8, 6)), new THREE.MeshBasicMaterial({ color: 0xfff3a0 })); gg.add(s2); return { g: gg }; }, g.dyn); pr.g.position.set(q.x / T, .7, (q.y + 8) / T); if (q.col) pr.g.children[0].material.color.setHex(q.col); if (q.sz) pr.g.scale.setScalar(q.sz); light(q.x / T, (q.y + 8) / T, 5, 0xffa534, .8, 1.6); if (Math.random() < .5) { parts.push({ x: q.x / T, z: (q.y + 8) / T, h: .7, vx: (Math.random() - .5), vz: (Math.random() - .5), vh: .3, g: 0, l: .25, c: new THREE.Color(Math.random() < .5 ? 0xf5d142 : 0xe8913a) }); } }
+  if (dun.arena) {
+    const ob = dun.run.perk.orbit || 0; for (let i = 0; i < ob; i++) { const o = ((dun.orbObjs ||= [])[i] ||= {}), e = ent(o, mkBlade, g.dyn), a = (dun.orbA || 0) + i * 6.283 / ob; e.g.position.set((P.x + Math.cos(a) * 64) / T, .7, (P.y + 8 + Math.sin(a) * 64) / T); e.g.rotation.y += DT * 12; }
+    for (const bl of dun.bolts || []) { const be = ent(bl, () => { const gg = new THREE.Group(), m = new THREE.Mesh(geo("bolt", () => new THREE.BoxGeometry(.18, 7, .18)), new THREE.MeshBasicMaterial({ color: 0xbfefff, transparent: true })); m.position.y = 3.5; m.material.userData.own = 1; gg.add(m); return { g: gg, m }; }, g.dyn); be.g.position.set(bl.x / T, 0, (bl.y + 8) / T); be.m.material.opacity = Math.min(1, bl.t * 4); light(bl.x / T, (bl.y + 8) / T, 5, 0xbfefff, 1.5, 1.2); }
+  }
   for (const t of dun.tele) { const te = ent(t, () => { const gg = new THREE.Group(), ring = new THREE.Mesh(new THREE.RingGeometry(.92, 1, 40), new THREE.MeshBasicMaterial({ color: 0xff3a2a, transparent: true, opacity: .9, side: THREE.DoubleSide, depthWrite: false })), fill = new THREE.Mesh(new THREE.CircleGeometry(1, 36), new THREE.MeshBasicMaterial({ color: 0xff5a2a, transparent: true, opacity: .4, side: THREE.DoubleSide, depthWrite: false })); for (const m of [ring, fill]) { m.geometry.rotateX(-HALF); m.material.userData.own = 1; m.userData.ownGeo = 1; gg.add(m); } fill.position.y = .02; return { g: gg, fill }; }, g.dyn); te.g.position.set(t.x / T, .06, t.y / T); te.g.scale.setScalar(t.r / T); te.fill.scale.setScalar(Math.max(.05, 1 - t.t / t.t0)); light(t.x / T, t.y / T, 5, 0xff4a2a, .6, .8); }
   for (const q of dun.eproj) { const eq = ent(q, () => { const gg = new THREE.Group(); gg.add(new THREE.Mesh(geo("eorb", () => new THREE.SphereGeometry(.24, 10, 8)), new THREE.MeshBasicMaterial({ color: 0xc03aff }))); return { g: gg }; }, g.dyn); eq.g.position.set(q.x / T, .8, (q.y + 8) / T); light(q.x / T, (q.y + 8) / T, 4, 0xc03aff, .8, 1); }
   for (const a of dun.arcs) {
@@ -1878,7 +1900,7 @@ function drawWorldTerrain() {
 /* ----- 월드 게임플레이 ----- */
 /* ----- 멀티플레이 (server/server.js 와 통신) ----- */
 const NET = {
-  on: false, ws: null, id: null, col: 0x3d6ed0, name: "", others: new Map(), ed: {}, away: true, posT: 0, retryT: 0, count: 1, mySay: "", mySayT: 0,
+  rank: null, on: false, ws: null, id: null, col: 0x3d6ed0, name: "", others: new Map(), ed: {}, away: true, posT: 0, retryT: 0, count: 1, mySay: "", mySayT: 0,
   url: (() => { try { const q = new URLSearchParams(location.search), sv = q.get("server"); if (sv) return sv; if (q.has("online") && /^https?:/.test(location.protocol)) return location.origin.replace(/^http/, "ws"); } catch (e) {} return null; })(),
   send(m) { if (this.ws && this.ws.readyState === 1) this.ws.send(JSON.stringify(m)); },
 };
@@ -1894,11 +1916,12 @@ function netPlayer(p) {
 }
 function netMsg(m) {
   switch (m.t) {
-    case "hello": NET.on = true; NET.id = m.id; NET.col = m.col; NET.name = m.name; NET.ed = m.edits || {}; NET.count = m.count || 1; NET.others.clear(); for (const p of m.players) netPlayer(p);
+    case "hello": NET.on = true; NET.id = m.id; NET.col = m.col; NET.name = m.name; NET.ed = m.edits || {}; NET.rank = m.rank || []; NET.count = m.count || 1; NET.others.clear(); for (const p of m.players) netPlayer(p);
       useEdits(NET.ed); $("online").hidden = false; addChat("", `🌐 ${m.name}(으)로 접속했어요 · ${NET.count}명 접속 중`, true); break;
     case "state": for (const p of m.ps) netPlayer(p); break;
     case "away": NET.others.delete(m.id); break;
     case "count": NET.count = m.n; break;
+    case "rank": NET.rank = m.list || []; if (gearTab === "arena" && !$("gear").hidden) renderGear(); break;
     case "chat": addChat(m.name, m.text, !!m.sys); { const o = NET.others.get(m.id); if (o && !m.sys) { o.say = m.text; o.sayT = 6; } } break;
     case "edit": if (m.c === null) delete NET.ed[m.k]; else NET.ed[m.k] = m.c; if (WORLD) markDirty(m.k % WN, Math.floor(m.k / WN)); break;
   }
@@ -2338,6 +2361,147 @@ function mkDemonLord() {
 }
 MON3["😈"] = mkDemonLord;
 
+/* ---------- 서바이벌 아레나 (XP 히어로식: 웨이브 · 자동 공격 · 경험치 구슬 · 3택1 강화) ---------- */
+const ARENA = { x: 21, y: 1, w: 3, h: 3 };
+const PERKS = {
+  atk: { e: "⚔️", n: "공격력 강화", d: "공격력 +20%" }, spd: { e: "⚡", n: "공격 속도", d: "공격 속도 +15%" }, hp: { e: "❤️", n: "체력 강화", d: "최대 체력 +25% (즉시 회복)" },
+  move: { e: "🏃", n: "이동 속도", d: "이동 속도 +10%" }, multi: { e: "🎯", n: "다중 타격/사격", d: "근접: 범위 +12 · 원거리: 발사체 +1" }, orbit: { e: "🌀", n: "회전 칼날", d: "나를 도는 칼날 +1 (닿으면 피해)" },
+  bolt: { e: "🌩️", n: "번개", d: "주기적으로 적에게 번개 (간격↓ 피해↑)" }, magnet: { e: "🧲", n: "경험치 자석", d: "구슬 흡수 범위 +50%" }, crit: { e: "💥", n: "치명타", d: "치명타 확률 +10%" }, vamp: { e: "🩸", n: "흡혈", d: "피해의 4% 회복" },
+};
+const STYLES = { sword: { e: "⚔️", n: "검", d: "근접 광역 · 자동 베기", cost: 0 }, bow: { e: "🏹", n: "활", d: "관통 화살 · 중거리", cost: 800 }, gun: { e: "🔫", n: "총", d: "빠른 연사 · 장거리", cost: 1500 } };
+const DAILY = [
+  { n: "몬스터 50마리 처치", need: 50, get: d => d.kills, bells: 150 }, { n: "아레나 웨이브 8 도달", need: 8, get: d => d.wave, bells: 250 }, { n: "아레나 3회 도전", need: 3, get: d => d.runs, bells: 200 },
+];
+const upCost = lv => Math.round(100 * Math.pow(lv + 1, 1.6));
+function pstats() {
+  const b = pstatsBase(), u = S.arena.up, pk = dun && dun.arena && dun.run ? dun.run.perk : null;
+  b.dmg = Math.round(b.dmg * (1 + .04 * u.atk)); b.maxhp = Math.round(b.maxhp * (1 + .04 * u.hp));
+  if (pk) { b.dmg = Math.round(b.dmg * (1 + .2 * (pk.atk || 0))); b.as *= 1 + .15 * (pk.spd || 0); b.maxhp = Math.round(b.maxhp * (1 + .25 * (pk.hp || 0))); b.ms *= 1 + .1 * (pk.move || 0); b.crit = Math.min(80, r1(b.crit + 10 * (pk.crit || 0))); b.ls = r1(b.ls + 4 * (pk.vamp || 0)); }
+  return b;
+}
+function dailyTouch() { const today = new Date().toLocaleDateString("sv"); if (!S.daily || S.daily.d !== today) S.daily = { d: today, kills: 0, wave: 0, runs: 0, claimed: [0, 0, 0] }; return S.daily; }
+const idleRate = () => 3 + 1.5 * S.arena.best + S.lv;
+const idleStored = () => Math.floor(Math.min(480, Math.max(0, Date.now() - S.idleT) / 60000) * idleRate());
+function idleToast() { const st = idleStored(); if (st >= 100) say(`💤 방치 보상 ${st}벨이 쌓였어요! (Y: 아레나 창에서 받기)`, 4500); }
+
+function genArena(w0) {
+  const w = 40, h = 28, map = Array.from({ length: h }, (_, y) => Array.from({ length: w }, (_, x) => (x === 0 || y === 0 || x === w - 1 || y === h - 1) ? "#" : "."));
+  for (let i = 0; i < 8; i++) { const x = 4 + ri(w - 9), y = 4 + ri(h - 9); if (Math.hypot(x - w / 2, y - h / 2) < 6 || y > h - 6) continue; map[y][x] = map[y][x + 1] = map[y + 1][x] = map[y + 1][x + 1] = "#"; }
+  const d = newDun({ arena: true, depth: 1, map, exit: { x: w / 2 | 0, y: h - 3 }, stairs: null });
+  d.run = { lv: 1, xp: 0, need: 8, perk: {}, kills: 0, gold: 0, pending: 0, choices: [] }; d.wave = { n: w0, toSpawn: 0, t: 1, clearT: 0, boss: false }; d.cleared = w0 - 1; return d;
+}
+function arenaInfo() {
+  const w = dun.wave, r = dun.run, pk = Object.entries(r.perk).map(([k, v]) => PERKS[k].e + v).join(" ");
+  return `⚔️ 웨이브 ${w.n}${w.boss ? " 👑" : ""} · 남은 ${dun.mons.length + w.toSpawn} · 런 Lv.${r.lv} (${r.xp}/${r.need})${pk ? "<br>" + pk : ""}`;
+}
+function startWave(n) {
+  const w = dun.wave; w.n = n; w.boss = n % 10 === 0; w.clearT = 0; w.t = 1.2; w.toSpawn = w.boss ? 8 + (n >> 1) : 6 + 2 * n + (n / 3 | 0);
+  sfx(w.boss ? "die" : "ui"); say(w.boss ? `👑 웨이브 ${n} — 보스가 나타났다!` : `⚔️ 웨이브 ${n} 시작`, 2200);
+  if (w.boss) {
+    const P = player, a = Math.random() * 6.283, x = clamp(P.x + Math.cos(a) * 280, 80, 38 * T), y = clamp(P.y + Math.sin(a) * 200, 80, 26 * T), depth = 1 + Math.floor(n * .45);
+    const b = n % 30 === 0 ? mkDemon(x, y) : mkMon(depth + 1, x, y, true); b.hunt = 9999; b.arenaBoss = true; dun.mons.push(b);
+  }
+}
+function spawnArena() {
+  const P = player, n = dun.wave.n, depth = 1 + Math.floor(n * .45), map = dun.map;
+  for (let k = 0; k < 30; k++) {
+    const x = 1 + ri(map[0].length - 2), y = 1 + ri(map.length - 2); if (map[y][x] !== ".") continue; const px = (x + .5) * T, py = (y + .5) * T - 8; if (Math.hypot(px - P.x, py - P.y) < 9 * T) continue;
+    const m = mkMonT(ri(Math.min(MONS.length, 2 + (n >> 2))), depth, px, py); m.hunt = 9999; m.hostile = true; m.tier = Math.min(4, n >> 3); dun.mons.push(m); return;
+  }
+}
+function autoFight() {
+  const P = player, sty = S.arena.style, range = sty === "sword" ? 100 : sty === "bow" ? 320 : 380; if (P.atkCd > 0 || P.dash > 0) return;
+  let tgt = null, bd = range; for (const m of dun.mons) { const d = Math.hypot(m.x - P.x, m.y - P.y); if (d < bd) { bd = d; tgt = m; } }
+  if (!tgt) return; const a = Math.atan2(tgt.y - P.y, tgt.x - P.x); P.dx = Math.cos(a); P.dy = Math.sin(a);
+  if (sty === "sword") { attack(true); return; }
+  const st = pstats(), n = 1 + (dun.run.perk.multi || 0), gun = sty === "gun"; P.atkCd = (gun ? .2 : .46) / st.as; sfx("swing");
+  for (let i = 0; i < n; i++) { const aa = a + (i - (n - 1) / 2) * .16, sp = gun ? 520 : 420; dun.proj.push({ x: P.x, y: P.y, vx: Math.cos(aa) * sp, vy: Math.sin(aa) * sp, m: gun ? .5 : 1.25, life: gun ? .8 : .9, pierce: !gun, hit: new Set(), col: gun ? 0xffe08a : 0xe8d890, sz: gun ? .5 : .7 }); }
+}
+function arenaTick(dt) {
+  const d = dun, w = d.wave, P = player, run = d.run, pk = run.perk;
+  for (const m of d.mons) if (m.obT > 0) m.obT -= dt;
+  if (w.toSpawn > 0) { w.t -= dt; if (w.t <= 0 && d.mons.length < 36) { w.t = Math.max(.22, 1 - .025 * w.n); spawnArena(); w.toSpawn--; } }
+  else if (d.mons.length === 0) {
+    w.clearT += dt;
+    if (w.clearT > 1.5) { const n = w.n, gold = 8 + 2 * n; S.bells += gold; run.gold += gold; d.cleared = n; const dl = dailyTouch(); dl.wave = Math.max(dl.wave, n); fx(P.x, P.y - 40, `웨이브 ${n} 클리어! +${gold}🔔`, "#ffe27a"); sfx("coin"); heal(Math.round(pstats().maxhp * .15)); hud(); startWave(n + 1); }
+  }
+  autoFight();
+  const ob = pk.orbit || 0; d.orbA = (d.orbA || 0) + dt * 3.4;
+  for (let i = 0; i < ob; i++) { const a = d.orbA + i * 6.283 / ob, bx = P.x + Math.cos(a) * 64, by = P.y + Math.sin(a) * 64; for (const m of [...d.mons]) if (!(m.obT > 0) && Math.hypot(m.x - bx, m.y - by) < 28) { m.obT = .5; hitMon(m, .8 + .15 * ob); } }
+  if (pk.bolt) { run.boltT = (run.boltT ?? 2) - dt; if (run.boltT <= 0) { run.boltT = Math.max(1, 3.4 - .5 * pk.bolt); const c = d.mons.filter(m => Math.hypot(m.x - P.x, m.y - P.y) < 380); if (c.length) { const m = c[ri(c.length)]; (d.bolts ||= []).push({ x: m.x, y: m.y, t: .3 }); sfx("fire"); hitMon(m, 2.2 + .3 * pk.bolt); } } }
+  if (d.bolts) { for (const b of d.bolts) b.t -= dt; d.bolts = d.bolts.filter(b => b.t > 0); }
+}
+function gemGain(n) {
+  const r = dun.run; r.xp += n;
+  while (r.xp >= r.need) { r.xp -= r.need; r.lv++; r.need = Math.round(r.need * 1.28 + 3); r.pending++; sfx("lvl"); burst(player.x, player.y, 18, ["#5affc8", "#fff"], 100, .7, -30, 1); }
+  if (r.pending > 0 && !modal) openPerk();
+}
+function openPerk() {
+  const r = dun.run, ids = Object.keys(PERKS).filter(k => (r.perk[k] || 0) < 5).sort(() => Math.random() - .5); r.choices = ids.slice(0, 3);
+  if (!r.choices.length) { r.pending = 0; return; } modal = true; gearTab = "perk"; renderGear(); $("gear").hidden = false; keys.clear();
+}
+function choosePerk(id) {
+  const r = dun.run; if (!r.choices.includes(id)) return; r.perk[id] = (r.perk[id] || 0) + 1; r.pending--; sfx("gear");
+  if (id === "hp") heal(Math.round(pstats().maxhp * .3));
+  if (r.pending > 0) { openPerk(); renderGear(); } else { modal = false; $("gear").hidden = true; }
+}
+function arenaKill(m) {
+  const r = dun.run, n = Math.max(1, Math.round((m.xp / 6 + 1) * (1 + .05 * S.arena.up.xp))); r.kills++; dun.loot.push({ t: "gem", n, x: m.x, y: m.y, age: 0 });
+  if (m.arenaBoss) {
+    for (let i = 0; i < 3; i++) dun.loot.push({ t: "gem", n: n * 2, x: m.x + (i - 1) * 30, y: m.y + 20, age: 0 });
+    for (let i = 0; i < 2; i++) dun.loot.push({ t: "gear", it: genGear(Math.max(2, 3 + dun.wave.n + Math.round(S.lv * .3)), 2), x: m.x + (i ? 40 : -40), y: m.y + 50 });
+    dun.loot.push({ t: "bell", n: 100 + dun.wave.n * 10, x: m.x, y: m.y + 60 });
+  } else if (Math.random() < .03) dun.loot.push({ t: "pot", x: m.x, y: m.y });
+}
+let ARES = null;
+function finishArena(dead) {
+  const d = dun, A = S.arena, run = d.run, cleared = Math.max(0, d.wave.n - 1), gold = cleared * 15 + run.kills * 2, dl = dailyTouch();
+  S.bells += gold; dl.runs++; dl.wave = Math.max(dl.wave, cleared); A.runs++; A.kills += run.kills; const rec = cleared > A.best; if (rec) A.best = cleared;
+  A.rank.push({ name: NET.name || "나", wave: cleared, kills: run.kills, ts: Date.now() }); A.rank.sort((a, b) => b.wave - a.wave || b.kills - a.kills); A.rank = A.rank.slice(0, 8);
+  if (NET.on && cleared > 0) NET.send({ t: "score", wave: cleared, kills: run.kills });
+  ARES = { cleared, kills: run.kills, gold, rec, lv: run.lv, perks: { ...run.perk }, dead, best: A.best };
+  setTimeout(() => { gearTab = "arenaend"; modal = true; renderGear(); $("gear").hidden = false; }, 350);
+}
+function startArena() {
+  if (scene === "home") return say("집에서는 시작할 수 없어요.", 1800);
+  if (scene === "dun" && !(dun && dun.kind === "world")) return say("지금은 시작할 수 없어요.", 1800);
+  const ret = scene === "dun" ? { x: player.x, y: player.y } : null; closeShop(); enterDungeon(S.arena.start || 1, false, "arena", ret);
+}
+
+/* ----- 패널 ----- */
+function bodyArena() {
+  const A = S.arena, dl = dailyTouch(), st = idleStored(), starts = []; for (let w = 1; w <= A.best + 1; w += 10) starts.push(w);
+  const row = (l, r) => `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:2px 0"><span>${l}</span>${r}</div>`, btn = (a, ok, t) => `<button style="margin:0;padding:2px 12px" ${a} ${ok ? "" : "disabled"}>${t}</button>`;
+  if (NET.on && NET.rank === null) NET.send({ t: "rank?" });
+  let h = `<h2>⚔️ 서바이벌 아레나</h2><div><small>자동 공격으로 몰려오는 웨이브를 버티고, 경험치 구슬로 레벨업해 강화를 고르세요. 10웨이브마다 보스!<br>최고 기록 <b>웨이브 ${A.best}</b> · 누적 처치 ${A.kills} · 도전 ${A.runs}회</small></div>`;
+  h += `<h3>도전</h3><div>시작 웨이브: ${starts.map(w => `<button style="margin:0 4px 4px 0;padding:1px 10px;${(A.start || 1) === w ? "background:#fff" : ""}" data-apick="${w}">${w}</button>`).join("")}</div><button style="margin:6px 0 0" data-astart>⚔️ 도전하기 (웨이브 ${A.start || 1}~)</button>`;
+  h += `<h3>무기 스타일</h3>` + Object.entries(STYLES).map(([k, s]) => { const own = A.own.includes(k); return row(`${s.e} ${s.n} <small>${s.d}</small>`, btn(`data-astyle="${k}"`, own || S.bells >= s.cost, A.style === k ? "사용 중" : own ? "선택" : `구매 ${s.cost}`)); }).join("");
+  h += `<h3>영구 강화</h3>` + [["atk", "⚔️ 공격력", "+4%"], ["hp", "❤️ 체력", "+4%"], ["xp", "💎 구슬 효율", "+5%"]].map(([k, n, e]) => row(`${n} <b>Lv.${A.up[k]}</b>/20 <small>레벨당 ${e}</small>`, btn(`data-aup="${k}"`, A.up[k] < 20 && S.bells >= upCost(A.up[k]), A.up[k] >= 20 ? "최대" : `강화 ${upCost(A.up[k])}`))).join("");
+  h += `<h3>💤 방치 보상</h3>` + row(`쌓인 보상 <b>${st}</b>벨 <small>(분당 ${idleRate().toFixed(1)}, 최대 8시간)</small>`, btn("data-aidle", st > 0, "받기"));
+  h += `<h3>📅 일일 임무</h3>` + DAILY.map((m, i) => { const v = Math.min(m.need, m.get(dl)); return row(`${v >= m.need ? "✅" : "⬜"} ${m.n} <small>(${v}/${m.need}) 🔔${m.bells}</small>`, btn(`data-adaily="${i}"`, !dl.claimed[i] && v >= m.need, dl.claimed[i] ? "완료" : "받기")); }).join("");
+  h += `<h3>🏆 랭킹</h3><div><small>내 기록</small>` + (A.rank.slice(0, 5).map((r, i) => `<div>${i + 1}. ${r.name} — 웨이브 ${r.wave} · 처치 ${r.kills}</div>`).join("") || "<div>아직 기록이 없어요.</div>") + `</div>`;
+  if (NET.on) h += `<div style="margin-top:4px"><small>🌐 서버 랭킹</small>` + ((NET.rank || []).slice(0, 8).map((r, i) => `<div>${i + 1}. ${r.name} — 웨이브 ${r.wave} · 처치 ${r.kills}</div>`).join("") || "<div>아직 기록이 없어요.</div>") + `</div>`;
+  return h;
+}
+function bodyPerk() {
+  const r = dun.run; return `<h2>⬆️ 레벨 업! Lv.${r.lv}</h2><div><small>강화를 하나 고르세요 (남은 선택 ${r.pending})</small></div>` + r.choices.map(id => { const p = PERKS[id], lv = r.perk[id] || 0; return `<div class="g" data-perk="${id}"><span style="font-weight:700">${p.e} ${p.n} <small style="display:inline;opacity:.7">Lv.${lv} → ${lv + 1}</small><small>${p.d}</small></span></div>`; }).join("");
+}
+function bodyArenaEnd() {
+  const R = ARES; if (!R) return "<div>기록이 없어요.</div>";
+  return `<h2>${R.dead ? "💀 쓰러졌어요" : "🚪 아레나를 나왔어요"}</h2><div style="margin:6px 0">${R.rec ? "🎉 <b>신기록!</b><br>" : ""}도달 웨이브 <b>${R.cleared}</b> (최고 ${R.best})<br>처치 ${R.kills}마리 · 런 레벨 ${R.lv}<br>획득 <b>${R.gold}</b>벨</div>
+    <div>${Object.entries(R.perks).map(([k, v]) => `${PERKS[k].e}${PERKS[k].n} Lv.${v}`).join(" · ") || "선택한 강화가 없어요."}</div><button data-aend>확인</button>`;
+}
+
+/* ----- 모델 ----- */
+function mkArena() {
+  const g = new THREE.Group(), st = 0xd8c8a0, st2 = 0xb8a880;
+  for (let i = 0; i < 14; i++) { const a = i / 14 * 6.283; B(g, .85, 1.7 + (i % 2) * .3, .5, i % 2 ? st : st2, Math.cos(a) * 1.35, .85, Math.sin(a) * 1.35, { r: [0, HALF - a, 0] }); }
+  C(g, 1.25, 1.25, .1, 0xc8a870, 0, .05, 0, 16); B(g, 1.3, .5, .08, 0x7d5433, 0, 2.5, 1.5);
+  for (const s of [-1, 1]) { B(g, .08, .8, .03, 0xd8dce8, s * .18, 2.5, 1.55, { r: [0, 0, s * .7] }); C(g, .04, .04, 1.6, 0x7d5433, s * 1.0, 2.5, 1.5, 5); B(g, .6, .4, .04, 0xc8383a, s * 1.0 + .32, 3.1, 1.5); }
+  g.traverse(m => { if (m.isMesh) m.castShadow = true; }); return g;
+}
+function mkBlade() { const g = new THREE.Group(), m = B(g, .5, .05, .13, 0xe8f0ff, 0, 0, 0, { cs: false }); m.material = new THREE.MeshBasicMaterial({ color: 0xbfefff }); return { g }; }
+
 /* ---------- 효과음 (WebAudio, 파일 없이 합성) ---------- */
 let AC = null, muted = false;
 try { muted = localStorage.getItem("pokgeun-mute") === "1"; } catch (e) {}
@@ -2376,7 +2540,7 @@ player.hp = pstats().maxhp;
 resize(); hud(); $("clock").textContent = clockText(); setMute(muted);
 $("snd").onclick = () => { setMute(!muted); sfx("ui"); };
 requestAnimationFrame(frame);
-window.__game = { sEvent, storyReady, reportStory, openKing, nearKing, demonAI, finalizeDemon, enterDemon, onDemonDefeat, mkDemon, damageP, addFame, get STORY() { return STORY; }, NET, spawnNear, worldTick, killMon, setBuild: i => { buildSel = i == null ? null : BUILD[i]; }, farmAct, winteract, genOffers, turnIn, warpTo, worldAct, enterWorld, getWorld, get WORLD() { return WORLD; }, get dun() { return dun; }, wc, wb, setClock: v => { clock = v; }, fireball, feed, toggleMount, craft, togglePanel, enterDungeon, get dun() { return dun; }, pstats, genGear, attack, scene: () => scene, furnSelSet: v => { furnSel = v; renderFurn(); }, player, trees, S, keys, act, get fishing() { return fishing; }, bugs, villagers }; // 디버그/테스트용
+window.__game = { startArena, arenaTick, startWave, gemGain, choosePerk, finishArena, openPerk, autoFight, idleStored, dailyTouch, genArena, mkMonT, get PERKS() { return PERKS; }, get ARES() { return ARES; }, sEvent, storyReady, reportStory, openKing, nearKing, demonAI, finalizeDemon, enterDemon, onDemonDefeat, mkDemon, damageP, addFame, get STORY() { return STORY; }, NET, spawnNear, worldTick, killMon, setBuild: i => { buildSel = i == null ? null : BUILD[i]; }, farmAct, winteract, genOffers, turnIn, warpTo, worldAct, enterWorld, getWorld, get WORLD() { return WORLD; }, get dun() { return dun; }, wc, wb, setClock: v => { clock = v; }, fireball, feed, toggleMount, craft, togglePanel, enterDungeon, get dun() { return dun; }, pstats, genGear, attack, scene: () => scene, furnSelSet: v => { furnSel = v; renderFurn(); }, player, trees, S, keys, act, get fishing() { return fishing; }, bugs, villagers }; // 디버그/테스트용
 </script>
 </body>
 </html>

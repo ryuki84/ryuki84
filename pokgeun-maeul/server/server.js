@@ -11,7 +11,8 @@ const ALLOWED = new Set([0, 12, 13, 14, 15, 18, 21]);          // 0 = 채집/철
 const COLORS = [0x3d6ed0, 0xd9534f, 0x4a9a4a, 0xf0a23c, 0x8a5ad0, 0x2fb0b0, 0xe8508a, 0x6a7a8a];
 fs.mkdirSync(DATA, { recursive: true });
 let edits = {}; try { edits = JSON.parse(fs.readFileSync(FILE, "utf8")); } catch (e) {}
-let dirty = false;
+let dirty = false, rdirty = false;
+const RFILE = path.join(DATA, "ranking.json"); let ranking = []; try { ranking = JSON.parse(fs.readFileSync(RFILE, "utf8")); } catch (e) {}
 const players = new Map(); let nextId = 1;
 
 const regrow = k => setTimeout(() => { if (edits[k] === 0) { delete edits[k]; dirty = true; broadcast({ t: "edit", k: +k, c: null }); } }, 420000 + Math.random() * 120000);
@@ -44,7 +45,7 @@ wss.on("connection", ws => {
     let m; try { m = JSON.parse(raw); } catch (e) { return; } if (!m || typeof m.t !== "string") return;
     if (m.t === "join" && !p.joined) {
       p.joined = true; p.name = clean(m.name, 12) || "모험가" + p.id; players.set(p.id, p);
-      send(p, { t: "hello", id: p.id, name: p.name, col: p.col, edits, count: players.size, players: [...players.values()].filter(q => q !== p && q.w).map(pub) });
+      send(p, { t: "hello", id: p.id, name: p.name, col: p.col, edits, rank: ranking.slice(0, 10), count: players.size, players: [...players.values()].filter(q => q !== p && q.w).map(pub) });
       broadcast({ t: "chat", id: 0, name: "", text: `${p.name} 님이 접속했어요`, sys: 1 }, p); broadcast({ t: "count", n: players.size });
       return;
     }
@@ -52,6 +53,13 @@ wss.on("connection", ws => {
     if (m.t === "pos") { p.x = num(m.x, 0, N * 32, p.x); p.y = num(m.y, 0, N * 32, p.y); p.dx = num(m.dx, -1, 1, 0); p.dy = num(m.dy, -1, 1, 1); p.mv = m.mv ? 1 : 0; p.w = 1; }
     else if (m.t === "away") { if (p.w) { p.w = 0; broadcast({ t: "away", id: p.id }, p); } }
     else if (m.t === "chat") { const text = clean(m.text, 120), now = Date.now(); if (!text || now - p.lastChat < 400) return; p.lastChat = now; broadcast({ t: "chat", id: p.id, name: p.name, text }); }
+    else if (m.t === "rank?") send(p, { t: "rank", list: ranking.slice(0, 10) });
+    else if (m.t === "score") {                                  // 아레나 기록 (클라이언트 신고 방식이라 치트 방지는 없어요)
+      const now = Date.now(); if (now - (p.lastScore || 0) < 5000) return; p.lastScore = now;
+      const wave = Math.trunc(num(m.wave, 0, 999)), kills = Math.trunc(num(m.kills, 0, 99999)); if (wave < 1) return;
+      ranking.push({ name: p.name, wave, kills, ts: now }); ranking.sort((a, b) => b.wave - a.wave || b.kills - a.kills); ranking = ranking.slice(0, 30); rdirty = true;
+      broadcast({ t: "rank", list: ranking.slice(0, 10) });
+    }
     else if (m.t === "edit") {
       const now = Date.now(); if (now - p.eT > 1000) { p.eT = now; p.eN = 0; } if (++p.eN > 30) return;        // 초당 30회 제한
       const k = Math.trunc(+m.k); if (!(k >= 0 && k < N * N)) return; const c = m.c === null ? null : Math.trunc(+m.c); if (c !== null && !ALLOWED.has(c)) return;
@@ -70,7 +78,7 @@ setInterval(() => {                                            // 10Hz 위치 �
   for (const p of inWorld) send(p, { t: "state", ps: inWorld.filter(q => q !== p).map(pub) });
 }, 100);
 setInterval(() => { for (const p of players.values()) { if (!p.alive) { p.ws.terminate(); continue; } p.alive = false; p.ws.ping(); } }, 30000);
-const flush = () => { if (!dirty) return; dirty = false; try { fs.writeFileSync(FILE, JSON.stringify(edits)); } catch (e) { console.error("저장 실패", e.message); } };
+const flush = () => { if (dirty) { dirty = false; try { fs.writeFileSync(FILE, JSON.stringify(edits)); } catch (e) { console.error("저장 실패", e.message); } } if (rdirty) { rdirty = false; try { fs.writeFileSync(RFILE, JSON.stringify(ranking)); } catch (e) {} } };
 setInterval(flush, 10000);
 for (const sig of ["SIGINT", "SIGTERM"]) process.on(sig, () => { flush(); process.exit(0); });
 server.listen(PORT, () => console.log(`🌍 포근 마을 서버: http://localhost:${PORT}/?online  (편집 ${Object.keys(edits).length}개 불러옴)`));
