@@ -32,7 +32,8 @@ const wss = new WebSocketServer({ server, maxPayload: 4096 });
 
 function send(p, m) { if (p.ws.readyState === 1) p.ws.send(JSON.stringify(m)); }
 function broadcast(m, except) { const s = JSON.stringify(m); for (const p of players.values()) if (p !== except && p.ws.readyState === 1) p.ws.send(s); }
-const pub = p => ({ id: p.id, name: p.name, col: p.col, x: p.x, y: p.y, dx: p.dx, dy: p.dy, mv: p.mv });
+const cleanLook = l => { const o = {}; for (const k of ["h", "hc", "sk", "ey", "tp"]) o[k] = Math.max(0, Math.min(9, (l && +l[k]) | 0)); return o; };
+const pub = p => ({ id: p.id, name: p.name, col: p.col, look: p.look, x: p.x, y: p.y, dx: p.dx, dy: p.dy, mv: p.mv });
 const clean = (s, n) => String(s ?? "").replace(/[\u0000-\u001f<>]/g, "").trim().slice(0, n);
 const num = (v, lo, hi, d = 0) => Number.isFinite(+v) ? Math.min(hi, Math.max(lo, +v)) : d;
 
@@ -44,12 +45,13 @@ wss.on("connection", ws => {
   ws.on("message", raw => {
     let m; try { m = JSON.parse(raw); } catch (e) { return; } if (!m || typeof m.t !== "string") return;
     if (m.t === "join" && !p.joined) {
-      p.joined = true; p.name = clean(m.name, 12) || "모험가" + p.id; players.set(p.id, p);
+      p.joined = true; p.look = cleanLook(m.look); p.name = clean(m.name, 12) || "모험가" + p.id; players.set(p.id, p);
       send(p, { t: "hello", id: p.id, name: p.name, col: p.col, edits, rank: ranking.slice(0, 10), count: players.size, players: [...players.values()].filter(q => q !== p && q.w).map(pub) });
       broadcast({ t: "chat", id: 0, name: "", text: `${p.name} 님이 접속했어요`, sys: 1 }, p); broadcast({ t: "count", n: players.size });
       return;
     }
     if (!p.joined) return;
+    if (m.t === "look") { p.look = cleanLook(m.look); return; }
     if (m.t === "pos") { p.x = num(m.x, 0, N * 32, p.x); p.y = num(m.y, 0, N * 32, p.y); p.dx = num(m.dx, -1, 1, 0); p.dy = num(m.dy, -1, 1, 1); p.mv = m.mv ? 1 : 0; p.w = 1; }
     else if (m.t === "away") { if (p.w) { p.w = 0; broadcast({ t: "away", id: p.id }, p); } }
     else if (m.t === "chat") { const text = clean(m.text, 120), now = Date.now(); if (!text || now - p.lastChat < 400) return; p.lastChat = now; broadcast({ t: "chat", id: p.id, name: p.name, text }); }

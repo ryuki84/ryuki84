@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>포근 마을</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;600;800&display=swap" rel="stylesheet">
 <style>
   :root { --ink:#4a3b2a; --paper:#fff8e6; --accent:#f2a65a; }
   * { box-sizing:border-box; }
@@ -32,6 +34,7 @@
   #msg { position:absolute; left:50%; bottom:clamp(60px,10vw,92px); transform:translateX(-50%); max-width:80%; background:var(--paper); border:3px solid var(--ink); border-radius:16px; padding:10px 18px; font-size:clamp(13px,2vw,20px); font-weight:600; text-align:center; box-shadow:0 4px 0 rgba(0,0,0,.25); }
   #msg[hidden], #shop[hidden], #help[hidden], #gear[hidden], #rpg[hidden] { display:none; }
   #shop, #help, #gear { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); background:var(--paper); border:4px solid var(--ink); border-radius:20px; padding:18px 24px; min-width:min(86%,340px); box-shadow:0 6px 0 rgba(0,0,0,.3); font-size:clamp(13px,2vw,18px); }
+  #gear.side { left:auto; right:14px; top:50%; transform:translateY(-50%); width:330px; min-width:0; }
   #shop h2, #help h2, #gear h2 { margin:0 0 10px; }
   #shop .row { display:flex; justify-content:space-between; padding:2px 0; }
   button { font:inherit; font-weight:700; background:var(--accent); color:var(--ink); border:3px solid var(--ink); border-radius:12px; padding:6px 14px; margin:8px 6px 0 0; cursor:pointer; }
@@ -86,6 +89,22 @@
     #shop, #gear, #help { position:fixed; max-height:92vh; overflow:auto; width:min(94vw,440px); }
     #touch { display:flex; justify-content:space-between; align-items:center; gap:8px; padding:12px 10px 0; }
   }
+
+  /* ---- 모던 UI: 글래스 + 부드러운 그림자 ---- */
+  :root { --glass:rgba(255,252,244,.74); --edge:rgba(255,255,255,.65); --line:rgba(74,59,42,.22); --shadow:0 8px 28px rgba(30,22,10,.28), 0 1px 0 rgba(255,255,255,.7) inset; }
+  html,body { font-family:"Noto Sans KR","Apple SD Gothic Neo",system-ui,sans-serif; letter-spacing:-.01em; }
+  .pill, #inv, #msg, #rpg, #furn, #shop, #help, #gear { background:var(--glass); -webkit-backdrop-filter:blur(14px) saturate(1.5); backdrop-filter:blur(14px) saturate(1.5); border:1px solid var(--edge); box-shadow:var(--shadow); }
+  #shop, #help, #gear { border-radius:22px; }
+  .pill { border-radius:999px; padding:4px 14px; font-weight:700; }
+  #inv, #rpg, #furn, #msg { border-radius:16px; }
+  .tool { background:var(--glass); -webkit-backdrop-filter:blur(12px) saturate(1.4); backdrop-filter:blur(12px) saturate(1.4); border:1px solid var(--edge); border-radius:16px; box-shadow:0 5px 16px rgba(30,22,10,.25), 0 1px 0 rgba(255,255,255,.7) inset; transition:transform .14s, background .14s; }
+  .tool.on { background:linear-gradient(180deg,#ffc58a,#f2a65a); box-shadow:0 8px 20px rgba(242,166,90,.5), 0 1px 0 rgba(255,255,255,.6) inset; }
+  button { background:linear-gradient(180deg,#ffd2a0,#f2a65a); border:1px solid rgba(74,59,42,.28); border-radius:12px; box-shadow:0 2px 6px rgba(30,22,10,.18), 0 1px 0 rgba(255,255,255,.6) inset; transition:transform .1s, filter .12s; }
+  button:hover:not(:disabled) { filter:brightness(1.06); } button:active:not(:disabled) { transform:translateY(1px) scale(.98); }
+  #chatin { border:1px solid var(--line); border-radius:12px; background:var(--glass); }
+  #chatlog div { background:rgba(24,20,34,.55); -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); }
+  #rpg .bar { border:1px solid rgba(74,59,42,.35); border-radius:10px; } #rpg .bar i.hp { background:linear-gradient(180deg,#ff7070,#d83a3a); } #rpg .bar i.xp { background:linear-gradient(180deg,#6fb0f0,#3a78c8); }
+  .g:hover { background:rgba(242,166,90,.18); }
 </style>
 </head>
 <body>
@@ -271,6 +290,7 @@ S.fin = S.fin || {}; S.room = S.room || [];
 S.lv = S.lv || 1; S.xp = S.xp || 0; S.potions = S.potions ?? 2; S.bag = S.bag || []; S.best = S.best || 0;
 S.eq = S.eq || { weapon: { id: 1, slot: "weapon", e: "🗡️", n: "나무 칼", rar: 0, ilvl: 1, st: { dmg: 3 }, price: 10 }, armor: null, ring: null };
 if (!S.st) { S.st = { str: 0, dex: 0, vit: 0 }; S.sk = { whirl: 1, fire: 0, tough: 0, tamer: 0 }; S.pts = (S.lv - 1) * 5; S.sp = S.lv - 1; }
+S.look = S.look || { h: 0, hc: 0, sk: 1, ey: 0, tp: 0 };
 S.mat = S.mat || { wood: 0, stone: 0, fiber: 0, berry: 0, meat: 0, hide: 0, bone: 0 }; S.pets = S.pets || []; S.petA = S.petA ?? -1;
 S.mat.ore = S.mat.ore || 0; S.arena = S.arena || { best: 0, kills: 0, runs: 0, style: "sword", own: ["sword"], up: { atk: 0, hp: 0, xp: 0 }, rank: [], start: 1 }; S.idleT = S.idleT || Date.now(); S.daily = S.daily || null; S.story = S.story || { stage: 0, p: {}, notified: false, demon: 0, known: false }; S.fame = S.fame || 0; S.wedits = S.wedits || {}; S.wreg = S.wreg || {}; S.wp = S.wp || {}; S.wopen = S.wopen || {}; S.wcl = S.wcl || {}; S.quests = S.quests || []; S.qoffer = S.qoffer || null; S.crops = S.crops || {}; S.disc = S.disc || "";
 const trees = S.trees;
@@ -346,7 +366,7 @@ $("furn").addEventListener("click", e => { const t = e.target.closest(".it"); if
 $("tools").addEventListener("click", e => { const t = e.target.closest(".tool"); if (t) { player.tool = +t.dataset.i; cancelFish(); hud(); } });
 function clockText() {
   const h = Math.floor(clock) % 24, m = Math.floor((clock % 1) * 60);
-  return `${h < 6 || h >= 19 ? "🌙" : "☀️"} ${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+  return `${WXI[WX.eff] || (h < 6 || h >= 19 ? "🌙" : "☀️")} ${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 }
 
 /* ---------- 상점 ---------- */
@@ -574,13 +594,15 @@ function bodyCraft() {
   }).join("");
 }
 function renderGear() {
-  const tabs = [["equip", "⚔️ 장비 (I)"], ["char", "📜 캐릭터 (K)"], ["craft", "🔨 제작 (C)"], ["build", "🏗️ 건설 (B)"], ["quest", "📜 의뢰 (J)"], ["map", "🗺️ 지도 (N)"], ["king", "👑 왕국 (L)"], ["arena", "⚔️ 아레나 (Y)"]].map(([k, l]) => `<button data-tab="${k}" style="margin:0 6px 8px 0;padding:3px 10px;${gearTab === k ? "background:#fff" : ""}">${l}</button>`).join("");
-  $("gear").innerHTML = (["ending", "perk", "arenaend"].includes(gearTab) ? "" : tabs) + (gearTab === "char" ? bodyChar() : gearTab === "craft" ? bodyCraft() : gearTab === "build" ? bodyBuild() : gearTab === "quest" ? bodyQuest() : gearTab === "map" ? bodyMap() : gearTab === "king" ? bodyKing() : gearTab === "ending" ? bodyEnding() : gearTab === "arena" ? bodyArena() : gearTab === "perk" ? bodyPerk() : gearTab === "arenaend" ? bodyArenaEnd() : bodyEquip()) + (gearTab === "perk" ? "" : `<button id="closeGear">닫기</button>`);
+  const tabs = [["equip", "⚔️ 장비 (I)"], ["char", "📜 캐릭터 (K)"], ["craft", "🔨 제작 (C)"], ["build", "🏗️ 건설 (B)"], ["quest", "📜 의뢰 (J)"], ["map", "🗺️ 지도 (N)"], ["king", "👑 왕국 (L)"], ["arena", "⚔️ 아레나 (Y)"], ["look", "🧑 외형 (O)"]].map(([k, l]) => `<button data-tab="${k}" style="margin:0 6px 8px 0;padding:3px 10px;${gearTab === k ? "background:#fff" : ""}">${l}</button>`).join("");
+  $("gear").classList.toggle("side", gearTab === "look" && innerWidth >= 700);
+  $("gear").innerHTML = (["ending", "perk", "arenaend"].includes(gearTab) ? "" : tabs) + (gearTab === "char" ? bodyChar() : gearTab === "craft" ? bodyCraft() : gearTab === "build" ? bodyBuild() : gearTab === "quest" ? bodyQuest() : gearTab === "map" ? bodyMap() : gearTab === "king" ? bodyKing() : gearTab === "ending" ? bodyEnding() : gearTab === "arena" ? bodyArena() : gearTab === "look" ? bodyLook() : gearTab === "perk" ? bodyPerk() : gearTab === "arenaend" ? bodyArenaEnd() : bodyEquip()) + (gearTab === "perk" ? "" : `<button id="closeGear">닫기</button>`);
   if (gearTab === "map") drawWorldMap();
 }
 $("gear").addEventListener("click", e => {
   const t = e.target, d = t.dataset || {};
   if (t.id === "closeGear") return closeShop();
+  if (d.look) { const [k, v] = d.look.split(":"); S.look = { ...lookOf(S.look), [k]: +v }; save(); netLook(); return renderGear(); }
   if (d.tab) { gearTab = d.tab; return renderGear(); }
   if (d.craft !== undefined) return craft(+d.craft);
   if (t.id === "qreroll") { S.qoffer = genOffers(); return renderGear(); }
@@ -945,6 +967,7 @@ function press(code) {
   else if (code === "KeyJ") togglePanel("quest");
   else if (code === "KeyL") togglePanel("king");
   else if (code === "KeyY") togglePanel("arena");
+  else if (code === "KeyO") togglePanel("look");
   else if (code === "KeyN") togglePanel("map");
   else if (code === "KeyX" && scene === "dun" && dun.kind === "world") worldRemove();
   else if (code === "KeyX" && scene === "home") { const { tx, ty } = target(); if (pickUp(tx, ty)) save(); }
@@ -1065,7 +1088,7 @@ if (HAS3D) try {
   Object.assign(sun.shadow.camera, { left: -17, right: 17, top: 15, bottom: -15, near: 1, far: 80 }); sun.shadow.bias = -.0006; sun.shadow.camera.updateProjectionMatrix();
   S3.add(amb, hemi, sun, sun.target);
   for (let i = 0; i < 6; i++) { const l = new THREE.PointLight(0xffc870, 0, 8, 2); S3.add(l); PLs.push(l); }
-  const d = new Uint8Array([95, 170, 255]); gradTex = new THREE.DataTexture(d, 3, 1, THREE.LuminanceFormat); gradTex.minFilter = gradTex.magFilter = THREE.NearestFilter; gradTex.generateMipmaps = false; gradTex.needsUpdate = true;
+  const d = new Uint8Array([80, 140, 205, 255]); gradTex = new THREE.DataTexture(d, 4, 1, THREE.LuminanceFormat); gradTex.minFilter = gradTex.magFilter = THREE.NearestFilter; gradTex.generateMipmaps = false; gradTex.needsUpdate = true;
 } catch (e) { R3 = null; }
 if (R3) applyQuality(gfxLv);
 if (!R3) $("help").insertAdjacentHTML("afterbegin", `<p style="color:#c0392b;font-weight:700">⚠️ 3D 그래픽을 불러오지 못했어요. 인터넷 연결과 WebGL 지원 브라우저가 필요해요.</p>`);
@@ -1073,7 +1096,7 @@ if (!R3) $("help").insertAdjacentHTML("afterbegin", `<p style="color:#c0392b;fon
 const GRADE = {
   uniforms: { tDiffuse: { value: null }, vig: { value: .22 }, sat: { value: 1.1 }, con: { value: 1.05 } },
   vertexShader: "varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }",
-  fragmentShader: "uniform sampler2D tDiffuse; uniform float vig, sat, con; varying vec2 vUv; void main(){ vec4 c = texture2D(tDiffuse, vUv); float m = max(c.r, max(c.g, c.b)); if (m > 1.0) c.rgb /= m; float l = dot(c.rgb, vec3(.299,.587,.114)); c.rgb = mix(vec3(l), c.rgb, sat); c.rgb = (c.rgb - .5) * con + .5; c.rgb *= 1.0 - vig * smoothstep(.42, .98, distance(vUv, vec2(.5))); gl_FragColor = vec4(clamp(c.rgb, 0.0, 1.0), 1.0); }",
+  fragmentShader: "uniform sampler2D tDiffuse; uniform float vig, sat, con; varying vec2 vUv; void main(){ vec4 c = texture2D(tDiffuse, vUv); float m = max(c.r, max(c.g, c.b)); if (m > 1.0) c.rgb /= m; float l = dot(c.rgb, vec3(.299,.587,.114)); c.rgb = mix(vec3(l), c.rgb, sat); { vec3 x = c.rgb * 1.12; vec3 a = clamp((x * (2.51 * x + .03)) / (x * (2.43 * x + .59) + .14), 0.0, 1.0); c.rgb = mix(c.rgb, a, .6); } c.rgb = (c.rgb - .5) * con + .5; c.rgb *= 1.0 - vig * smoothstep(.42, .98, distance(vUv, vec2(.5))); gl_FragColor = vec4(clamp(c.rgb, 0.0, 1.0), 1.0); }",
 };
 function initPost(w, h) {
   postTried = true; if (!THREE.EffectComposer || !THREE.UnrealBloomPass || !THREE.RenderPass || !THREE.ShaderPass) return;
@@ -1099,8 +1122,18 @@ addEventListener("resize", resize);
 /* ----- 재료 / 헬퍼 ----- */
 const MCACHE = new Map(), GC = {};
 let UNIQ = false;
-const Mu = c => { const m = new THREE.MeshToonMaterial({ color: c, gradientMap: gradTex }); m.userData.own = 1; return m; };
-const M = c => { let m = MCACHE.get(c); if (!m) { m = new THREE.MeshToonMaterial({ color: c, gradientMap: gradTex }); MCACHE.set(c, m); } return m; };
+const RIM = { value: .2 }, RIMC = { value: new THREE.Color(0xbfe0ff) };
+function toonPatch(m, key = "rim") {
+  const prev = m.onBeforeCompile, pk = m.customProgramCacheKey;
+  m.onBeforeCompile = sh => {
+    if (prev) prev.call(m, sh); sh.uniforms.uRim = RIM; sh.uniforms.uRimC = RIMC;
+    sh.fragmentShader = sh.fragmentShader.replace("#include <common>", "#include <common>\nuniform float uRim; uniform vec3 uRimC;").replace("#include <emissivemap_fragment>", "#include <emissivemap_fragment>\n { float rf = pow(1.0 - clamp(dot(normalize(normal), normalize(vViewPosition)), 0.0, 1.0), 2.6); totalEmissiveRadiance += uRimC * rf * uRim; }");
+  };
+  m.customProgramCacheKey = () => key + (m.userData.pk || "");
+  return m;
+}
+const Mu = c => { const m = toonPatch(new THREE.MeshToonMaterial({ color: c, gradientMap: gradTex })); m.userData.own = 1; return m; };
+const M = c => { let m = MCACHE.get(c); if (!m) { m = toonPatch(new THREE.MeshToonMaterial({ color: c, gradientMap: gradTex })); MCACHE.set(c, m); } return m; };
 const uq = f => { UNIQ = true; try { return f(); } finally { UNIQ = false; } };
 const geo = (k, f) => GC[k] || (GC[k] = f());
 function addM(par, geom, col, x = 0, y = 0, z = 0, o = {}) {
@@ -1119,12 +1152,12 @@ const OUTM = new THREE.MeshBasicMaterial({ color: INK, side: THREE.BackSide });
 const HDR = (hex, k = 2.4, o = {}) => { const m = new THREE.MeshBasicMaterial({ color: hex, ...o }); m.color.multiplyScalar(k); return m; };
 const WIND = { value: 0 };
 function windMat(opts, amp) {
-  const m = new THREE.MeshToonMaterial({ gradientMap: gradTex, ...opts });
+  const m = new THREE.MeshToonMaterial({ gradientMap: gradTex, ...opts }); m.userData.pk = "w" + amp;
   m.onBeforeCompile = sh => {
     sh.uniforms.uWind = WIND;
     sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nuniform float uWind;").replace("#include <begin_vertex>", `#include <begin_vertex>\n#ifdef USE_INSTANCING\n float ph = instanceMatrix[3].x * .7 + instanceMatrix[3].z * .5;\n transformed.x += sin(uWind * 1.7 + ph) * ${amp.toFixed(3)} * max(position.y, 0.0);\n transformed.z += cos(uWind * 1.3 + ph) * ${(amp * .6).toFixed(3)} * max(position.y, 0.0);\n#endif`);
   };
-  return m;
+  return toonPatch(m);
 }
 const WATERMAT = new THREE.ShaderMaterial({
   transparent: true, depthWrite: false, vertexColors: true, uniforms: { uT: { value: 0 }, uDay: { value: 1 } },
@@ -1170,7 +1203,7 @@ class GB {
     g.computeVertexNormals(); const m = new THREE.Mesh(g, mat); m.receiveShadow = shadow; m.castShadow = false; return m;
   }
 }
-const VMAT = map => new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: gradTex, map: map || null });
+const VMAT = map => toonPatch(new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: gradTex, map: map || null }));
 const rn = (x, y, k) => ((x * 73856093 ^ y * 19349663 ^ k * 83492791) >>> 0) / 4294967296;
 let brickTex = null;
 function getBrick() {
@@ -1220,23 +1253,96 @@ function terrainGroup(w, h, at, kind) {
 
 /* ----- 모델: 사람 / 동물 / 몬스터 / 공룡 ----- */
 const leg = (par, x, y, z, w, h, col, d = w) => { const p = new THREE.Group(); p.position.set(x, y, z); B(p, w, h, d, col, 0, -h / 2, 0); par.add(p); return p; };
-function mkHuman(o) {
-  const g = new THREE.Group(), body = new THREE.Group(); g.add(body);
-  B(body, .5, .52, .3, o.shirt, 0, .66, 0); B(body, .52, .1, .32, o.belt || o.pants, 0, .42, 0);
-  Sp(body, .27, o.skin, 0, 1.13, 0); Sp(body, .29, o.hair, 0, 1.2, -.04, { s: [1, .85, 1] });
-  Sp(body, .04, INK, -.1, 1.1, .25); Sp(body, .04, INK, .1, 1.1, .25);
-  const arm = x => { const p = new THREE.Group(); p.position.set(x, .88, 0); B(p, .13, .42, .13, o.shirt, 0, -.2, 0); Sp(p, .08, o.skin, 0, -.44, 0); body.add(p); return p; };
-  const la = arm(-.34), ra = arm(.34), ll = leg(body, -.12, .4, 0, .17, .4, o.pants), rl = leg(body, .12, .4, 0, .17, .4, o.pants);
-  B(ll, .19, .08, .26, o.boots || 0x3a2a20, 0, -.4, .03); B(rl, .19, .08, .26, o.boots || 0x3a2a20, 0, -.4, .03);
-  outline(g); return { g, body, la, ra, legs: [ll, rl], hum: true, h: 1.8 };
+/* ----- 모던 캐릭터: 부드러운 체형 · 표정 있는 얼굴 · 헤어 4종 · 장비 외형 ----- */
+const LOOK = { hair: [0x3a2a22, 0x1c1c28, 0xe8c070, 0xc8503a, 0x6a4ac8, 0x4a9ad8, 0xf0f0f4], skin: [0xffe0c8, 0xf2c79a, 0xd9a273, 0x9a6a46, 0x6a4430], eye: [0x4a7ad8, 0x3a9a5a, 0x8a5a34, 0xd8503a, 0x8a5ad0], out: [0x3d6ed0, 0xd9534f, 0x4a9a4a, 0x8a5ad0, 0x2fb0b0, 0x2e2e3e], hs: ["단발", "긴 머리", "포니테일", "삐죽머리"] };
+const lookOf = l => ({ h: ((l && l.h) | 0) % 4, hc: ((l && l.hc) | 0) % 7, sk: ((l && l.sk) | 0) % 5, ey: ((l && l.ey) | 0) % 5, tp: ((l && l.tp) | 0) % 6 });
+const shade = (hex, f) => new THREE.Color(hex).multiplyScalar(f).getHex();
+const RTINT = [0xb8bcc8, 0x6fa8ff, 0xffd34d, 0xff8a2b, 0x5be37d];
+const Sq = (p, r, c, x, y, z, o, sg = 20) => addM(p, geo(`q${r},${sg}`, () => new THREE.SphereGeometry(r, sg, Math.round(sg * .7))), c, x, y, z, o);
+const noOl = m => { m.userData.ol = 1; return m; };
+function addHair(head, st, col, lite) {
+  const hl = new THREE.Color(col).lerp(new THREE.Color(0xffffff), .28).getHex();
+  addM(head, geo("hcap", () => new THREE.SphereGeometry(.325, 22, 14, 0, Math.PI * 2, 0, Math.PI * .56)), col, 0, .035, -.045, { r: [-.32, 0, 0] });
+  if (lite) return null;
+  for (let i = 0; i < 5; i++) { const d = Math.abs(i - 2); K(head, .06, .17 - d * .02, col, (i - 2) * .095, .2, .262 - d * .02, 5, { r: [Math.PI - .35, 0, (i - 2) * .12] }); }
+  for (const s of [-1, 1]) K(head, .06, .26, col, s * .295, 0, .05, 5, { r: [Math.PI, 0, -s * .12] });
+  addM(head, geo("hhl", () => new THREE.SphereGeometry(.12, 10, 6)), hl, -.06, .3, .12, { s: [1, .3, .6], cs: false });
+  let tail = null;
+  if (st === 1) { C(head, .22, .12, .62, col, 0, -.3, -.2, 10); K(head, .12, .25, col, 0, -.66, -.2, 8, { r: [Math.PI, 0, 0] }); }
+  else if (st === 2) { tail = new THREE.Group(); tail.position.set(0, .13, -.3); head.add(tail); Sq(tail, .08, col, 0, 0, 0, undefined, 10); K(tail, .09, .5, col, 0, -.28, -.04, 8, { r: [Math.PI, 0, 0] }); }
+  else if (st === 3) for (let i = 0; i < 7; i++) { const a = i / 7 * 6.283; K(head, .07, .3, col, Math.cos(a) * .18, .3 + (i % 2) * .04, Math.sin(a) * .18 - .03, 5, { r: [Math.sin(a) * .6, 0, -Math.cos(a) * .6] }); }
+  return tail;
 }
-const mkPlayer = () => uq(() => mkHuman({ shirt: 0x3d6ed0, pants: 0x2c3e78, skin: 0xf2c79a, hair: 0x5a3a22 }));
+function heroFace(head, o) {
+  const eyeC = o.eye ?? 0x4a7ad8, grp = new THREE.Group(); head.add(grp); const hi = HDR(0xffffff, 1.7);
+  for (const s of [-1, 1]) {
+    const e = new THREE.Group(); e.position.set(s * .118, -.015, .255); e.rotation.y = s * .22; grp.add(e);
+    noOl(Sq(e, .078, 0xffffff, 0, 0, 0, { s: [1, 1.18, .5], cs: false }, 14)); noOl(Sq(e, .057, eyeC, 0, -.008, .018, { s: [1, 1.2, .45], cs: false }, 12)); noOl(Sq(e, .03, 0x14101c, 0, -.01, .03, { s: [1, 1.2, .4], cs: false }, 10));
+    for (const [hx, hy, r] of [[-.018, .03, .017], [.016, -.024, .009]]) { const m = new THREE.Mesh(geo("eh" + r, () => new THREE.SphereGeometry(r, 8, 6)), hi); m.position.set(hx, hy, .04); m.userData.ol = 1; e.add(m); }
+    noOl(B(head, .085, .014, .02, o.hair, s * .122, .125, .27, { r: [0, s * .2, -s * .16], cs: false })); noOl(Sq(head, .05, 0xff8a9a, s * .175, -.1, .225, { s: [1, .6, .3], cs: false }, 8));
+  }
+  noOl(addM(head, geo("smile", () => new THREE.TorusGeometry(.04, .009, 6, 12, Math.PI)), 0x8a3a3a, 0, -.105, .285, { r: [-.15, 0, Math.PI], cs: false }));
+  return grp;
+}
+function skullFace(head) {
+  const eye = HDR(0x6ee7ff, 2.4);
+  for (const s of [-1, 1]) { noOl(Sq(head, .08, 0x14101c, s * .115, -.01, .24, { s: [1, 1.2, .5], cs: false }, 12)); const m = new THREE.Mesh(geo("sk_e", () => new THREE.SphereGeometry(.026, 8, 6)), eye); m.position.set(s * .115, -.02, .275); m.userData.ol = 1; head.add(m); }
+  for (let i = -2; i <= 2; i++) noOl(B(head, .03, .05, .02, 0xf2eee0, i * .036, -.14, .282, { cs: false })); noOl(B(head, .06, .045, .02, 0x14101c, 0, -.065, .292, { cs: false }));
+}
+function zombieFace(head, ogre) {
+  const eye = HDR(ogre ? 0xffd34d : 0xff3a3a, 2.4);
+  for (const s of [-1, 1]) {
+    noOl(Sq(head, .07, 0xf0f0e0, s * .115, -.01, .245, { s: [1, 1, .5], cs: false }, 10)); const m = new THREE.Mesh(geo("zb_e", () => new THREE.SphereGeometry(.03, 8, 6)), eye); m.position.set(s * .115, -.012, .278); m.userData.ol = 1; head.add(m);
+    noOl(B(head, .1, .02, .02, 0x1a1420, s * .115, .1, .28, { r: [0, 0, -s * (ogre ? .45 : .15)], cs: false }));
+  }
+  noOl(B(head, .13, .03, .02, 0x1a1420, 0, -.12, .285, { cs: false })); if (ogre) for (const s of [-1, 1]) noOl(K(head, .025, .08, 0xffffff, s * .05, -.14, .285, 4, { r: [Math.PI, 0, 0], cs: false }));
+}
+function mkHuman(o) {
+  const g = new THREE.Group(), body = new THREE.Group(); g.add(body); const face = o.face || "hero", skin = o.skin, jacket = o.shirt, pants = o.pants, boots = o.boots || 0x3a2a20, belt = o.belt || 0x4a3426, eq = o.eq || {}, sg = o.lite ? 10 : 14;
+  const mkLeg = x => { const p = new THREE.Group(); p.position.set(x, .62, 0); C(p, .085, .068, .5, pants, 0, -.25, 0, 10); Sq(p, .082, pants, 0, -.01, 0, undefined, 10); Sq(p, .1, boots, 0, -.55, .035, { s: [1, .62, 1.4] }, 10); body.add(p); return p; };
+  const ll = mkLeg(-.115), rl = mkLeg(.115);
+  C(body, .2, .17, .44, jacket, 0, .86, 0, sg); C(body, .17, .235, .17, jacket, 0, .65, 0, sg); C(body, .182, .182, .055, belt, 0, .71, 0, sg); B(body, .075, .055, .02, 0xf5d142, 0, .71, .185);
+  if (!o.lite) TR(body, .125, .03, jacket, 0, 1.07, 0, { r: [HALF, 0, 0] }); C(body, .06, .07, .1, skin, 0, 1.1, 0, 8);
+  const head = new THREE.Group(); head.position.set(0, 1.27, 0); body.add(head);
+  Sq(head, .3, skin, 0, 0, 0, { s: [1, .96, .98] }, o.lite ? 14 : 22); if (!o.lite) for (const s of [-1, 1]) Sq(head, .055, skin, s * .29, -.02, -.01, { s: [.6, 1, .8] }, 8);
+  const arm = s => { const p = new THREE.Group(); p.position.set(s * .27, 1.0, 0); Sq(p, .085, jacket, 0, 0, 0, undefined, 10); C(p, .065, .055, .3, jacket, 0, -.17, 0, 10); Sq(p, .066, o.glove || skin, 0, -.35, 0, undefined, 10); body.add(p); return p; };
+  const la = arm(-1), ra = arm(1);
+  if (eq.armor) { const t = RTINT[eq.armor.rar] ?? RTINT[0]; C(body, .215, .19, .24, t, 0, .95, 0, 14); for (const p of [la, ra]) Sq(p, .125, t, 0, .02, 0, { s: [1, .62, 1] }, 10); if (eq.armor.rar >= 2) { const gm = Sq(body, .035, 0xffffff, 0, .96, .205, undefined, 8); gm.material = HDR(t, 2.2); gm.userData.ol = 1; } }
+  if (eq.ring) { const rr = TR(ra, .05, .013, 0xf5d142, 0, -.37, 0, { r: [0, HALF, 0] }); rr.material = HDR(0xf5d142, 2); rr.userData.ol = 1; }
+  let tail = null; if (face === "hero") tail = addHair(head, o.hs | 0, o.hair, o.lite); else if (face === "zombie" || face === "ogre") addHair(head, 0, o.hair, true);
+  outline(g); let blinkG = null;
+  if (face === "hero") blinkG = o.lite ? null : heroFace(head, o); else if (face === "skull") skullFace(head); else zombieFace(head, face === "ogre");
+  return { g, body, head, la, ra, legs: [ll, rl], hum: true, h: 1.95, blinkG, tail, seed: Math.random() * 10 };
+}
+function mkHeroFromLook(look, col, eq) {
+  const L = lookOf(look), tp = look ? LOOK.out[L.tp] : (col || LOOK.out[0]);
+  return uq(() => mkHuman({ shirt: tp, pants: shade(tp, .45), skin: LOOK.skin[L.sk], hair: LOOK.hair[L.hc], eye: LOOK.eye[L.ey], hs: L.h, eq: eq || {} }));
+}
+const lookSig = () => { const L = lookOf(S.look); return `${L.h},${L.hc},${L.sk},${L.ey},${L.tp},${S.eq.armor ? S.eq.armor.id : 0},${S.eq.ring ? S.eq.ring.id : 0}`; };
+const mkPlayer = () => { const e = mkHeroFromLook(S.look, 0, S.eq); e.sig = lookSig(); return e; };
+let curPE = null;
+function refreshLook(e) {
+  curPE = e; const sig = lookSig(); if (e.sig === sig) return e;
+  swapInto(e, mkPlayer()); e.sig = sig; return e;
+}
+function swapInto(e, n) {
+  e.g.traverse(m => { if (m.isMesh && m.material && m.material.userData.own) m.material.dispose(); });
+  e.g.clear(); n.g.children.slice().forEach(c => e.g.add(c));
+  for (const k of ["body", "head", "la", "ra", "legs", "blinkG", "tail", "seed"]) e[k] = n[k]; e.wk = undefined; e.wm = null; e.fl = false;
+}
+const netLook = () => { if (NET.on) NET.send({ t: "look", look: lookOf(S.look) }); };
+const lookMode = () => modal && gearTab === "look" && !$("gear").hidden;
+function bodyLook() {
+  const L = lookOf(S.look), hex = v => "#" + v.toString(16).padStart(6, "0");
+  const sw = (k, arr, hexes) => `<div style="display:flex;gap:7px;flex-wrap:wrap;margin:4px 0 8px">${arr.map((v, i) => `<button style="margin:0;width:36px;height:36px;padding:0;border-radius:50%;background:${hexes ? hex(hexes[i]) : "#fff"};outline:${L[k] === i ? "3px solid #ff8f5e" : "1px solid rgba(0,0,0,.18)"};outline-offset:2px" data-look="${k}:${i}">${hexes ? "" : v}</button>`).join("")}</div>`;
+  return `<h2>🧑 외형</h2><div><small>바로 적용돼요. 멀티플레이에서도 다른 사람에게 보여요.</small></div><h3>머리 모양 · ${LOOK.hs[L.h]}</h3>${sw("h", LOOK.hs.map((n, i) => i + 1))}<h3>머리 색</h3>${sw("hc", LOOK.hair, LOOK.hair)}<h3>피부색</h3>${sw("sk", LOOK.skin, LOOK.skin)}<h3>눈 색</h3>${sw("ey", LOOK.eye, LOOK.eye)}<h3>옷 색</h3>${sw("tp", LOOK.out, LOOK.out)}<div><small>🛡️ 갑옷과 💍 반지를 착용하면 겉모습에도 반영돼요.</small></div>`;
+}
 function weaponModel(e) {
   const g = new THREE.Group();
   if (e === "🪓") { C(g, .035, .035, .62, 0x7d5433, 0, .3, 0); B(g, .28, .2, .05, 0xb8bcc8, .12, .52, 0); }
   else if (e === "🔨") { C(g, .035, .035, .6, 0x7d5433, 0, .3, 0); B(g, .32, .2, .2, 0x8a8e9e, 0, .6, 0); }
   else { B(g, .08, .7, .03, 0xd8dce8, 0, .5, 0); B(g, .28, .06, .06, 0xe8b84a, 0, .15, 0); C(g, .035, .035, .2, 0x7d5433, 0, .02, 0); K(g, .045, .1, 0xd8dce8, 0, .9, 0, 4); }
-  g.rotation.x = .9; g.position.set(0, -.44, .05); const w = new THREE.Group(); w.add(g); return w;
+  g.rotation.x = .9; g.position.set(0, -.38, .05); const w = new THREE.Group(); w.add(g); return w;
 }
 function mkAnimal(k) {
   const P = { "🐶": { c: 0xd9a45c, d: 0x8a5a2c, w: 0xfff3d6 }, "🐱": { c: 0xf0a23c, d: 0xc9742a, w: 0xfff3d6 }, "🐰": { c: 0xf6f2ea, d: 0xf28cb0, w: 0xffffff }, "🐻": { c: 0x8a5a34, d: 0x5a3a22, w: 0xd9b07c } }[k];
@@ -1244,15 +1350,23 @@ function mkAnimal(k) {
     const g = new THREE.Group(), body = new THREE.Group(); g.add(body);
     Sp(body, .34, P.c, 0, .5, 0, { s: [1, 1.05, .9] }); Sp(body, .24, P.w, 0, .46, .14, { s: [1, 1, .6] });
     const head = new THREE.Group(); head.position.set(0, 1.06, 0); body.add(head); Sp(head, .36, P.c, 0, 0, 0);
-    Sp(head, .13, P.w, 0, -.1, .3, { s: [1.2, .8, .9] }); Sp(head, .045, INK, 0, -.05, .4); Sp(head, .05, INK, -.13, .05, .31); Sp(head, .05, INK, .13, .05, .31);
+    Sp(head, .13, P.w, 0, -.1, .3, { s: [1.2, .8, .9] }); Sp(head, .045, INK, 0, -.05, .4);
     if (k === "🐶") { B(head, .12, .3, .16, P.d, -.34, -.04, 0, { r: [0, 0, .3] }); B(head, .12, .3, .16, P.d, .34, -.04, 0, { r: [0, 0, -.3] }); }
     if (k === "🐱") { K(head, .12, .26, P.c, -.2, .36, 0, 4); K(head, .12, .26, P.c, .2, .36, 0, 4); }
     if (k === "🐰") { Sp(head, .09, P.c, -.12, .52, 0, { s: [1, 3, .8] }); Sp(head, .09, P.c, .12, .52, 0, { s: [1, 3, .8] }); Sp(head, .05, P.d, -.12, .5, .05, { s: [1, 3, .5] }); Sp(head, .05, P.d, .12, .5, .05, { s: [1, 3, .5] }); }
     if (k === "🐻") { Sp(head, .13, P.c, -.25, .3, 0); Sp(head, .13, P.c, .25, .3, 0); Sp(head, .07, P.w, -.25, .3, .06); Sp(head, .07, P.w, .25, .3, .06); }
     Sp(body, .1, P.c, -.34, .5, .05); Sp(body, .1, P.c, .34, .5, .05);
     const l1 = leg(body, -.14, .22, 0, .16, .22, P.d), l2 = leg(body, .14, .22, 0, .16, .22, P.d);
-    if (k === "🐱") { C(body, .05, .05, .6, P.c, 0, .35, -.38, 6, { r: [-1, 0, 0] }); } else Sp(body, .11, P.w, 0, .3, -.32);
-    outline(g); return { g, body, legs: [l1, l2], head, h: 1.7 };
+    const tailG = new THREE.Group(); tailG.position.set(0, .34, -.34); body.add(tailG);
+    if (k === "🐱") C(tailG, .05, .05, .6, P.c, 0, .06, -.06, 6, { r: [-1, 0, 0] }); else Sp(tailG, .11, P.w, 0, -.04, -.03);
+    outline(g); const blinkG = new THREE.Group(), hi = HDR(0xffffff, 1.8); head.add(blinkG);
+    for (const s of [-1, 1]) {
+      const e = new THREE.Group(); e.position.set(s * .13, .05, .3); e.rotation.y = s * .3; blinkG.add(e);
+      Sq(e, .075, 0x1a1420, 0, 0, 0, { s: [1, 1.15, .6], cs: false }, 14).userData.ol = 1;
+      for (const [x, y, r] of [[-.02, .03, .026], [.02, -.025, .013]]) { const m = new THREE.Mesh(geo("ah" + r, () => new THREE.SphereGeometry(r, 8, 6)), hi); m.position.set(x, y, .05); m.userData.ol = 1; e.add(m); }
+      if (k !== "🐻") Sq(head, .05, 0xff8a9a, s * .22, -.07, .26, { s: [1, .6, .3], cs: false }, 8).userData.ol = 1;
+    }
+    return { g, body, legs: [l1, l2], head, h: 1.7, blinkG, tailG, seed: Math.random() * 10 };
   });
 }
 const mkRat = () => uq(() => { const g = new THREE.Group(), b = new THREE.Group(); g.add(b); const c = 0x8a8e9e;
@@ -1269,9 +1383,9 @@ const mkSpider = () => uq(() => { const g = new THREE.Group(), b = new THREE.Gro
   Sp(b, .2, c, 0, .32, -.1, { s: [1, .8, 1.2] }); Sp(b, .13, 0x4a3f58, 0, .34, .2); Sp(b, .03, 0xe03a3a, -.05, .38, .31); Sp(b, .03, 0xe03a3a, .05, .38, .31);
   const legs = []; for (let i = 0; i < 4; i++) for (const s of [-1, 1]) { const p = new THREE.Group(); p.position.set(0, .32, .15 - i * .13); p.rotation.y = s * (.2 + i * .1) + (s > 0 ? 0 : 0); const m = C(p, .02, .02, .5, c, s * .25, 0, 0, 5, { r: [0, 0, s * 1.1] }); b.add(p); legs.push(p); }
   outline(g); return { g, body: b, legs: [], sp: legs, h: 1.1 }; });
-const mkSkel = () => { const e = uq(() => mkHuman({ shirt: 0xe8e4d8, pants: 0xe8e4d8, skin: 0xe8e4d8, hair: 0xe8e4d8, boots: 0xe8e4d8 })); e.body.children.forEach(c => { if (c.isMesh && c.geometry.parameters && c.geometry.parameters.radius === .04) { c.scale.setScalar(1.7); c.position.z -= .02; } }); return e; };
-const mkZombie = () => { const e = uq(() => mkHuman({ shirt: 0x6a5a7a, pants: 0x3a3248, skin: 0x8fbf7a, hair: 0x2e3a2a })); e.la.rotation.x = e.ra.rotation.x = -1.4; e.arms = false; e.fixedArms = true; return e; };
-const mkOgre = () => { const e = uq(() => mkHuman({ shirt: 0x5a3a22, pants: 0x7a3a2a, skin: 0xd9505a, hair: 0xd9505a, belt: 0xf5d142 })); e.g.scale.setScalar(1.45); K(e.body, .07, .25, 0xf5d142, -.2, 1.45, 0, 5); K(e.body, .07, .25, 0xf5d142, .2, 1.45, 0, 5); e.h = 2.7; return e; };
+const mkSkel = () => uq(() => mkHuman({ shirt: 0xe8e4d8, pants: 0xd8d4c8, skin: 0xe8e4d8, hair: 0xe8e4d8, boots: 0xe8e4d8, belt: 0xb8b4a8, face: "skull", lite: true }));
+const mkZombie = () => { const e = uq(() => mkHuman({ shirt: 0x6a5a7a, pants: 0x3a3248, skin: 0x8fbf7a, hair: 0x2e3a2a, face: "zombie", lite: true })); e.la.rotation.x = e.ra.rotation.x = -1.4; e.fixedArms = true; return e; };
+const mkOgre = () => { const e = uq(() => mkHuman({ shirt: 0x5a3a22, pants: 0x7a3a2a, skin: 0xd9505a, hair: 0xd9505a, belt: 0xf5d142, face: "ogre", lite: true })); e.g.scale.setScalar(1.45); K(e.body, .07, .25, 0xf5d142, -.2, 1.6, 0, 5); K(e.body, .07, .25, 0xf5d142, .2, 1.6, 0, 5); e.h = 2.9; return e; };
 function quadruped(o) {
   return uq(() => {
     const g = new THREE.Group(), b = new THREE.Group(); g.add(b);
@@ -1322,10 +1436,16 @@ const mkDragon = () => uq(() => {
 const MON3 = { "🐀": mkRat, "🦇": mkBat, "🕷️": mkSpider, "💀": mkSkel, "🧟": mkZombie, "👹": mkOgre, "🐲": mkDragon };
 const DINO3 = [mkLizard, mkBoar, mkBrachio, mkCroc, mkRaptor];
 function animE(e, mv, spd = 9, amp = .6) {
-  const t = vtime * spd;
+  const t = vtime * spd, sd = e.seed || 0;
   if (e.legs) e.legs.forEach((l, i) => { l.rotation.x = mv ? Math.sin(t + (i % 2) * Math.PI + (i > 1 ? 1.2 : 0)) * amp : l.rotation.x * .8; });
   if (e.hum && !e.fixedArms) { e.la.rotation.x = e.legs[1].rotation.x * .9; e.ra.rotation.x = e.legs[0].rotation.x * .9; }
-  if (e.body) e.body.position.y = mv ? Math.abs(Math.sin(t)) * .06 : 0;
+  if (e.hum) {
+    e.body.position.y = mv ? Math.abs(Math.sin(t)) * .05 : Math.sin(vtime * 2 + sd) * .008; e.body.rotation.x = mv ? .08 : 0; e.body.rotation.z = mv ? Math.sin(t) * .03 : 0;
+    if (e.head) { e.head.rotation.z = Math.sin(vtime * 1.3 + sd) * .03; e.head.rotation.x = mv ? -.05 : 0; }
+  } else if (e.body) e.body.position.y = mv ? Math.abs(Math.sin(t)) * .06 : 0;
+  if (e.blinkG) e.blinkG.scale.y = (vtime * .9 + sd) % 4 > 3.86 ? .1 : 1;
+  if (e.tail) e.tail.rotation.x = Math.sin(vtime * (mv ? 9 : 2.5) + sd) * (mv ? .35 : .12) + (mv ? .3 : 0);
+  if (e.tailG) e.tailG.rotation.y = Math.sin(vtime * 7 + sd) * .5;
   if (e.wings) e.wings.forEach((w, i) => { w.rotation.z = (i ? -1 : 1) * Math.sin(vtime * (e.fly ? 24 : 6)) * (e.fly ? .8 : .3); });
   if (e.sp) e.sp.forEach((p, i) => { p.rotation.z = mv ? Math.sin(t * 1.4 + i) * .12 : 0; });
   if (e.fly && e.b) e.b.position.y = .9 + Math.sin(vtime * 6) * .12;
@@ -1480,7 +1600,7 @@ const MOTE_N = 100, motes = { p: new Float32Array(MOTE_N * 3), ph: new Float32Ar
 let GKIND = "village";
 function updateMotes() {
   const g = G.motes, dk = darkness(); if (!g) return; const n = QUAL.motes, night = dk > .25;
-  const mode = GKIND === "home" ? "" : GKIND === "dun" ? (dun && dun.demon ? "ember" : dun && dun.arena ? "" : "dust") : night ? "fly" : "pollen";
+  const mode = GKIND === "home" ? "" : GKIND === "dun" ? (dun && dun.demon ? "ember" : dun && dun.arena ? "" : "dust") : (WX.rain > .3 || WX.snow > .3) ? "" : night ? "fly" : "pollen";
   if (!n || !mode) { g.visible = false; return; } g.visible = true;
   if (motes.mode !== mode) { motes.mode = mode; for (let i = 0; i < MOTE_N; i++) { motes.p[i * 3] = camT.x + (Math.random() - .5) * 34; motes.p[i * 3 + 1] = Math.random() * 4; motes.p[i * 3 + 2] = camT.z + (Math.random() - .5) * 24; motes.ph[i] = Math.random() * 6.28; } }
   const pa = g.geometry.attributes.position, ca = g.geometry.attributes.color, p = motes.p, sp = mode === "ember" ? [0, .9, 0] : mode === "dust" ? [.05, .03, .04] : [.25, .08, .12];
@@ -1528,19 +1648,91 @@ function follow(tx, tz, mw, mh, D) {
   const cx = clamp(tx, hx, Math.max(hx, mw - hx)), cz = clamp(tz, hz, Math.max(hz, mh - hz));
   camT.x += (cx - camT.x) * k; camT.z += (cz - camT.z) * k;
 }
+/* ----- 날씨: 맑음 / 비 / 폭풍(번개·천둥) / 안개 / 눈 ----- */
+const WX = { type: "clear", eff: "clear", t: 25, rain: 0, snow: 0, fog: 0, storm: 0, cloud: 0, flash: 0, bolt: 6, thunder: [] };
+const WXFOG = new THREE.Fog(0xaab4bc, 40, 90), WXI = { clear: "", rain: "🌧️", storm: "⛈️", fog: "🌫️", snow: "❄️" };
+let WXR = null, WXS = null, WXA = null, NBUF = null;
+const noiseBuf = () => NBUF || (NBUF = (() => { const n = AC.sampleRate * 2, b = AC.createBuffer(1, n, AC.sampleRate), d = b.getChannelData(0); for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1; return b; })());
+function wxEff() {
+  if (GKIND !== "village" && GKIND !== "wild") return "clear";
+  let t = WX.type, b = -1;
+  if (scene === "dun" && dun && dun.kind === "world" && typeof WORLD !== "undefined" && WORLD) b = WORLD.bio[Math.floor((player.y + 8) / T) * WN + Math.floor(player.x / T)];
+  if (b === BIO.SNOW && (t === "rain" || t === "storm")) t = "snow";
+  else if (b === BIO.DESERT && t !== "clear") t = "clear";
+  else if (b === BIO.DEMON) t = t === "snow" ? "clear" : t;
+  return t;
+}
+function thunder() {
+  if (muted || !started) return;
+  try {
+    AC = AC || new (window.AudioContext || window.webkitAudioContext)(); if (AC.state === "suspended") AC.resume();
+    const t = AC.currentTime, s = AC.createBufferSource(), f = AC.createBiquadFilter(), g = AC.createGain(); s.buffer = noiseBuf(); f.type = "lowpass";
+    f.frequency.setValueAtTime(700, t); f.frequency.exponentialRampToValueAtTime(70, t + 2);
+    g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.4, t + .06); g.gain.exponentialRampToValueAtTime(.001, t + 2.1); s.connect(f); f.connect(g); g.connect(AC.destination); s.start(t); s.stop(t + 2.2);
+  } catch (e) {}
+}
+function rainAudio() {
+  if (!WXA && (WX.rain < .03 || muted || !started)) return;
+  try {
+    AC = AC || new (window.AudioContext || window.webkitAudioContext)(); if (AC.state === "suspended") AC.resume();
+    if (!WXA) { const s = AC.createBufferSource(), f = AC.createBiquadFilter(), g = AC.createGain(); s.buffer = noiseBuf(); s.loop = true; f.type = "bandpass"; f.frequency.value = 2200; f.Q.value = .35; g.gain.value = 0; s.connect(f); f.connect(g); g.connect(AC.destination); s.start(); WXA = g; }
+    WXA.gain.setTargetAtTime(muted || !started ? 0 : WX.rain * (.04 + WX.storm * .04), AC.currentTime, .4);
+  } catch (e) {}
+}
+function wxObjs() {
+  if (WXR || !S3) return; const rn = 900, sn = 700, rg = new THREE.BufferGeometry(), sg = new THREE.BufferGeometry();
+  rg.setAttribute("position", new THREE.BufferAttribute(new Float32Array(rn * 6), 3)); sg.setAttribute("position", new THREE.BufferAttribute(new Float32Array(sn * 3), 3));
+  WXR = { o: new THREE.LineSegments(rg, new THREE.LineBasicMaterial({ color: 0xd8e8ff, transparent: true, opacity: .7, depthWrite: false })), p: new Float32Array(rn * 3), n: rn };
+  WXS = { o: new THREE.Points(sg, new THREE.PointsMaterial({ size: .46, color: 0xffffff, map: softTex(), transparent: true, depthWrite: false, opacity: .95, sizeAttenuation: true })), p: new Float32Array(sn * 3), n: sn };
+  for (const W of [WXR, WXS]) { for (let i = 0; i < W.n; i++) { W.p[i * 3] = (Math.random() - .5) * 36; W.p[i * 3 + 1] = Math.random() * 15; W.p[i * 3 + 2] = (Math.random() - .5) * 28; } W.o.frustumCulled = false; W.o.visible = false; S3.add(W.o); }
+}
+function weatherTick() {
+  const dt = Math.min(DT, .1); wxObjs();
+  if ((WX.t -= dt) <= 0) { const r = Math.random(); WX.type = r < .46 ? "clear" : r < .68 ? "rain" : r < .8 ? "fog" : r < .88 ? "storm" : "snow"; WX.t = 80 + Math.random() * 130; }
+  const e = WX.eff = wxEff(), up = (k, tg, s) => { WX[k] += clamp(tg - WX[k], -dt * s, dt * s); };
+  up("rain", e === "rain" || e === "storm" ? 1 : 0, .5); up("storm", e === "storm" ? 1 : 0, .4); up("snow", e === "snow" ? 1 : 0, .5); up("fog", e === "fog" ? 1 : 0, .4);
+  WX.cloud = clamp(Math.max(WX.rain * .62, WX.fog * .45, WX.snow * .5) + WX.storm * .3, 0, 1);
+  if (WX.storm > .6) { if ((WX.bolt -= dt) <= 0) { WX.flash = 1; WX.bolt = 4 + Math.random() * 9; WX.thunder.push(.35 + Math.random() * 1.2); if (Math.random() < .4) WX.bolt = .25; } }
+  WX.flash = Math.max(0, WX.flash - dt * 3.2); { const th = []; for (const d of WX.thunder) { if (d - dt <= 0) thunder(); else th.push(d - dt); } WX.thunder = th; } rainAudio();
+  const cx = camT.x, cz = camT.z, R = WXR, Sn = WXS;
+  R.o.visible = WX.rain > .02; if (R.o.visible) {
+    const n = Math.round(R.n * clamp(.35 + WX.rain * .3 + WX.storm * .35, 0, 1)), p = R.p, a = R.o.geometry.attributes.position.array, sl = .06 + WX.storm * .08; R.o.material.opacity = .75 * WX.rain;
+    for (let i = 0; i < n; i++) { let y = p[i * 3 + 1] - (20 + WX.storm * 8) * dt; if (y < 0) { y += 15; p[i * 3] = (Math.random() - .5) * 36; p[i * 3 + 2] = (Math.random() - .5) * 28; } p[i * 3 + 1] = y; const x = cx + p[i * 3], z = cz + p[i * 3 + 2] + 3; a[i * 6] = x; a[i * 6 + 1] = y; a[i * 6 + 2] = z; a[i * 6 + 3] = x + sl * 4; a[i * 6 + 4] = y + .8; a[i * 6 + 5] = z; }
+    R.o.geometry.attributes.position.needsUpdate = true; R.o.geometry.setDrawRange(0, n * 2);
+  }
+  Sn.o.visible = WX.snow > .02; if (Sn.o.visible) {
+    const n = Math.round(Sn.n * WX.snow), p = Sn.p, a = Sn.o.geometry.attributes.position.array; Sn.o.material.opacity = .95 * WX.snow;
+    for (let i = 0; i < n; i++) { let y = p[i * 3 + 1] - (1 + (i % 5) * .25) * dt; if (y < 0) { y += 15; p[i * 3] = (Math.random() - .5) * 36; p[i * 3 + 2] = (Math.random() - .5) * 28; } p[i * 3 + 1] = y; a[i * 3] = cx + p[i * 3] + Math.sin(vtime * .8 + i) * .5; a[i * 3 + 1] = y; a[i * 3 + 2] = cz + p[i * 3 + 2] + 3 + Math.cos(vtime * .6 + i) * .4; }
+    Sn.o.geometry.attributes.position.needsUpdate = true; Sn.o.geometry.setDrawRange(0, n);
+  }
+}
+function wxApply(dk) {
+  const k = { si: sun.intensity, ai: amb.intensity, hi: hemi.intensity, bg: S3.background, fog: S3.fog, sat: GR.sat, con: GR.con };
+  if (GKIND !== "village" && GKIND !== "wild") return k;
+  const c = WX.cloud, f = WX.fog; if (c < .01 && f < .01 && WX.flash <= 0) return k;
+  const nd = clamp(dk / .55, 0, 1), gray = new THREE.Color(0x9aa6b4).lerp(new THREE.Color(0x141a2a), nd);
+  S3.background = k.bg.clone().lerp(gray, clamp(c * .8 + f * .5, 0, 1));
+  sun.intensity *= 1 - c * .8; hemi.intensity *= 1 - c * .3; amb.intensity = amb.intensity * (1 - c * .08) + c * .06; GR.sat *= 1 - c * .4 - f * .15; GR.con *= 1 - c * .04;
+  if (WX.flash > 0) { amb.intensity += WX.flash * 1.1; sun.intensity += WX.flash * .6; S3.background.lerp(new THREE.Color(0xe8eeff), WX.flash * .5); }
+  const fk = clamp(f + WX.rain * .35 + WX.snow * .4, 0, 1);
+  if (fk > .02) { const n0 = k.fog ? k.fog.near : 60, f0 = k.fog ? k.fog.far : 140; WXFOG.color.copy(S3.background); WXFOG.near = n0 + (6 - n0) * fk; WXFOG.far = f0 + (30 - f0) * fk; S3.fog = WXFOG; }
+  return k;
+}
+function wxRestore(k) { sun.intensity = k.si; amb.intensity = k.ai; hemi.intensity = k.hi; S3.background = k.bg; S3.fog = k.fog; GR.sat = k.sat; GR.con = k.con; }
 function finish(D, dim) {
   const sh = shake > 0 ? (Math.random() - .5) * shake * .05 : 0, sv = shake > 0 ? (Math.random() - .5) * shake * .05 : 0;
   cam.position.set(camT.x + sh, D * .82 + sv, camT.z + D * .574); cam.lookAt(camT.x + sh, 0, camT.z);
+  if (lookMode() && curPE && innerWidth >= 700) { const hp = curPE.g.position, ox = .95; cam.position.set(hp.x + ox, 1.5, hp.z + 6.2); cam.lookAt(hp.x + ox, .95, hp.z); curPE.g.rotation.y = Math.sin(vtime * .8) * .9 + .25; }
   sun.position.set(camT.x - 9, 17, camT.z + 7); sun.target.position.set(camT.x, 0, camT.z); sun.target.updateMatrixWorld();
   const p0 = PLs[0]; p0.position.set(PL0.x, PL0.h, PL0.z); p0.color.setHex(PL0.c); p0.intensity = PL0.i; p0.distance = PL0.r;
   lights.sort((a, b) => ((a.x - camT.x) ** 2 + (a.z - camT.z) ** 2) - ((b.x - camT.x) ** 2 + (b.z - camT.z) ** 2));
   for (let i = 1; i < PLs.length; i++) { const L = lights[i - 1], l = PLs[i]; if (L) { l.position.set(L.x, L.h, L.z); l.color.setHex(L.c); l.intensity = L.i; l.distance = L.r; } else l.intensity = 0; }
   lights.length = 0; PL0.i = 0;
   drawParts(); updateMotes(); sweep();
-  const dk = darkness(); WIND.value = vtime; WATERMAT.uniforms.uT.value = vtime; WATERMAT.uniforms.uDay.value = GKIND === "home" ? 1 : 1 - clamp(dk / .55, 0, 1) * .72;
+  const dk = darkness(); weatherTick(); const keep = wxApply(dk); RIM.value = .16 + dk * .24; RIMC.value.setHex(0xbfe0ff).lerp(new THREE.Color(0x7f93ff), clamp(dk * 1.6, 0, 1)); WIND.value = vtime; WATERMAT.uniforms.uT.value = vtime; WATERMAT.uniforms.uDay.value = GKIND === "home" ? 1 : 1 - clamp(dk / .55, 0, 1) * .72;
   if (G.cloud) { const on = (GKIND === "village" || GKIND === "wild") && dk < .3, cm = G.cloud; cm.visible = on; if (on) { cm.position.set(camT.x, .1, camT.z); const t = cm.material.map; t.offset.set(camT.x / 90 + vtime * .004, -camT.z / 90 + vtime * .002); cm.material.opacity = clamp(1 - dk * 3, 0, 1) * .9; } }
-  if (composer && gradePass) { bloomPass.enabled = QUAL.bloom; bloomPass.strength = .55 + dk * .5; const u = gradePass.uniforms; u.vig.value = GR.vig; u.sat.value = GR.sat; u.con.value = GR.con; try { composer.render(DT); return; } catch (e) { composer = null; } }
-  R3.render(S3, cam);
+  if (composer && gradePass) { bloomPass.enabled = QUAL.bloom; bloomPass.strength = .55 + dk * .5; const u = gradePass.uniforms; u.vig.value = GR.vig; u.sat.value = GR.sat; u.con.value = GR.con; try { composer.render(DT); wxRestore(keep); return; } catch (e) { composer = null; } }
+  R3.render(S3, cam); wxRestore(keep);
 }
 function light(x, z, r, c = 0xffc870, h = 1.4, i = 1.5) { lights.push({ x, z, r, c, h, i }); }
 function overlay(extra) {
@@ -1590,7 +1782,7 @@ function drawVillage() {
     if (e.ff) { const on = Math.sin(vtime * 5 + b.a) > -.3; e.ff.material.color.setHex(on ? 0xf5ff8a : 0x6a7030).multiplyScalar(on ? 3 : 1); if (on && night) light(b.x / T, (b.y + 8) / T, 2.5, 0xe8ff8a, .8, 1); }
     else e.wings.forEach((w, i) => w.rotation.z = (i ? -1 : 1) * (.2 + Math.abs(Math.sin(vtime * 14 + b.a)) * 1.1));
   }
-  const pe = ent(PK.v, mkPlayer, g.vdyn), pz = (P.y + 8) / T; pe.g.position.set(P.x / T, 0, pz); face(pe.g, P.dx, P.dy, 16);
+  const pe = refreshLook(ent(PK.v, mkPlayer, g.vdyn)), pz = (P.y + 8) / T; pe.g.position.set(P.x / T, 0, pz); face(pe.g, P.dx, P.dy, 16);
   animE(pe, P.mv && !modal, 10, .75); pe.ra.rotation.x = pe.ra.rotation.x; flash(pe, false);
   if (fishing) {
     const be = ent(fishing, () => ({ g: mkBobber() }), g.vdyn); be.g.position.set(fishing.tx + .5, -.05 + (fishing.state === "bite" ? Math.abs(Math.sin(vtime * 20)) * .2 : Math.sin(vtime * 3) * .03), fishing.ty + .7);
@@ -1625,7 +1817,7 @@ function drawHome() {
     if (f.wall) e.g.position.set(r.x + .5, 1.9 - r.y * .55, 2 + .05); else e.g.position.set(r.x + .5, 0, r.y + .5);
     if (r.id === "lamp") light(r.x + .5, r.y + .5, 5, 0xffd9a0, 1.3, .9); else if (r.id === "tv") light(r.x + .5, r.y + 1.2, 3, 0x8fb0ff, .8, 1); else if (r.id === "window" && dk > .2) light(r.x + .5, 2.8, 4, 0x8fa0ff, 1.5, .8);
   }
-  const pe = ent(PK.h, mkPlayer, g.hdyn); pe.g.position.set(P.x / T, 0, (P.y + 8) / T); face(pe.g, P.dx, P.dy, 16); animE(pe, P.mv && !modal, 10, .75);
+  const pe = refreshLook(ent(PK.h, mkPlayer, g.hdyn)); pe.g.position.set(P.x / T, 0, (P.y + 8) / T); face(pe.g, P.dx, P.dy, 16); animE(pe, P.mv && !modal, 10, .75);
   PL0.x = P.x / T; PL0.z = (P.y + 8) / T; PL0.r = 5; PL0.i = .5 + dk * .5; PL0.h = 2; PL0.c = 0xffe6c0; light(6, RH - .3, 3, 0xffd9a0, 1.2, .8);
   labelT("⬇ 출구", 6, RH + .6, .2);
   if (!modal) { const { tx, ty } = target(); cursorAt(tx, ty, .04); } else G.cursor.visible = false;
@@ -1709,7 +1901,7 @@ function drawDun() {
     e.g.position.set(pet.x / T, 0, (pet.y + 8) / T); if (P.mounted) { face(e.g, P.dx, P.dy, 12); e.g.position.set(P.x / T, 0, pz); } else face(e.g, P.x - pet.x, P.y - pet.y, 8); animE(e, mvp, 8, .55);
     if (!P.mounted) labelT(`Lv.${pe.lv}`, pet.x / T, (pet.y + 8) / T, e.h + .1, "#9be39b");
   }
-  const e = ent(PK.d, mkPlayer, g.dyn);
+  const e = refreshLook(ent(PK.d, mkPlayer, g.dyn));
   const lift = P.mounted && pet && pe ? [.8, .9, 1.3, .9, 1.4][pe.idx] : 0;
   e.g.position.set(P.x / T, lift, pz); face(e.g, P.dx, P.dy, 18); animE(e, P.mv && !modal && !P.mounted, 10, .75); flash(e, P.flash > 0);
   e.g.visible = !(P.inv > 0 && Math.floor(vtime * 20) % 2);
@@ -1997,8 +2189,8 @@ function addChat(name, text, sys) {
 }
 function netPlayer(p) {
   let o = NET.others.get(p.id);
-  if (!o) { o = { id: p.id, name: p.name, col: p.col, x: p.x, y: p.y, tx: p.x, ty: p.y, dx: p.dx, dy: p.dy, mv: 0, say: "", sayT: 0 }; NET.others.set(p.id, o); }
-  o.name = p.name ?? o.name; o.col = p.col ?? o.col; o.tx = p.x; o.ty = p.y; o.dx = p.dx; o.dy = p.dy; o.mv = p.mv;
+  if (!o) { o = { id: p.id, name: p.name, look: p.look, col: p.col, x: p.x, y: p.y, tx: p.x, ty: p.y, dx: p.dx, dy: p.dy, mv: 0, say: "", sayT: 0 }; NET.others.set(p.id, o); }
+  o.name = p.name ?? o.name; if (p.look) o.look = p.look; o.col = p.col ?? o.col; o.tx = p.x; o.ty = p.y; o.dx = p.dx; o.dy = p.dy; o.mv = p.mv;
 }
 function netMsg(m) {
   switch (m.t) {
@@ -2014,7 +2206,7 @@ function netMsg(m) {
 }
 function netConnect() {
   if (!NET.url || NET.ws) return; let ws; try { ws = new WebSocket(NET.url); } catch (e) { return; } NET.ws = ws;
-  ws.onopen = () => { let nm = ""; try { nm = ($("nick").value || localStorage.getItem("pokgeun-nick") || "").trim(); localStorage.setItem("pokgeun-nick", nm); } catch (e) {} NET.send({ t: "join", name: nm }); };
+  ws.onopen = () => { let nm = ""; try { nm = ($("nick").value || localStorage.getItem("pokgeun-nick") || "").trim(); localStorage.setItem("pokgeun-nick", nm); } catch (e) {} NET.send({ t: "join", name: nm, look: lookOf(S.look) }); };
   ws.onmessage = ev => { let m; try { m = JSON.parse(ev.data); } catch (e) { return; } netMsg(m); };
   ws.onclose = () => { const was = NET.on; NET.ws = null; NET.on = false; NET.others.clear(); NET.away = true; useEdits(S.wedits); NET.retryT = 4; $("online").hidden = true; if (was) { addChat("", "서버 연결이 끊겼어요. 다시 연결하는 중…", true); say("🌐 서버 연결이 끊겼어요 (혼자 하기 모드로 전환)", 3000); } };
   ws.onerror = () => {};
@@ -2260,7 +2452,7 @@ function drawWorldEnts(g, P, pz) {
     if (v.model === "king") { labelT("👑 " + v.name, v.x / T, (v.y + 8) / T, 2.4, "#ffe27a"); if (S.story.stage < STORY.length) labelT(storyReady() ? "❗" : "❓", v.x / T, (v.y + 8) / T, 3.1, "#ffd34d"); } else if (Math.hypot(v.x - P.x, v.y - P.y) < 90) labelT(v.name, v.x / T, (v.y + 8) / T, 2, "#fff3d6");
   }
   for (const o of NET.others.values()) {
-    const e = ent(o, () => uq(() => mkHuman({ shirt: o.col || 0x3d6ed0, pants: 0x2c3e78, skin: 0xf2c79a, hair: 0x5a3a22 })), g.dyn); e.g.position.set(o.x / T, 0, (o.y + 8) / T); face(e.g, o.dx || 0, o.dy || 1); animE(e, !!o.mv, 10, .75);
+    const e = ent(o, () => mkHeroFromLook(o.look, o.col || 0x3d6ed0), g.dyn); { const sg = JSON.stringify(o.look || 0); if (e.osig !== undefined && e.osig !== sg) swapInto(e, mkHeroFromLook(o.look, o.col || 0x3d6ed0)); e.osig = sg; } e.g.position.set(o.x / T, 0, (o.y + 8) / T); face(e.g, o.dx || 0, o.dy || 1); animE(e, !!o.mv, 10, .75);
     labelT(o.name || "모험가", o.x / T, (o.y + 8) / T, 2.1, "#9be39b"); if (o.sayT > 0) labelT(o.say, o.x / T, (o.y + 8) / T, 2.7, "#ffffff");
   }
   if (NET.on) { labelT(NET.name, P.x / T, pz, 2.1, "#ffe27a"); if (NET.mySayT > 0) labelT(NET.mySay, P.x / T, pz, 2.7, "#ffffff"); }
@@ -2392,18 +2584,18 @@ function enterDemon(poi) {
 /* ----- 모델: 국왕 · 근위병 · 성 · 마왕성 · 대마왕 ----- */
 function mkKing() {
   return uq(() => {
-    const e = mkHuman({ shirt: 0xa8202a, pants: 0x5a1018, skin: 0xf2c79a, hair: 0xe8e4d8, belt: 0xf5d142, boots: 0x3a1a10 }), b = e.body;
-    B(b, .66, .86, .46, 0xa8202a, 0, .43, 0); B(b, .7, .12, .5, 0xf2f0ea, 0, 1.0, 0); Sp(b, .11, 0xf2f0ea, -.32, 1.0, 0); Sp(b, .11, 0xf2f0ea, .32, 1.0, 0);
-    B(b, .56, .9, .06, 0x7a1018, 0, .62, -.26); B(b, .3, .26, .1, 0xf2f0ea, 0, .98, .22);
-    C(b, .2, .24, .16, 0xf5d142, 0, 1.47, 0, 8); for (let i = 0; i < 5; i++) { const a = i * 1.2566; K(b, .045, .15, 0xf5d142, Math.cos(a) * .2, 1.62, Math.sin(a) * .2, 4); }
-    e.g.scale.setScalar(1.15); outline(e.g); return e;
+    const e = mkHuman({ shirt: 0xa8202a, pants: 0x5a1018, skin: 0xf2c79a, hair: 0xe8e4d8, belt: 0xf5d142, boots: 0x3a1a10, hs: 0 }), b = e.body;
+    C(b, .24, .3, .78, 0xa8202a, 0, .62, 0, 14); C(b, .27, .27, .1, 0xf2f0ea, 0, 1.02, 0, 14); Sp(b, .12, 0xf2f0ea, -.33, 1.02, 0); Sp(b, .12, 0xf2f0ea, .33, 1.02, 0);
+    B(b, .5, .85, .05, 0x7a1018, 0, .62, -.27); K(b, .12, .24, 0xf2f0ea, 0, .98, .2, 5, { r: [Math.PI, 0, 0] });
+    C(e.head, .22, .25, .17, 0xf5d142, 0, .33, 0, 12); for (let i = 0; i < 5; i++) { const a = i * 1.2566; K(e.head, .045, .15, 0xf5d142, Math.cos(a) * .22, .5, Math.sin(a) * .22, 4); }
+    e.g.scale.setScalar(1.12); outline(e.g); return e;
   });
 }
 function mkGuard() {
   return uq(() => {
-    const e = mkHuman({ shirt: 0xb8bcc8, pants: 0x5c6070, skin: 0xf2c79a, hair: 0x5a3a22, belt: 0x8a5a34, boots: 0x3a3a44 }), b = e.body;
-    Sp(b, .3, 0xc8ccd8, 0, 1.2, 0, { s: [1, .85, 1] }); K(b, .06, .3, 0xd8383a, 0, 1.55, 0, 5); B(b, .18, .1, .05, 0x2a2a34, 0, 1.12, .27);
-    C(e.ra, .025, .025, 1.9, 0x7d5433, 0, -.1, .1, 5); K(e.ra, .06, .22, 0xd8dce8, 0, .9, .1, 4); B(e.la, .06, .4, .3, 0x3d6ed0, -.1, -.3, .1);
+    const e = mkHuman({ shirt: 0xb8bcc8, pants: 0x5c6070, skin: 0xf2c79a, hair: 0x5a3a22, belt: 0x8a5a34, boots: 0x3a3a44, hs: 0 }), h = e.head;
+    Sq(h, .345, 0xc8ccd8, 0, .04, 0, { s: [1, .82, 1.02] }); K(h, .06, .3, 0xd8383a, 0, .4, 0, 5); B(h, .2, .09, .05, 0x2a2a34, 0, -.02, .33);
+    C(e.ra, .025, .025, 1.9, 0x7d5433, 0, -.3, .1, 5); K(e.ra, .06, .22, 0xd8dce8, 0, .72, .1, 4); B(e.la, .06, .4, .3, 0x3d6ed0, -.1, -.3, .1);
     outline(e.g); return e;
   });
 }
@@ -2627,7 +2819,7 @@ resize(); hud(); $("clock").textContent = clockText(); setMute(muted);
 $("snd").onclick = () => { setMute(!muted); sfx("ui"); };
 $("gfx").onclick = () => { applyQuality({ high: "mid", mid: "low", low: "high" }[gfxLv]); sfx("ui"); say(`🎨 그래픽 품질: ${QUAL.n}`, 1600); };
 requestAnimationFrame(frame);
-window.__game = { startArena, arenaTick, startWave, gemGain, choosePerk, finishArena, openPerk, autoFight, idleStored, dailyTouch, genArena, mkMonT, get PERKS() { return PERKS; }, get ARES() { return ARES; }, sEvent, storyReady, reportStory, openKing, nearKing, demonAI, finalizeDemon, enterDemon, onDemonDefeat, mkDemon, damageP, addFame, get STORY() { return STORY; }, NET, spawnNear, worldTick, killMon, setBuild: i => { buildSel = i == null ? null : BUILD[i]; }, farmAct, winteract, genOffers, turnIn, warpTo, worldAct, enterWorld, getWorld, get WORLD() { return WORLD; }, get dun() { return dun; }, wc, wb, setClock: v => { clock = v; }, fireball, feed, toggleMount, craft, togglePanel, enterDungeon, get dun() { return dun; }, pstats, genGear, attack, scene: () => scene, furnSelSet: v => { furnSel = v; renderFurn(); }, player, trees, S, keys, act, get fishing() { return fishing; }, bugs, villagers }; // 디버그/테스트용
+window.__game = { WX, setWeather: t => { WX.type = t; WX.t = 9999; }, startArena, arenaTick, startWave, gemGain, choosePerk, finishArena, openPerk, autoFight, idleStored, dailyTouch, genArena, mkMonT, get PERKS() { return PERKS; }, get ARES() { return ARES; }, sEvent, storyReady, reportStory, openKing, nearKing, demonAI, finalizeDemon, enterDemon, onDemonDefeat, mkDemon, damageP, addFame, get STORY() { return STORY; }, NET, spawnNear, worldTick, killMon, setBuild: i => { buildSel = i == null ? null : BUILD[i]; }, farmAct, winteract, genOffers, turnIn, warpTo, worldAct, enterWorld, getWorld, get WORLD() { return WORLD; }, get dun() { return dun; }, wc, wb, setClock: v => { clock = v; }, fireball, feed, toggleMount, craft, togglePanel, enterDungeon, get dun() { return dun; }, pstats, genGear, attack, scene: () => scene, furnSelSet: v => { furnSel = v; renderFurn(); }, player, trees, S, keys, act, get fishing() { return fishing; }, bugs, villagers }; // 디버그/테스트용
 </script>
 </body>
 </html>
