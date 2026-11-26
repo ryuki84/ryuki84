@@ -17,6 +17,7 @@
   #snd { left:12px; top:82px; cursor:pointer; }
   #online { left:12px; top:118px; }
   #gfx { left:64px; top:82px; cursor:pointer; }
+  #sty { left:164px; top:82px; cursor:pointer; }
   #chat { position:absolute; left:12px; top:158px; width:min(300px,46%); font-size:clamp(11px,1.5vw,14px); pointer-events:none; }
   #chatlog div { background:rgba(28,20,32,.72); color:#fff3d6; padding:2px 8px; border-radius:8px; margin-top:3px; width:fit-content; max-width:100%; word-break:break-all; }
   #chatin { pointer-events:auto; width:100%; margin-top:5px; padding:5px 9px; border-radius:9px; border:3px solid var(--ink); font:inherit; background:var(--paper); color:var(--ink); }
@@ -84,7 +85,7 @@
     #inv { display:none; top:40px; right:6px; min-width:110px; font-size:11px; padding:6px 8px; }
     body.showinv #inv { display:block; }
     .pill { font-size:11px; padding:2px 10px; border-width:2px; }
-    #bells { left:6px; top:6px; } #clock { left:6px; top:32px; } #snd { left:6px; top:58px; } #online { left:6px; top:84px; } #gfx { left:54px; top:58px; } #chat { top:114px; }
+    #bells { left:6px; top:6px; } #clock { left:6px; top:32px; } #snd { left:6px; top:58px; } #online { left:6px; top:84px; } #gfx { left:54px; top:58px; } #sty { left:124px; top:58px; } #chat { top:114px; }
     #msg { bottom:6px; font-size:12px; padding:6px 12px; max-width:92%; }
     #shop, #gear, #help { position:fixed; max-height:92vh; overflow:auto; width:min(94vw,440px); }
     #touch { display:flex; justify-content:space-between; align-items:center; gap:8px; padding:12px 10px 0; }
@@ -115,6 +116,7 @@
   <div id="snd" class="pill" title="소리 켜기/끄기 (M)">🔊</div>
   <div id="online" class="pill" hidden></div>
   <div id="gfx" class="pill" title="그래픽 품질 (눌러서 변경)">🎨</div>
+  <div id="sty" class="pill" title="렌더링 스타일 비교 (눌러서 변경, 새로고침돼요)">🖌️</div>
   <div id="bells" class="pill"></div>
   <div id="clock" class="pill"></div>
   <div id="inv"></div>
@@ -171,7 +173,7 @@ const THREE = { ...T3, EffectComposer, RenderPass, ShaderPass, UnrealBloomPass, 
 /* r128 → r187: 기존 색감 유지 — 색 관리 끄기 + 옛 방식 점광원 감쇠 */
 THREE.ColorManagement.enabled = false;
 /* 렌더링 스타일 비교용: ?style=cel (애니메 셀) / ?style=pbr (스타일라이즈드 PBR) / 기본 = 툰 */
-const RSTYLE = (() => { try { return new URLSearchParams(location.search).get("style") || localStorage.getItem("pokgeun-style") || "toon"; } catch (e) { return "toon"; } })();
+const RSTYLE = (() => { try { const h = (location.hash.match(/style=(\w+)/) || [])[1]; let v = new URLSearchParams(location.search).get("style") || h; if (!v) try { v = localStorage.getItem("pokgeun-style"); } catch (e) {} return ["toon", "cel", "pbr"].includes(v) ? v : "toon"; } catch (e) { return "toon"; } })();
 const PBRX = RSTYLE === "pbr" ? await Promise.all([import("three/addons/postprocessing/GTAOPass.js"), Promise.resolve(null)]).catch(() => null) : null;
 function TOON(o) { if (RSTYLE !== "pbr") return new THREE.MeshToonMaterial(o); const { gradientMap, ...r } = o; return new THREE.MeshStandardMaterial({ roughness: .72, metalness: 0, ...r }); }
 THREE.ShaderChunk.lights_pars_begin = THREE.ShaderChunk.lights_pars_begin.replace(/float getDistanceAttenuation\([\s\S]*?return distanceFalloff;\s*\}/, "float getDistanceAttenuation( const in float lightDistance, const in float cutoffDistance, const in float decayExponent ) {\n\tif ( cutoffDistance > 0.0 && decayExponent > 0.0 ) return pow( saturate( - lightDistance / cutoffDistance + 1.0 ), decayExponent );\n\treturn 1.0;\n}");
@@ -1099,7 +1101,7 @@ if (HAS3D) try {
   Object.assign(sun.shadow.camera, { left: -17, right: 17, top: 15, bottom: -15, near: 1, far: 80 }); sun.shadow.bias = -.0006; sun.shadow.camera.updateProjectionMatrix();
   S3.add(amb, hemi, sun, sun.target);
   for (let i = 0; i < 6; i++) { const l = new THREE.PointLight(0xffc870, 0, 8, 2); S3.add(l); PLs.push(l); }
-  const d = RSTYLE === "cel" ? new Uint8Array([100, 255]) : new Uint8Array([80, 140, 205, 255]); gradTex = new THREE.DataTexture(d, d.length, 1, THREE.RedFormat); gradTex.minFilter = gradTex.magFilter = THREE.NearestFilter; gradTex.generateMipmaps = false; gradTex.needsUpdate = true;
+  const d = RSTYLE === "cel" ? new Uint8Array([96, 96, 96, 96, 160, 255, 255, 255]) : new Uint8Array([80, 140, 205, 255]); gradTex = new THREE.DataTexture(d, d.length, 1, THREE.RedFormat); gradTex.minFilter = gradTex.magFilter = RSTYLE === "cel" ? THREE.LinearFilter : THREE.NearestFilter; gradTex.generateMipmaps = false; gradTex.needsUpdate = true;
 } catch (e) { R3 = null; }
 if (R3) applyQuality(gfxLv);
 if (!R3) $("help").insertAdjacentHTML("afterbegin", `<p style="color:#c0392b;font-weight:700">⚠️ 3D 그래픽을 불러오지 못했어요. 인터넷 연결과 WebGL 지원 브라우저가 필요해요.</p>`);
@@ -1139,7 +1141,7 @@ function toonPatch(m, key = "rim") {
   const prev = m.onBeforeCompile, pk = m.customProgramCacheKey;
   m.onBeforeCompile = sh => {
     if (prev) prev.call(m, sh); sh.uniforms.uRim = RIM; sh.uniforms.uRimC = RIMC;
-    sh.fragmentShader = sh.fragmentShader.replace("#include <common>", "#include <common>\nuniform float uRim; uniform vec3 uRimC;").replace("#include <emissivemap_fragment>", "#include <emissivemap_fragment>\n { float rf = pow(1.0 - clamp(dot(normalize(normal), normalize(vViewPosition)), 0.0, 1.0), 2.6); totalEmissiveRadiance += uRimC * rf * uRim; }");
+    sh.fragmentShader = sh.fragmentShader.replace("#include <common>", "#include <common>\nuniform float uRim; uniform vec3 uRimC;").replace("#include <opaque_fragment>", (RSTYLE === "cel" ? "{ float bse = max(dot(diffuseColor.rgb, vec3(.3333)), 1e-3); float lit = dot(outgoingLight - totalEmissiveRadiance, vec3(.3333)) / bse; float shd = clamp(1.1 - lit, 0.0, 1.0); float lm = dot(outgoingLight, vec3(.299, .587, .114)); outgoingLight = mix(vec3(lm), outgoingLight, 1.0 + shd * .4) * mix(vec3(1.0), vec3(.8, .85, 1.12), shd); }\n" : "") + "#include <opaque_fragment>").replace("#include <emissivemap_fragment>", "#include <emissivemap_fragment>\n { float rf = pow(1.0 - clamp(dot(normalize(normal), normalize(vViewPosition)), 0.0, 1.0), 2.6); totalEmissiveRadiance += uRimC * rf * uRim; }");
   };
   m.customProgramCacheKey = () => key + (m.userData.pk || "");
   return m;
@@ -1160,7 +1162,7 @@ const K = (p, r, h, c, x, y, z, n = 7, o) => addM(p, geo(`k${r},${h},${n}`, () =
 const I = (p, r, c, x, y, z, o) => addM(p, geo(`i${r}`, () => new THREE.IcosahedronGeometry(r, 0)), c, x, y, z, o);
 const TR = (p, r, t, c, x, y, z, o) => addM(p, geo(`t${r},${t}`, () => new THREE.TorusGeometry(r, t, 6, 14)), c, x, y, z, o);
 const HALF = Math.PI / 2;
-const OUTM = new THREE.MeshBasicMaterial({ color: INK, side: THREE.BackSide });
+const OUTM = new THREE.MeshBasicMaterial({ color: RSTYLE === "cel" ? 0x3e2a44 : INK, side: THREE.BackSide });
 const HDR = (hex, k = 2.4, o = {}) => { const m = new THREE.MeshBasicMaterial({ color: hex, ...o }); m.color.multiplyScalar(k); return m; };
 const WIND = { value: 0 };
 function windMat(opts, amp) {
@@ -1186,7 +1188,7 @@ const detailTex = () => _detail || (_detail = mkCanvasTex(128, (x, n) => {
 }));
 const cloudTex = () => _cloud || (_cloud = mkCanvasTex(256, (x, n) => { const r = mulberry32(8); for (let i = 0; i < 18; i++) { const cx = r() * n, cy = r() * n, rad = 26 + r() * 40; for (const [ox, oy] of [[0, 0], [n, 0], [-n, 0], [0, n], [0, -n]]) { const g = x.createRadialGradient(cx + ox, cy + oy, 0, cx + ox, cy + oy, rad); g.addColorStop(0, "rgba(12,24,60,.34)"); g.addColorStop(1, "rgba(12,24,60,0)"); x.fillStyle = g; x.fillRect(0, 0, n, n); } } }));
 function outline(g, t = 1.1) {
-  if (RSTYLE === "pbr") return g; if (RSTYLE === "cel") t += .04;
+  if (RSTYLE === "pbr") return g; if (RSTYLE === "cel") t += .015;
   const L = []; g.traverse(o => { if (o.isMesh && !o.userData.ol) L.push(o); });
   for (const m of L) { const o = new THREE.Mesh(m.geometry, OUTM); o.scale.setScalar(t); o.userData.ol = 1; m.add(o); }
   return g;
@@ -1337,8 +1339,8 @@ const KCLS = [["knight", "기사"], ["barbarian", "바바리안"], ["mage", "마
 const KW = { "🗡️": "sword_1handed", "🪓": "axe_1handed" }, KSH = ["shield_round", "shield_square", "shield_badge", "shield_spikes", "shield_badge_color"];
 const KEXT = "glb";            // 아티팩트 사본은 json(glTF) 로 바뀜
 const KAY = { ready: false, failed: false, started: false, src: {}, clips: {}, wpn: {}, sc: 1 };
-const KOUT = new THREE.MeshBasicMaterial({ color: INK, side: THREE.BackSide });
-const KOW = RSTYLE === "cel" ? "0.045" : "0.03";
+const KOUT = new THREE.MeshBasicMaterial({ color: RSTYLE === "cel" ? 0x3e2a44 : INK, side: THREE.BackSide });
+const KOW = RSTYLE === "cel" ? "0.034" : "0.03";
 KOUT.onBeforeCompile = sh => { sh.vertexShader = sh.vertexShader.replace("#include <skinning_vertex>", "#include <skinning_vertex>\n#ifdef USE_SKINNING\n transformed += normalize(objectNormal) * " + KOW + ";\n#else\n transformed += normalize(normal) * " + KOW + ";\n#endif"); };
 KOUT.customProgramCacheKey = () => "kout";
 function loadKay() {
@@ -1819,9 +1821,9 @@ function finish(D, dim) {
   for (let i = 1; i < PLs.length; i++) { const L = lights[i - 1], l = PLs[i]; if (L) { l.position.set(L.x, L.h, L.z); l.color.setHex(L.c); l.intensity = L.i; l.distance = L.r; } else l.intensity = 0; }
   lights.length = 0; PL0.i = 0;
   drawParts(); updateMotes(); sweep();
-  const dk = darkness(); weatherTick(); const keep = wxApply(dk); RIM.value = (.16 + dk * .24) * (RSTYLE === "cel" ? 2.6 : RSTYLE === "pbr" ? .5 : 1); RIMC.value.setHex(0xbfe0ff).lerp(new THREE.Color(0x7f93ff), clamp(dk * 1.6, 0, 1)); WIND.value = vtime; WATERMAT.uniforms.uT.value = vtime; WATERMAT.uniforms.uDay.value = GKIND === "home" ? 1 : 1 - clamp(dk / .55, 0, 1) * .72;
+  const dk = darkness(); weatherTick(); const keep = wxApply(dk); RIM.value = (.16 + dk * .24) * (RSTYLE === "cel" ? 2.2 : RSTYLE === "pbr" ? .5 : 1); RIMC.value.setHex(0xbfe0ff).lerp(new THREE.Color(0x7f93ff), clamp(dk * 1.6, 0, 1)); WIND.value = vtime; WATERMAT.uniforms.uT.value = vtime; WATERMAT.uniforms.uDay.value = GKIND === "home" ? 1 : 1 - clamp(dk / .55, 0, 1) * .72;
   if (G.cloud) { const on = (GKIND === "village" || GKIND === "wild") && dk < .3, cm = G.cloud; cm.visible = on; if (on) { cm.position.set(camT.x, .1, camT.z); const t = cm.material.map; t.offset.set(camT.x / 90 + vtime * .004, -camT.z / 90 + vtime * .002); cm.material.opacity = clamp(1 - dk * 3, 0, 1) * .9; } }
-  if (composer && gradePass) { bloomPass.enabled = QUAL.bloom; bloomPass.strength = .55 + dk * .5; const u = gradePass.uniforms; u.vig.value = GR.vig; u.sat.value = GR.sat; u.con.value = GR.con; legacyLights(true); try { composer.render(DT); legacyLights(false); wxRestore(keep); return; } catch (e) { legacyLights(false); composer = null; } }
+  if (composer && gradePass) { bloomPass.enabled = QUAL.bloom; bloomPass.strength = .55 + dk * .5 + (RSTYLE === "cel" ? .15 : 0); const u = gradePass.uniforms; u.vig.value = GR.vig; u.sat.value = GR.sat * (RSTYLE === "cel" ? 1.12 : 1); u.con.value = GR.con; legacyLights(true); try { composer.render(DT); legacyLights(false); wxRestore(keep); return; } catch (e) { legacyLights(false); composer = null; } }
   legacyLights(true); R3.render(S3, cam); legacyLights(false); wxRestore(keep);
 }
 function light(x, z, r, c = 0xffc870, h = 1.4, i = 1.5) { lights.push({ x, z, r, c, h, i }); }
@@ -2908,6 +2910,14 @@ function frame(now) {
 player.hp = pstats().maxhp;
 resize(); hud(); loadKay(); $("clock").textContent = clockText(); setMute(muted);
 $("snd").onclick = () => { setMute(!muted); sfx("ui"); };
+const STY_N = { toon: "툰", cel: "원신풍 셀", pbr: "PBR" };
+$("sty").textContent = "🖌️ " + STY_N[RSTYLE];
+$("sty").onclick = () => {
+  const nx = { toon: "cel", cel: "pbr", pbr: "toon" }[RSTYLE]; save(); sfx("ui"); say(`🖌️ ${STY_N[nx]} 스타일로 바꾸는 중…`, 3000);
+  try { localStorage.setItem("pokgeun-style", nx); } catch (e) {}
+  try { const u = new URL(location.href); u.searchParams.delete("style"); u.hash = "style=" + nx; history.replaceState(null, "", u); } catch (e) { location.hash = "style=" + nx; }
+  setTimeout(() => location.reload(), 150);
+};
 $("gfx").onclick = () => { applyQuality({ high: "mid", mid: "low", low: "high" }[gfxLv]); sfx("ui"); say(`🎨 그래픽 품질: ${QUAL.n}`, 1600); };
 requestAnimationFrame(frame);
 window.__game = { get S3() { return S3; }, get KAY() { return KAY; }, get curPE() { return curPE; }, pAnim, WX, setWeather: t => { WX.type = t; WX.t = 9999; }, startArena, arenaTick, startWave, gemGain, choosePerk, finishArena, openPerk, autoFight, idleStored, dailyTouch, genArena, mkMonT, get PERKS() { return PERKS; }, get ARES() { return ARES; }, sEvent, storyReady, reportStory, openKing, nearKing, demonAI, finalizeDemon, enterDemon, onDemonDefeat, mkDemon, damageP, addFame, get STORY() { return STORY; }, NET, spawnNear, worldTick, killMon, setBuild: i => { buildSel = i == null ? null : BUILD[i]; }, farmAct, winteract, genOffers, turnIn, warpTo, worldAct, enterWorld, getWorld, get WORLD() { return WORLD; }, get dun() { return dun; }, wc, wb, setClock: v => { clock = v; }, fireball, feed, toggleMount, craft, togglePanel, enterDungeon, get dun() { return dun; }, pstats, genGear, attack, scene: () => scene, furnSelSet: v => { furnSel = v; renderFurn(); }, player, trees, S, keys, act, get fishing() { return fishing; }, bugs, villagers }; // 디버그/테스트용
