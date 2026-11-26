@@ -1329,6 +1329,7 @@ function mkHeroFromLook(look, col, eq) {
 /* ----- 3D 캐릭터 에셋: KayKit Adventurers (Kay Lousberg, CC0) — 뼈대 애니메이션 ----- */
 const KCLS = [["knight", "기사"], ["barbarian", "바바리안"], ["mage", "마법사"], ["rogue", "도적"], ["rogue_hooded", "후드 도적"]];
 const KW = { "🗡️": "sword_1handed", "🪓": "axe_1handed" }, KSH = ["shield_round", "shield_square", "shield_badge", "shield_spikes", "shield_badge_color"];
+const KEXT = "glb";            // 아티팩트 사본은 json(glTF) 로 바뀜
 const KAY = { ready: false, failed: false, started: false, src: {}, clips: {}, wpn: {}, sc: 1 };
 const KOUT = new THREE.MeshBasicMaterial({ color: INK, side: THREE.BackSide });
 KOUT.onBeforeCompile = sh => { sh.vertexShader = sh.vertexShader.replace("#include <skinning_vertex>", "#include <skinning_vertex>\n#ifdef USE_SKINNING\n transformed += normalize(objectNormal) * 0.03;\n#else\n transformed += normalize(normal) * 0.03;\n#endif"); };
@@ -1337,7 +1338,7 @@ function loadKay() {
   if (KAY.started || !R3) return; KAY.started = true;
   const L = new THREE.GLTFLoader(), WS = [...Object.values(KW), ...KSH];
   const raw = sc => { sc.traverse(o => { if (o.isMesh && o.material && o.material.map) o.material.map.colorSpace = THREE.NoColorSpace; }); return sc; };
-  Promise.all([...KCLS.map(c => L.loadAsync(`assets/chars/${c[0]}.glb`)), L.loadAsync("assets/anims.glb"), ...WS.map(w => L.loadAsync(`assets/weapons/${w}.glb`))]).then(r => {
+  Promise.all([...KCLS.map(c => L.loadAsync(`assets/chars/${c[0]}.${KEXT}`)), L.loadAsync(`assets/anims.${KEXT}`), ...WS.map(w => L.loadAsync(`assets/weapons/${w}.${KEXT}`))]).then(r => {
     KCLS.forEach((c, i) => { KAY.src[c[0]] = raw(r[i].scene); });
     r[KCLS.length].animations.forEach(a => { KAY.clips[a.name] = a; });
     WS.forEach((w, i) => { KAY.wpn[w] = raw(r[KCLS.length + 1 + i].scene); });
