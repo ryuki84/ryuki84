@@ -14,3 +14,7 @@
   Universal Animation Library (Standard) — Quaternius (quaternius.com), CC0 (LICENSE-UAL.txt)
   (glTF: github.com/J-Ponzo/gltf-universal-animation-library)
   웹용 변환: 애니메이션 19종만 남기고 리샘플. 옷 색은 게임에서 뼈대 부위별로 칠해요.
+
+지형 텍스처 — assets/ground/
+  Poly Haven (polyhaven.com), CC0: leafy_grass, forest_leaves_02, coast_sand_01, snow_02, rocky_terrain_02, brown_mud_dry, grey_plaster_02
+  웹용 변환: 1k 색상/노멀(GL) 맵을 512px webp로 줄임(plaster는 흑백 디테일로 변환).
