@@ -107,6 +107,78 @@
   #chatlog div { background:rgba(24,20,34,.55); -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); }
   #rpg .bar { border:1px solid rgba(74,59,42,.35); border-radius:10px; } #rpg .bar i.hp { background:linear-gradient(180deg,#ff7070,#d83a3a); } #rpg .bar i.xp { background:linear-gradient(180deg,#6fb0f0,#3a78c8); }
   .g:hover { background:rgba(242,166,90,.18); }
+
+  /* ===== UI/UX 개편 ===== */
+  kbd { display:inline-block; min-width:1.5em; padding:1px 6px; border-radius:6px; background:#fff; border:1px solid rgba(74,59,42,.25); box-shadow:0 2px 0 rgba(74,59,42,.18); font:700 .82em/1.4 "Noto Sans KR",system-ui,sans-serif; text-align:center; color:var(--ink); }
+  #snd, #gfx, #sty, #view { display:none !important; }
+  #bells { left:12px; top:10px; } #clock { left:12px; top:46px; } #cfgbtn { left:12px; top:82px; cursor:pointer; } #online { left:60px; top:82px; } #chat { top:122px; }
+  #cfg { position:absolute; left:12px; top:118px; z-index:35; width:240px; padding:10px; border-radius:18px; background:var(--glass); -webkit-backdrop-filter:blur(16px) saturate(1.5); backdrop-filter:blur(16px) saturate(1.5); border:1px solid var(--edge); box-shadow:var(--shadow); }
+  #cfg h3 { margin:2px 6px 8px; font-size:15px; }
+  #cfg button { display:flex; justify-content:space-between; align-items:center; width:100%; margin:0 0 6px; padding:8px 12px; background:rgba(255,255,255,.7); font-size:14px; }
+  #cfg button b { color:#c0602a; }
+  #inv { cursor:pointer; min-width:0; padding:7px 14px; } #inv b { margin:0; display:flex; gap:8px; align-items:center; } #inv u { text-decoration:none; opacity:.6; transition:transform .2s; }
+  #inv .invb { display:none; margin-top:6px; } body.showinv #inv .invb { display:block; } body.showinv #inv u { transform:rotate(180deg); }
+  #dock { position:absolute; right:12px; top:58px; display:flex; flex-direction:column; gap:5px; z-index:20; }
+  #msg { bottom:clamp(130px,17vw,156px) !important; }
+  #dock button { position:relative; width:50px; height:44px; margin:0; padding:2px 0 0; border-radius:14px; font-size:20px; line-height:1; background:var(--glass); -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px); border:1px solid var(--edge); box-shadow:0 4px 14px rgba(30,22,10,.22); display:flex; flex-direction:column; align-items:center; justify-content:center; }
+  #dock button small { font-size:10px; font-weight:700; margin-top:3px; }
+  #dock button i { position:absolute; right:3px; top:2px; font-style:normal; font-size:9px; opacity:.55; }
+  #dock button em { position:absolute; left:-4px; top:-4px; background:#e8505a; color:#fff; font-style:normal; font-size:11px; width:17px; height:17px; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 0 0 2px #fff; animation:pulse 1.2s infinite; }
+  #dock button.on { background:linear-gradient(180deg,#ffc58a,#f2a65a); }
+  #dock button:hover { transform:translateX(-3px); }
+  @keyframes pulse { 50% { transform:scale(1.2); } }
+  #hint { position:absolute; left:50%; bottom:clamp(86px,12vw,104px); transform:translateX(-50%); z-index:15; padding:7px 16px; border-radius:999px; font-weight:700; font-size:clamp(12px,1.6vw,16px); white-space:nowrap; background:rgba(28,22,34,.72); color:#fff; -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); box-shadow:0 4px 16px rgba(0,0,0,.25); pointer-events:none; }
+  #hint kbd { margin-right:6px; }
+  body[data-scene="dun"] #hint, body[data-scene="world"] #hint, body[data-scene="wild"] #hint { bottom:clamp(92px,13vw,112px); }
+  #abar { position:absolute; left:50%; bottom:10px; transform:translateX(-50%); display:flex; gap:8px; z-index:16; }
+  #abar button { position:relative; width:clamp(48px,6.4vw,62px); height:clamp(48px,6.4vw,62px); margin:0; padding:0; border-radius:16px; font-size:clamp(20px,2.6vw,26px); display:flex; flex-direction:column; align-items:center; justify-content:center; background:var(--glass); -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px); border:1px solid var(--edge); box-shadow:0 5px 16px rgba(30,22,10,.25); overflow:hidden; }
+  #abar button:first-child { width:clamp(58px,7.6vw,74px); background:linear-gradient(180deg,#ffd2a0,#f2a65a); }
+  #abar button::after { content:""; position:absolute; inset:0; background:conic-gradient(rgba(20,16,28,.62) var(--cd), transparent 0); pointer-events:none; }
+  #abar button i { position:absolute; left:4px; top:2px; font-style:normal; font-size:10px; font-weight:800; opacity:.7; }
+  #abar button small { font-size:9px; font-weight:700; margin-top:1px; position:relative; z-index:1; }
+  #abar button.cd small { color:#fff; font-size:12px; text-shadow:0 0 3px #000; }
+  #abar button.dis { opacity:.45; }
+  #abar button em { position:absolute; right:3px; bottom:2px; font-style:normal; font-size:11px; font-weight:800; }
+  #rpg .sk { display:none; }
+  #rpg { bottom:10px; width:min(230px,25%); }
+  #keys { position:absolute; inset:0; z-index:40; display:flex; flex-direction:column; align-items:center; justify-content:center; background:rgba(20,16,28,.45); -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px); padding:16px; }
+  #keys[hidden] { display:none; }
+  #keys .kc { position:relative; background:var(--glass); -webkit-backdrop-filter:blur(16px); backdrop-filter:blur(16px); border:1px solid var(--edge); border-radius:20px; box-shadow:var(--shadow); max-width:660px; width:100%; max-height:100%; overflow:auto; }
+  #keys h2 { padding:16px 22px 4px; margin:0; }
+  #keys .kg { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px 18px; padding:12px 22px; max-width:640px; }
+  #keys section h3 { margin:4px 0 6px; font-size:15px; } #keys section div { display:flex; gap:8px; align-items:center; margin:3px 0; font-size:13px; } #keys section kbd { min-width:5.2em; }
+  #keys .tip { padding:4px 22px 16px; margin:0; font-size:12px; }
+  .x { position:absolute; right:10px; top:10px; width:34px; height:34px; margin:0 !important; padding:0; border-radius:50%; font-size:16px; z-index:2; background:rgba(255,255,255,.8); }
+  #gear { padding-top:16px; }
+  #gear [data-tab] { border-radius:999px; font-size:13px; padding:4px 11px !important; background:rgba(255,255,255,.55); box-shadow:none; }
+  #gear [data-tab][style*="#fff"] { background:linear-gradient(180deg,#ffd2a0,#f2a65a) !important; }
+  #help .sub { margin:0 0 10px; opacity:.85; }
+  #help .hcards { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin:8px 0; }
+  #help .hcards div { background:rgba(255,255,255,.6); border-radius:14px; padding:8px 10px; display:flex; flex-direction:column; gap:3px; }
+  #help .hcards b { font-size:14px; } #help .hcards span { font-size:12px; line-height:1.55; }
+  #help .goals { font-size:12px; opacity:.85; }
+  #joy { width:128px; height:128px; border-radius:50%; background:radial-gradient(circle, rgba(255,255,255,.55), rgba(255,255,255,.18)); border:2px solid rgba(74,59,42,.25); position:relative; touch-action:none; flex:none; }
+  #joy i { position:absolute; left:50%; top:50%; width:54px; height:54px; margin:-27px 0 0 -27px; border-radius:50%; background:linear-gradient(180deg,#ffd2a0,#f2a65a); box-shadow:0 4px 10px rgba(0,0,0,.25); pointer-events:none; }
+  #touch .acts { flex-direction:row; align-items:center; gap:10px; }
+  #touch .row2 { display:grid; grid-template-columns:repeat(3,48px); gap:6px; }
+  #touch .row2 button { height:46px; border-radius:12px; font-size:17px; line-height:1.1; }
+  #touch .row2 button small { display:block; font-size:9px; }
+  #touch .big { width:76px; height:76px; border-radius:50%; font-size:26px; flex:none; }
+  #joy { width:112px !important; height:112px !important; }
+  @media (max-width:760px), (pointer:coarse) {
+    #dock { position:static; flex-direction:row; overflow-x:auto; padding:8px; gap:6px; margin:8px auto 0; width:calc(100% - 16px); }
+    #dock button { flex:none; width:54px; }
+    #dock button:hover { transform:none; }
+    #abar { display:none; }
+    #hint { bottom:8px; font-size:12px; }
+    #bells { left:6px; top:6px; } #clock { left:6px; top:32px; } #cfgbtn { left:6px; top:58px; } #online { left:48px; top:58px; } #cfg { left:6px; top:86px; }
+    #help .hcards { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    #inv { display:block; top:6px; right:6px; padding:4px 10px; font-size:11px; }
+    #keys .kg { grid-template-columns:1fr; }
+    #msg { bottom:auto !important; top:84px; }
+    #rpg { width:calc(100% - 16px) !important; }
+    #touch { padding:12px 8px 0; }
+  }
 </style>
 </head>
 <body>
@@ -119,6 +191,12 @@
   <div id="gfx" class="pill" title="그래픽 품질 (눌러서 변경)">🎨</div>
   <div id="sty" class="pill" title="렌더링 스타일 비교 (눌러서 변경, 새로고침돼요)">🖌️</div>
   <div id="view" class="pill" title="시점 전환 (P)">🎥</div>
+  <div id="cfgbtn" class="pill" title="설정">⚙️</div>
+  <div id="cfg" hidden></div>
+  <div id="dock"></div>
+  <div id="hint" hidden></div>
+  <div id="abar" hidden></div>
+  <div id="keys" hidden></div>
   <div id="bells" class="pill"></div>
   <div id="clock" class="pill"></div>
   <div id="inv"></div>
@@ -128,18 +206,16 @@
   <div id="shop" hidden></div>
   <div id="help">
     <h2>🌳 포근 마을에 오신 걸 환영해요</h2>
-    <p>이동: 방향키 / WASD</p>
-    <p>행동: 스페이스 또는 Z</p>
-    <p>도구 선택: 1~5 (손·잠자리채·낚싯대·삽·묘목)</p>
-    <p>T: 시간 빨리감기 (낮/밤 구경용) · M: 소리 켜기/끄기</p>
-    <p>🏠 집 문 앞에서 스페이스 → 실내 꾸미기 (가구는 상점에서 구매)</p>
-    <p>⛰️ 던전 입구(오른쪽 위): 스페이스 공격 · Q 회전베기 · E 구르기 · F 물약 · R 화염구</p>
-    <p>🌍 오픈월드(왼쪽 입구): 끝없는 대륙 탐험 · 채집 · 건설(B) · 의뢰(J) · 지도(N) · V 길들이기 · G 탈것</p>
-    <p>⚔️ 마을 위쪽 아레나(또는 Y): 웨이브 서바이벌 — 자동 공격 · 경험치 구슬 · 3택1 강화 · 보스 · 랭킹</p>
-    <p>👑 왕도의 국왕에게 왕명을 받고(L) 북쪽 마왕성의 대마왕을 물리쳐 보세요!</p>
-    <p>I 장비 · K 캐릭터(스탯/스킬/동료) · C 제작</p>
-    <p>🏪 상점에서 열매·물고기·곤충을 팔고 묘목을 사 보세요!</p>
-    <p>📱 폰에서는 화면 아래 버튼으로 조작해요 (🎒 = 주머니 보기)</p>
+    <p class="sub">동물 친구들과 살면서 숲을 탐험하고, 던전과 대마왕에 도전하는 3D 모험이에요.</p>
+    <div class="hcards">
+      <div><b>🕹️ 이동</b><span>WASD · 방향키<br>📱 왼쪽 조이스틱</span></div>
+      <div><b>🎥 카메라</b><span>마우스 드래그 · <kbd>,</kbd> <kbd>.</kbd><br><kbd>P</kbd> 시점 전환</span></div>
+      <div><b>✋ 행동</b><span><kbd>Space</kbd> — 화면 아래<br>안내에 나온 행동</span></div>
+      <div><b>⚔️ 전투</b><span><kbd>Q</kbd> 회전 <kbd>E</kbd> 구르기<br><kbd>R</kbd> 화염구 <kbd>F</kbd> 물약</span></div>
+      <div><b>📋 메뉴</b><span>오른쪽 아이콘을 누르거나<br>단축키 (<kbd>H</kbd> 전체 보기)</span></div>
+      <div><b>🧰 마을 도구</b><span><kbd>1</kbd>~<kbd>5</kbd> 손·채·낚싯대·삽·묘목</span></div>
+    </div>
+    <p class="goals">🏪 상점에서 팔고 사기 · 🕳️ 던전 · 🌍 오픈월드(건설·채집·의뢰) · 🏟️ 아레나 · 👑 국왕의 의뢰로 대마왕 토벌</p>
     <p id="nickrow" hidden>🌐 닉네임 <input id="nick" maxlength="12" placeholder="모험가" style="font:inherit;padding:3px 8px;border:2px solid var(--ink);border-radius:8px;width:9em"></p>
     <button id="start">시작하기</button><button id="reset" style="background:#e8dcc0">새로 시작</button>
   </div>
@@ -148,14 +224,9 @@
   <div id="rpg" hidden></div>
   <div id="furn" hidden></div>
   <div id="touch">
-    <div class="dpad">
-      <button data-k="ArrowUp ArrowLeft">↖</button><button data-k="ArrowUp">▲</button><button data-k="ArrowUp ArrowRight">↗</button>
-      <button data-k="ArrowLeft">◀</button><i></i><button data-k="ArrowRight">▶</button>
-      <button data-k="ArrowDown ArrowLeft">↙</button><button data-k="ArrowDown">▼</button><button data-k="ArrowDown ArrowRight">↘</button>
-    </div>
+    <div id="joy"><i></i></div>
     <div class="acts">
-      <div class="row2"><button data-k="KeyI">장비</button><button data-k="KeyK">캐릭터</button><button data-k="KeyC">제작</button><button id="tinv">🎒</button></div>
-      <div class="row2"><button class="td" data-k="KeyQ">Q</button><button class="td" data-k="KeyE">E</button><button class="td" data-k="KeyR">R</button><button class="td" data-k="KeyF">F</button><button class="tw" data-k="KeyV">V</button><button class="tw" data-k="KeyG">G</button><button class="th" data-k="KeyX">집기</button><button class="tx" data-k="KeyB">건설</button><button class="tx" data-k="KeyN">지도</button><button class="tx" data-k="KeyJ">의뢰</button><button class="tx" data-k="KeyL">왕국</button><button class="tx" id="tchat">채팅</button></div>
+      <div class="row2"><button class="td" data-k="KeyQ">🌀<small>회전</small></button><button class="td" data-k="KeyE">💨<small>구르기</small></button><button class="td" data-k="KeyR">🔥<small>화염</small></button><button class="td" data-k="KeyF">🧪<small>물약</small></button><button class="tw" data-k="KeyV">🍖<small>먹이</small></button><button class="tw" data-k="KeyG">🐎<small>탈것</small></button><button class="th" data-k="KeyX">✋<small>집기</small></button><button id="tinv">🎒<small>주머니</small></button><button id="tchat">💬<small>채팅</small></button></div>
       <button class="big" data-k="Space">A</button>
     </div>
   </div>
@@ -379,7 +450,7 @@ function hud() {
   document.body.dataset.scene = scene === "dun" && dun ? (dun.kind === "wild" ? "wild" : dun.kind === "world" ? "world" : "dun") : scene;
   $("bells").textContent = `🔔 ${S.bells.toLocaleString()} 벨 · ⚔️ Lv.${S.lv}${S.pts + S.sp > 0 ? " ✨" : ""}`;
   const rows = Object.entries(S.inv).filter(([, v]) => v > 0).map(([k, v]) => `<div><span>${ITEMS[k].e} ${ITEMS[k].n}</span><span>×${v}</span></div>`).join("");
-  $("inv").innerHTML = `<b>🎒 주머니 ${count()}/${CAP}</b>${rows}<div><span>🧪 물약</span><span>×${S.potions}</span></div>${matRow()}`;
+  $("inv").innerHTML = `<b>🎒 주머니 ${count()}/${CAP} <u>▾</u></b><div class="invb">${rows}<div><span>🧪 물약</span><span>×${S.potions}</span></div>${matRow()}</div>`;
   renderFurn(); renderRpg();
   $("tools").style.display = scene === "dun" ? "none" : "flex";
   $("tools").innerHTML = TOOLS.map((t, i) => `<div class="tool ${i === player.tool ? "on" : ""}" data-i="${i}"><i>${i + 1}</i>${t.e}<small>${i === 4 ? "×" + (S.inv.sapling || 0) : t.n}</small></div>`).join("");
@@ -627,12 +698,12 @@ function bodyCraft() {
 function renderGear() {
   const tabs = [["equip", "⚔️ 장비 (I)"], ["char", "📜 캐릭터 (K)"], ["craft", "🔨 제작 (C)"], ["build", "🏗️ 건설 (B)"], ["quest", "📜 의뢰 (J)"], ["map", "🗺️ 지도 (N)"], ["king", "👑 왕국 (L)"], ["arena", "⚔️ 아레나 (Y)"], ["look", "🧑 외형 (O)"]].map(([k, l]) => `<button data-tab="${k}" style="margin:0 6px 8px 0;padding:3px 10px;${gearTab === k ? "background:#fff" : ""}">${l}</button>`).join("");
   $("gear").classList.toggle("side", gearTab === "look" && innerWidth >= 700);
-  $("gear").innerHTML = (["ending", "perk", "arenaend"].includes(gearTab) ? "" : tabs) + (gearTab === "char" ? bodyChar() : gearTab === "craft" ? bodyCraft() : gearTab === "build" ? bodyBuild() : gearTab === "quest" ? bodyQuest() : gearTab === "map" ? bodyMap() : gearTab === "king" ? bodyKing() : gearTab === "ending" ? bodyEnding() : gearTab === "arena" ? bodyArena() : gearTab === "look" ? bodyLook() : gearTab === "perk" ? bodyPerk() : gearTab === "arenaend" ? bodyArenaEnd() : bodyEquip()) + (gearTab === "perk" ? "" : `<button id="closeGear">닫기</button>`);
+  $("gear").innerHTML = (gearTab === "perk" ? "" : `<button id="closeX" class="x" title="닫기 (Esc)">✕</button>`) + (["ending", "perk", "arenaend"].includes(gearTab) ? "" : tabs) + (gearTab === "char" ? bodyChar() : gearTab === "craft" ? bodyCraft() : gearTab === "build" ? bodyBuild() : gearTab === "quest" ? bodyQuest() : gearTab === "map" ? bodyMap() : gearTab === "king" ? bodyKing() : gearTab === "ending" ? bodyEnding() : gearTab === "arena" ? bodyArena() : gearTab === "look" ? bodyLook() : gearTab === "perk" ? bodyPerk() : gearTab === "arenaend" ? bodyArenaEnd() : bodyEquip()) + (gearTab === "perk" ? "" : `<button id="closeGear">닫기</button>`);
   if (gearTab === "map") drawWorldMap();
 }
 $("gear").addEventListener("click", e => {
   const t = e.target, d = t.dataset || {};
-  if (t.id === "closeGear") return closeShop();
+  if (t.id === "closeGear" || t.id === "closeX") return closeShop();
   if (d.look) { const [k, v] = d.look.split(":"); S.look = { ...lookOf(S.look), [k]: +v }; save(); netLook(); return renderGear(); }
   if (d.tab) { gearTab = d.tab; return renderGear(); }
   if (d.craft !== undefined) return craft(+d.craft);
@@ -849,7 +920,7 @@ function attack(held) {
 }
 function whirl() {
   const P = player; if (scene !== "dun" || P.qCd > 0 || modal) return; const L = skLv("whirl"), r = 84 + 4 * (L - 1);
-  P.qCd = Math.max(2, 5 - .3 * (L - 1)); sfx("whirl"); pAnim("2H_Melee_Attack_Spin", .55); shake = Math.max(shake, 2); dun.arcs.push({ a: 0, t: .25, r, whirl: true });
+  P.qCd = Math.max(2, 5 - .3 * (L - 1)); P.qMax = P.qCd; sfx("whirl"); pAnim("2H_Melee_Attack_Spin", .55); shake = Math.max(shake, 2); dun.arcs.push({ a: 0, t: .25, r, whirl: true });
   for (const m of [...dun.mons]) if (Math.hypot(m.x - P.x, m.y - P.y) < r + (m.boss ? 12 : 0)) hitMon(m, 1.8 + .25 * (L - 1));
 }
 function fireball() {
@@ -982,6 +1053,7 @@ function press(code) {
   if (keys.has(code)) return;
   keys.add(code);
   if (!started) { if (code === "Space" || code === "Enter") begin(); return; }
+  if (code === "Escape" && !$("keys").hidden) return toggleKeys();
   if (code === "Escape" && modal && gearTab !== "perk") closeShop();
   else if (code === "Space" || code === "KeyZ") act();
   else if (scene === "dun" && code === "KeyQ") whirl();
@@ -999,6 +1071,7 @@ function press(code) {
   else if (code === "KeyL") togglePanel("king");
   else if (code === "KeyY") togglePanel("arena");
   else if (code === "KeyP") toggleView();
+  else if (code === "KeyH") toggleKeys();
   else if (code === "KeyO") togglePanel("look");
   else if (code === "KeyN") togglePanel("map");
   else if (code === "KeyX" && scene === "dun" && dun.kind === "world") worldRemove();
@@ -3103,11 +3176,12 @@ function sfx(k) { if (SFX[k]) SFX[k](); }
 function setMute(m) { muted = m; try { localStorage.setItem("pokgeun-mute", m ? "1" : "0"); } catch (e) {} $("snd").textContent = m ? "🔇" : "🔊"; }
 
 /* ---------- 메인 루프 ---------- */
-let last = performance.now(), hudT = 0, rpgT = 0;
+let last = performance.now(), hudT = 0, rpgT = 0, hintT = 0;
 function frame(now) {
   const dt = clamp((now - last) / 1000, 0, .05); last = now;
   update(dt); netTick(dt); stepParts(dt); draw();
   if ((hudT += dt) > .5) { hudT = 0; $("clock").textContent = clockText(); }
+  if ((hintT += dt) > .15) { hintT = 0; updHint(); renderBar(); }
   if (scene === "dun" && (rpgT += dt) > .1) { rpgT = 0; renderRpg(); }
   requestAnimationFrame(frame);
 }
@@ -3131,7 +3205,76 @@ $("view").textContent = TPV_ON ? "🎥 3인칭" : "🎥 탑뷰"; $("view").oncli
   cv0.style.touchAction = "none"; }
 $("gfx").onclick = () => { applyQuality({ high: "mid", mid: "low", low: "high" }[gfxLv]); sfx("ui"); say(`🎨 그래픽 품질: ${QUAL.n}`, 1600); };
 requestAnimationFrame(frame);
-window.__game = { get sun() { return sun; }, get GRD() { return GRD; }, get S3() { return S3; }, setYaw: v => { camYaw = v; camManT = vtime + 999; }, get MAN() { return MAN; }, get KAY() { return KAY; }, get curPE() { return curPE; }, pAnim, WX, setWeather: t => { WX.type = t; WX.t = 9999; }, startArena, arenaTick, startWave, gemGain, choosePerk, finishArena, openPerk, autoFight, idleStored, dailyTouch, genArena, mkMonT, get PERKS() { return PERKS; }, get ARES() { return ARES; }, sEvent, storyReady, reportStory, openKing, nearKing, demonAI, finalizeDemon, enterDemon, onDemonDefeat, mkDemon, damageP, addFame, get STORY() { return STORY; }, NET, spawnNear, worldTick, killMon, setBuild: i => { buildSel = i == null ? null : BUILD[i]; }, farmAct, winteract, genOffers, turnIn, warpTo, worldAct, enterWorld, getWorld, get WORLD() { return WORLD; }, get dun() { return dun; }, wc, wb, setClock: v => { clock = v; }, fireball, feed, toggleMount, craft, togglePanel, enterDungeon, get dun() { return dun; }, pstats, genGear, attack, scene: () => scene, furnSelSet: v => { furnSel = v; renderFurn(); }, player, trees, S, keys, act, get fishing() { return fishing; }, bugs, villagers }; // 디버그/테스트용
+/* ===== UI/UX 개편: 설정 메뉴 · 메뉴 독 · 스킬 바 · 상황 안내 · 조작 도움말 · 모바일 조이스틱 ===== */
+const tapKey = code => { press(code); setTimeout(() => release(code), 90); };
+/* 설정(⚙️): 소리 · 화질 · 그래픽 스타일 · 시점을 한곳에 */
+function renderCfg() {
+  const it = (id, lab) => `<button data-cfg="${id}"><span>${lab}</span><b>${$(id).textContent.replace(/^\S+\s*/, "") || $(id).textContent}</b></button>`;
+  $("cfg").innerHTML = `<h3>⚙️ 설정</h3>${it("snd", "🔊 소리")}${it("gfx", "🎨 화질")}${it("sty", "🖌️ 그래픽 스타일")}${it("view", "🎥 시점")}<button data-cfg="keys"><span>⌨️ 조작 방법</span><b>H</b></button>`;
+  const sb = $("cfg").querySelector('[data-cfg="snd"] b'); if (sb) sb.textContent = muted ? "꺼짐" : "켜짐";
+}
+$("cfgbtn").onclick = e => { e.stopPropagation(); const c = $("cfg"); c.hidden = !c.hidden; if (!c.hidden) renderCfg(); sfx("ui"); };
+$("cfg").addEventListener("click", e => { const b = e.target.closest("[data-cfg]"); if (!b) return; e.stopPropagation(); const id = b.dataset.cfg; if (id === "keys") { $("cfg").hidden = true; return toggleKeys(); } $(id).click(); setTimeout(renderCfg, 60); });
+addEventListener("pointerdown", e => { if (!e.target.closest("#cfg, #cfgbtn")) $("cfg").hidden = true; });
+/* 메뉴 독: 단축키를 몰라도 클릭으로 */
+const DOCK = [["equip", "⚔️", "장비", "I"], ["char", "📜", "캐릭터", "K"], ["craft", "🔨", "제작", "C"], ["build", "🏗️", "건설", "B"], ["quest", "📋", "의뢰", "J"], ["map", "🗺️", "지도", "N"], ["king", "👑", "왕국", "L"], ["arena", "🏟️", "아레나", "Y"], ["look", "🧑", "외형", "O"], ["keys", "❓", "도움말", "H"]];
+function renderDock() {
+  const badge = { char: S.pts + S.sp > 0, king: typeof storyReady === "function" && (() => { try { return storyReady(); } catch (e) { return false; } })() };
+  const sig = JSON.stringify(badge) + (!$("gear").hidden && gearTab); if (sig === renderDock.sig) return; renderDock.sig = sig;
+  $("dock").innerHTML = DOCK.map(([k, e, n, key]) => `<button data-dock="${k}" title="${n} (${key})" class="${!$("gear").hidden && gearTab === k ? "on" : ""}">${e}<small>${n}</small><i>${key}</i>${badge[k] ? '<em>!</em>' : ""}</button>`).join("");
+}
+$("dock").addEventListener("click", e => { const b = e.target.closest("[data-dock]"); if (!b || !started) return; const k = b.dataset.dock; if (k === "keys") return toggleKeys(); if (k === "build") { if (!(scene === "dun" && dun && dun.kind === "world")) { say("🏗️ 건설은 오픈월드에서 할 수 있어요.", 1600); return; } } sfx("ui"); togglePanel(k); renderDock(); });
+/* 조작 도움말 (H) */
+function toggleKeys() {
+  const k = $("keys"); k.hidden = !k.hidden; sfx("ui"); if (k.hidden) return;
+  const row = (a, b) => `<div><kbd>${a}</kbd><span>${b}</span></div>`;
+  k.innerHTML = `<div class="kc"><button class="x" data-close>✕</button><h2>⌨️ 조작 방법</h2><div class="kg">
+    <section><h3>🕹️ 이동 · 카메라</h3>${row("WASD / 방향키", "이동 (카메라 기준)")}${row("마우스 드래그", "카메라 돌리기")}${row(", .", "카메라 왼쪽/오른쪽")}${row("P", "3인칭 ↔ 위에서 보기")}</section>
+    <section><h3>✋ 행동</h3>${row("Space", "화면 아래 안내에 나온 행동")}${row("1~5", "마을 도구 (손·채·낚싯대·삽·묘목)")}${row("X", "집기 / 철거")}${row("Enter", "채팅")}</section>
+    <section><h3>⚔️ 전투</h3>${row("Space", "공격 · 채집")}${row("Q", "회전베기")}${row("E", "구르기 (무적)")}${row("R", "화염구")}${row("F", "물약")}${row("V / G", "먹이주기 / 탈것")}</section>
+    <section><h3>📋 메뉴</h3>${row("I K C", "장비 · 캐릭터 · 제작")}${row("B J N", "건설 · 의뢰 · 지도")}${row("L Y O", "왕국 · 아레나 · 외형")}${row("Esc", "창 닫기")}</section></div>
+    <p class="tip">💡 오른쪽 아이콘 메뉴를 눌러도 돼요. 폰에서는 왼쪽 조이스틱으로 움직이고 오른쪽 버튼으로 행동해요.</p></div>`;
+}
+$("keys").addEventListener("click", e => { if (e.target.closest("[data-close]") || e.target === $("keys")) toggleKeys(); });
+/* 상황 안내: 지금 스페이스를 누르면 무엇을 하는지 */
+function ctxHint() {
+  if (!started || modal) return "";
+  if (scene === "out") {
+    if (fishing) return fishing.state === "bite" ? "🎣 지금! 낚아채기" : "🎣 입질을 기다리는 중… (움직이면 취소)";
+    const { px, py, tx, ty } = target(), v = villagers.find(v => Math.hypot(v.x - px, v.y - py) < 30);
+    if (v) return `💬 ${v.name}와(과) 이야기하기`;
+    if (inRect(SHOP, tx, ty)) return "🏪 상점 열기"; if (inRect(ARENA, tx, ty)) return "🏟️ 아레나"; if (inRect(CAVE, tx, ty)) return "🕳️ 던전에 들어가기"; if (inRect(WILDG, tx, ty)) return "🌍 오픈월드로 떠나기"; if (inRect(HOUSE, tx, ty)) return "🏠 집에 들어가기";
+    const t = player.tool;
+    if (t === 0) { const tr = treeAt(tx, ty); if (tr) return tr.age >= 60 ? (tr.fruit > 0 ? "🍎 나무를 흔들어 열매 따기" : "🌳 나무 흔들기") : "🌱 어린 나무 살펴보기"; return flowerAt(tx, ty) ? "🌷 꽃 꺾기" : ""; }
+    if (t === 1) return "🦋 잠자리채 휘두르기"; if (t === 2) return terrain[ty] && terrain[ty][tx] === "w" ? "🎣 낚싯대 던지기" : "🎣 물을 바라보고 낚시"; if (t === 3) return "⛏️ 땅 파기"; if (t === 4) return (S.inv.sapling || 0) > 0 ? "🌱 묘목 심기" : "🌱 묘목이 없어요 (상점)";
+  }
+  if (scene === "home") return "🛋️ 가구 놓기 · 문 쪽으로 나가기";
+  if (scene === "dun" && dun) { if (buildSel) return `🏗️ ${buildSel.n} 설치 · X 철거 · B 끄기`; return dun.kind === "world" ? "⚔️ 공격 · 🪓 채집 · 💬 말 걸기" : dun.arena ? "⚔️ 자동 공격 중 — 움직여서 피하기" : "⚔️ 공격"; }
+  return "";
+}
+const TOUCHY = matchMedia("(pointer:coarse)").matches;
+function updHint() { const h = ctxHint(), el = $("hint"); el.hidden = !h; if (h) el.innerHTML = `<kbd>${TOUCHY ? "A" : "Space"}</kbd> ${h}`; renderDock(); }
+/* 스킬 바: 아이콘 · 단축키 · 쿨다운 */
+function renderBar() {
+  const el = $("abar"); if (!(started && scene === "dun" && dun)) { el.hidden = true; return; } el.hidden = false;
+  const P = player, world = dun.kind === "world", wild = world || dun.kind === "wild", fire = skLv("fire") > 0;
+  const sl = (code, key, ic, name, cd = 0, mx = 1, dis = false, extra = "") => `<button data-k="${code}" class="${dis ? "dis" : ""} ${cd > 0 ? "cd" : ""}" style="--cd:${clamp(cd / mx, 0, 1) * 100}%" title="${name} (${key})">${ic}<i>${key}</i><small>${cd > 0 ? cd.toFixed(1) : name}</small>${extra}</button>`;
+  const html = sl("Space", TOUCHY ? "A" : "Space", "⚔️", wild ? "공격·채집" : "공격", P.atkCd > 0 ? P.atkCd : 0, .42 / pstats().as) + sl("KeyQ", "Q", "🌀", "회전베기", P.qCd, P.qMax || 5) + sl("KeyE", "E", "💨", "구르기", P.eCd, 2.5) + sl("KeyR", "R", fire ? "🔥" : "🔒", fire ? "화염구" : "Lv3·스킬", fire ? P.rCd : 0, 3, !fire) + sl("KeyF", "F", "🧪", "물약", P.fCd || 0, 1, S.potions <= 0, `<em>${S.potions}</em>`) + (wild ? sl("KeyV", "V", "🍖", "먹이주기") + sl("KeyG", "G", "🐎", P.mounted ? "내리기" : "탈것") : "");
+  if (html !== el.__h) { el.__h = html; el.innerHTML = html; }
+}
+$("abar").addEventListener("pointerdown", e => { const b = e.target.closest("[data-k]"); if (!b) return; e.preventDefault(); tapKey(b.dataset.k); });
+/* 주머니: 접었다 펴기 */
+$("inv").addEventListener("click", () => { document.body.classList.toggle("showinv"); sfx("ui"); });
+/* 모바일: 아날로그 조이스틱 */
+{ const J = $("joy"), K = J && J.querySelector("i"); let id = null, held = new Set();
+  const set = (dx, dy) => { const want = new Set(), l = Math.hypot(dx, dy); if (l > 14) { const nx = dx / l, ny = dy / l; if (nx > .38) want.add("ArrowRight"); if (nx < -.38) want.add("ArrowLeft"); if (ny > .38) want.add("ArrowDown"); if (ny < -.38) want.add("ArrowUp"); }
+    for (const k of held) if (!want.has(k)) release(k); for (const k of want) if (!held.has(k)) press(k); held = want; };
+  const mv = e => { const r = J.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2; let dx = e.clientX - cx, dy = e.clientY - cy; const l = Math.hypot(dx, dy), m = r.width * .38; if (l > m) { dx *= m / l; dy *= m / l; } K.style.transform = `translate(${dx}px,${dy}px)`; set(dx, dy); };
+  if (J) { J.addEventListener("pointerdown", e => { e.preventDefault(); id = e.pointerId; try { J.setPointerCapture(id); } catch (_) {} mv(e); });
+    J.addEventListener("pointermove", e => { if (e.pointerId === id) mv(e); });
+    const end = () => { id = null; K.style.transform = ""; set(0, 0); }; J.addEventListener("pointerup", end); J.addEventListener("pointercancel", end); J.addEventListener("lostpointercapture", end); } }
+renderDock();
+window.__game = { ctxHint, renderBar,  get sun() { return sun; }, get GRD() { return GRD; }, get S3() { return S3; }, setYaw: v => { camYaw = v; camManT = vtime + 999; }, get MAN() { return MAN; }, get KAY() { return KAY; }, get curPE() { return curPE; }, pAnim, WX, setWeather: t => { WX.type = t; WX.t = 9999; }, startArena, arenaTick, startWave, gemGain, choosePerk, finishArena, openPerk, autoFight, idleStored, dailyTouch, genArena, mkMonT, get PERKS() { return PERKS; }, get ARES() { return ARES; }, sEvent, storyReady, reportStory, openKing, nearKing, demonAI, finalizeDemon, enterDemon, onDemonDefeat, mkDemon, damageP, addFame, get STORY() { return STORY; }, NET, spawnNear, worldTick, killMon, setBuild: i => { buildSel = i == null ? null : BUILD[i]; }, farmAct, winteract, genOffers, turnIn, warpTo, worldAct, enterWorld, getWorld, get WORLD() { return WORLD; }, get dun() { return dun; }, wc, wb, setClock: v => { clock = v; }, fireball, feed, toggleMount, craft, togglePanel, enterDungeon, get dun() { return dun; }, pstats, genGear, attack, scene: () => scene, furnSelSet: v => { furnSel = v; renderFurn(); }, player, trees, S, keys, act, get fishing() { return fishing; }, bugs, villagers }; // 디버그/테스트용
 </script>
 </body>
 </html>
