@@ -4,3 +4,8 @@
   원본: https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0
 
 웹용 변환: 캐릭터에서 애니메이션·무기 분리, 애니메이션 22종만 남겨 리샘플(@gltf-transform).
+
+자연물(나무·덤불·바위·풀·꽃) — assets/nature/
+  Ultimate Stylized Nature Pack — Quaternius (quaternius.com), CC0
+  (FBX 소스: github.com/walterpalladino/godot-quaternius-ultimate-stylized-nature)
+  웹용 변환: FBX → glb, 폴리곤 감소(meshoptimizer), 텍스처는 webp(최대 512px)로 분리해 공유.

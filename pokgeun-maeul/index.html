@@ -173,9 +173,23 @@ const THREE = { ...T3, EffectComposer, RenderPass, ShaderPass, UnrealBloomPass, 
 /* r128 → r187: 기존 색감 유지 — 색 관리 끄기 + 옛 방식 점광원 감쇠 */
 THREE.ColorManagement.enabled = false;
 /* 렌더링 스타일 비교용: ?style=cel (애니메 셀) / ?style=pbr (스타일라이즈드 PBR) / 기본 = 툰 */
-const RSTYLE = (() => { try { const h = (location.hash.match(/style=(\w+)/) || [])[1]; let v = new URLSearchParams(location.search).get("style") || h; if (!v) try { v = localStorage.getItem("pokgeun-style"); } catch (e) {} return ["toon", "cel", "pbr"].includes(v) ? v : "toon"; } catch (e) { return "toon"; } })();
-const PBRX = RSTYLE === "pbr" ? await Promise.all([import("three/addons/postprocessing/GTAOPass.js"), Promise.resolve(null)]).catch(() => null) : null;
-function TOON(o) { if (RSTYLE !== "pbr") return new THREE.MeshToonMaterial(o); const { gradientMap, ...r } = o; return new THREE.MeshStandardMaterial({ roughness: .72, metalness: 0, ...r }); }
+const RSTYLE = (() => { try { const h = (location.hash.match(/style=(\w+)/) || [])[1]; let v = new URLSearchParams(location.search).get("style") || h; if (!v) try { v = localStorage.getItem("pokgeun-style"); } catch (e) {} return ["toon", "cel", "pbr", "real"].includes(v) ? v : "real"; } catch (e) { return "toon"; } })();
+const REAL = RSTYLE === "real", PBRL = RSTYLE === "pbr" || REAL;
+const PBRX = PBRL ? await Promise.all([import("three/addons/postprocessing/GTAOPass.js"), Promise.resolve(null)]).catch(() => null) : null;
+function TOON(o) { if (!PBRL) return new THREE.MeshToonMaterial(o); const { gradientMap, ...r } = o; return new THREE.MeshStandardMaterial({ roughness: REAL ? .88 : .72, metalness: 0, ...r }); }
+/* 듀랑고풍: Quaternius Ultimate Stylized Nature (CC0) 나무·덤불·바위·풀 */
+const NEXT = "glb";            // 아티팩트 사본은 json(glTF) 로 바뀜
+const NAT = REAL ? await (async () => {
+  try {
+    const L = new THREE.GLTFLoader(), TL = new THREE.TextureLoader(), base = "assets/nature/", tex = {}, parts = {}, mats = {};
+    const TN = ["NormalTree_Bark", "NormalTree_Leaves", "PineTree_Bark", "PineTree_Leaves", "BirchTree_Bark", "BirchTree_Leaves", "PalmTree_Trunk", "PalmTree_Leaves", "Bush_Leaves", "Grass", "Flowers", "Rocks", "Rocks_Desert"];
+    const MN = ["NormalTree_1", "NormalTree_2", "NormalTree_3", "PineTree_1", "PineTree_2", "PineTree_3", "BirchTree_1", "BirchTree_2", "PalmTree_1", "PalmTree_2", "DeadTree_1", "DeadTree_2", "Bush", "Bush_Flowers", "Bush_Large", "Bush_Large_Flowers", "Rock_1", "Rock_2", "Rock_3", "Rock_4", "Grass_Large", "Grass_Small", "Flower_1_Clump", "Flower_3_Clump", "Flower_4_Clump", "Plant_1", "Plant_2"];
+    await Promise.all(TN.map(async n => { const t = await TL.loadAsync(base + "tex/" + n + ".webp"); t.colorSpace = THREE.NoColorSpace; t.flipY = false; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 4; tex[n] = t; }));
+    const gl = await Promise.all(MN.map(n => L.loadAsync(base + n + "." + NEXT)));
+    MN.forEach((n, i) => { const P = []; gl[i].scene.updateMatrixWorld(true); gl[i].scene.traverse(o => { if (o.isMesh) { const g = o.geometry.clone().applyMatrix4(o.matrixWorld); g.userData.shared = 1; P.push({ g, m: o.material.name }); } }); parts[n] = P; });
+    return { tex, parts, mats };
+  } catch (e) { console.warn("자연 에셋을 불러오지 못했어요 — 기본 나무로 표시해요.", e); return null; }
+})() : null;
 THREE.ShaderChunk.lights_pars_begin = THREE.ShaderChunk.lights_pars_begin.replace(/float getDistanceAttenuation\([\s\S]*?return distanceFalloff;\s*\}/, "float getDistanceAttenuation( const in float lightDistance, const in float cutoffDistance, const in float decayExponent ) {\n\tif ( cutoffDistance > 0.0 && decayExponent > 0.0 ) return pow( saturate( - lightDistance / cutoffDistance + 1.0 ), decayExponent );\n\treturn 1.0;\n}");
 
 "use strict";
@@ -1098,7 +1112,7 @@ if (HAS3D) try {
   S3 = new THREE.Scene(); if (PBRX) { const pm = new THREE.PMREMGenerator(R3); const c = document.createElement("canvas"); c.width = 64; c.height = 32; const x = c.getContext("2d"), gr = x.createLinearGradient(0, 0, 0, 32); gr.addColorStop(0, "#9fd0ff"); gr.addColorStop(.48, "#e8f4ff"); gr.addColorStop(.52, "#a8c890"); gr.addColorStop(1, "#5a7a40"); x.fillStyle = gr; x.fillRect(0, 0, 64, 32); const et = new THREE.CanvasTexture(c); et.mapping = THREE.EquirectangularReflectionMapping; S3.environment = pm.fromEquirectangular(et).texture; S3.environmentIntensity = .35; } cam = new THREE.PerspectiveCamera(30, VW / VH, .5, 150);
   amb = new THREE.AmbientLight(0xffffff, .6); hemi = new THREE.HemisphereLight(0xcfe8ff, 0x6a5a3a, .35);
   sun = new THREE.DirectionalLight(0xfff2d6, .85); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
-  Object.assign(sun.shadow.camera, { left: -17, right: 17, top: 15, bottom: -15, near: 1, far: 80 }); sun.shadow.bias = -.0006; sun.shadow.camera.updateProjectionMatrix();
+  Object.assign(sun.shadow.camera, REAL ? { left: -26, right: 26, top: 26, bottom: -20, near: 1, far: 90 } : { left: -17, right: 17, top: 15, bottom: -15, near: 1, far: 80 }); sun.shadow.bias = -.0006; sun.shadow.camera.updateProjectionMatrix();
   S3.add(amb, hemi, sun, sun.target);
   for (let i = 0; i < 6; i++) { const l = new THREE.PointLight(0xffc870, 0, 8, 2); S3.add(l); PLs.push(l); }
   const d = RSTYLE === "cel" ? new Uint8Array([96, 96, 96, 96, 160, 255, 255, 255]) : new Uint8Array([80, 140, 205, 255]); gradTex = new THREE.DataTexture(d, d.length, 1, THREE.RedFormat); gradTex.minFilter = gradTex.magFilter = RSTYLE === "cel" ? THREE.LinearFilter : THREE.NearestFilter; gradTex.generateMipmaps = false; gradTex.needsUpdate = true;
@@ -1116,7 +1130,7 @@ function initPost(w, h) {
   try {
     const rt = new THREE.WebGLRenderTarget(w, h, { type: THREE.HalfFloatType, format: THREE.RGBAFormat, samples: 4 });
     composer = new THREE.EffectComposer(R3, rt); composer.addPass(new THREE.RenderPass(S3, cam));
-    if (PBRX && !/noao/.test(location.search)) { const ao = new PBRX[0].GTAOPass(S3, cam, w, h); ao.blendIntensity = .9; composer.addPass(ao); }
+    if (PBRX && gfxLv === "high" && !/noao/.test(location.search)) { const ao = new PBRX[0].GTAOPass(S3, cam, w, h); ao.blendIntensity = .9; composer.addPass(ao); }
     bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(w, h), .6, .55, .95); composer.addPass(bloomPass);
     gradePass = new THREE.ShaderPass(GRADE); composer.addPass(gradePass);
   } catch (e) { composer = null; }
@@ -1173,6 +1187,32 @@ function windMat(opts, amp) {
   };
   return toonPatch(m);
 }
+function addWind(m, amp, key) {
+  const prev = m.onBeforeCompile; m.userData.pk = (m.userData.pk || "") + key;
+  m.onBeforeCompile = sh => { if (prev) prev.call(m, sh); sh.uniforms.uWind = WIND; sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nuniform float uWind;").replace("#include <begin_vertex>", `#include <begin_vertex>\n{ float ph = 0.0;\n#ifdef USE_INSTANCING\n ph = instanceMatrix[3].x * .7 + instanceMatrix[3].z * .5;\n#endif\n float hy = max(position.y - .4, 0.0); transformed.x += sin(uWind * 1.6 + ph) * ${amp.toFixed(4)} * hy; transformed.z += cos(uWind * 1.2 + ph) * ${(amp * .6).toFixed(4)} * hy; }`); };
+  return m;
+}
+const PPOS = { value: new THREE.Vector3(1e4, 0, 1e4) };
+function addFade(m) {
+  const prev = m.onBeforeCompile; m.userData.pk = (m.userData.pk || "") + "fade";
+  m.onBeforeCompile = sh => {
+    if (prev) prev.call(m, sh); sh.uniforms.uPP = PPOS;
+    sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nvarying vec3 vWP;").replace("#include <fog_vertex>", "#include <fog_vertex>\n{ vec4 wpp = vec4(transformed, 1.0);\n#ifdef USE_INSTANCING\n wpp = instanceMatrix * wpp;\n#endif\n vWP = (modelMatrix * wpp).xyz; }");
+    sh.fragmentShader = sh.fragmentShader.replace("#include <common>", "#include <common>\nvarying vec3 vWP; uniform vec3 uPP;").replace("#include <clipping_planes_fragment>", "#include <clipping_planes_fragment>\n{ vec2 d = vWP.xz - (uPP.xz + vec2(0.0, 1.3)); d.y *= .7; float r = length(d); if (vWP.y > .9 && r < 3.0) { float a = smoothstep(1.7, 3.0, r); if (fract(sin(dot(floor(gl_FragCoord.xy), vec2(12.9898, 78.233))) * 43758.5453) > a) discard; } }");
+  };
+  return m;
+}
+const NTINT = { PineTree_Leaves: 0x5f9a78, BirchTree_Leaves: 0x5a9ac8, NormalTree_Leaves: 0x9cba90, Bush_Leaves: 0x9cba90, Grass: 0xd8e0c0 };
+function natMat(name) {
+  if (NAT.mats[name]) return NAT.mats[name];
+  const leaf = /Leaves|Grass|Flowers|Bush/.test(name), tn = name === "Rock" ? "Rocks" : name === "RockD" ? "Rocks_Desert" : name;
+  let m = TOON({ map: NAT.tex[tn] || null, alphaTest: leaf ? .45 : 0, side: leaf ? THREE.DoubleSide : THREE.FrontSide });
+  if (NTINT[name]) m.color.setHex(NTINT[name]); if (/Rock/.test(name)) m.color.setRGB(1.7, 1.68, 1.55);
+  if (leaf) addWind(m, /Grass|Flowers/.test(name) ? .09 : .012, name); if (/Tree|Palm/.test(name)) addFade(m); toonPatch(m); return (NAT.mats[name] = m);
+}
+function natModel(n, sc = 1, desert) { const g = new THREE.Group(); for (const p of NAT.parts[n]) { const me = new THREE.Mesh(p.g, natMat(desert && p.m === "Rock" ? "RockD" : p.m)); me.castShadow = !/Grass|Flower/.test(n); me.receiveShadow = true; g.add(me); } g.scale.setScalar(sc); return g; }
+const NATV = { oak: ["NormalTree_1", "NormalTree_2", "NormalTree_3"], pine: ["PineTree_1", "PineTree_2", "PineTree_3"], spine: ["PineTree_1", "PineTree_3"], dead: ["DeadTree_1", "DeadTree_2"], willow: ["BirchTree_1", "BirchTree_2"], rock: ["Rock_1", "Rock_2", "Rock_3", "Rock_4"], bush: ["Bush", "Bush_Flowers", "Bush_Large", "Bush_Large_Flowers"], tuft: ["Grass_Large", "Grass_Small", "Grass_Large", "Flower_3_Clump", "Grass_Small", "Grass_Large", "Flower_4_Clump"] };
+const NATS = { oak: .52, pine: .55, spine: .5, dead: .5, willow: .5, rock: .75, bush: .8, tuft: 1.1 };
 const WATERMAT = new THREE.ShaderMaterial({
   transparent: true, depthWrite: false, vertexColors: true, uniforms: { uT: { value: 0 }, uDay: { value: 1 } },
   vertexShader: "varying vec3 vW; varying float vF; void main(){ vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; vF = color.r; gl_Position = projectionMatrix * viewMatrix * w; }",
@@ -1181,14 +1221,20 @@ const WATERMAT = new THREE.ShaderMaterial({
 const mkCanvasTex = (n, fn, rep = true) => { const c = document.createElement("canvas"); c.width = c.height = n; fn(c.getContext("2d"), n); const t = new THREE.CanvasTexture(c); if (rep) t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 4; return t; };
 let _soft = null, _detail = null, _cloud = null;
 const softTex = () => _soft || (_soft = mkCanvasTex(64, (x, n) => { const g = x.createRadialGradient(n / 2, n / 2, 0, n / 2, n / 2, n / 2); g.addColorStop(0, "rgba(255,255,255,1)"); g.addColorStop(.4, "rgba(255,255,255,.55)"); g.addColorStop(1, "rgba(255,255,255,0)"); x.fillStyle = g; x.fillRect(0, 0, n, n); }, false));
-const detailTex = () => _detail || (_detail = mkCanvasTex(128, (x, n) => {
+const groundTex = () => mkCanvasTex(512, (x, n) => {
+  x.fillStyle = "#e6e6e0"; x.fillRect(0, 0, n, n); const r = mulberry32(77);
+  for (let i = 0; i < 260; i++) { const cx = r() * n, cy = r() * n, rad = 8 + r() * 46, gr = x.createRadialGradient(cx, cy, 0, cx, cy, rad), d = r() < .5; gr.addColorStop(0, d ? "rgba(70,80,40,.18)" : "rgba(255,255,235,.22)"); gr.addColorStop(1, "rgba(0,0,0,0)"); for (const [ox, oy] of [[0, 0], [n, 0], [-n, 0], [0, n], [0, -n]]) { x.save(); x.translate(ox, oy); x.fillStyle = gr; x.fillRect(cx - rad, cy - rad, rad * 2, rad * 2); x.restore(); } }
+  for (let i = 0; i < 5200; i++) { const a = r() * n, b = r() * n, l = 3 + r() * 9, ang = -HALF + (r() - .5) * .9; x.strokeStyle = r() < .55 ? `rgba(255,255,230,${.18 + r() * .25})` : `rgba(40,55,20,${.12 + r() * .18})`; x.lineWidth = .8 + r() * 1.4; x.beginPath(); x.moveTo(a, b); x.lineTo(a + Math.cos(ang) * l, b + Math.sin(ang) * l); x.stroke(); }
+  for (let i = 0; i < 160; i++) { x.fillStyle = `rgba(110,100,90,${.15 + r() * .2})`; x.beginPath(); x.ellipse(r() * n, r() * n, 1 + r() * 3, 1 + r() * 2, r() * 3, 0, 7); x.fill(); }
+});
+const detailTex = () => _detail || (_detail = REAL ? groundTex() : mkCanvasTex(128, (x, n) => {
   x.fillStyle = "#f2f2f2"; x.fillRect(0, 0, n, n); const r = mulberry32(31);
   for (let i = 0; i < 900; i++) { const a = r() * n, b = r() * n, l = 2 + r() * 5; x.strokeStyle = r() < .5 ? "rgba(255,255,255,.55)" : "rgba(60,70,40,.16)"; x.lineWidth = 1; x.beginPath(); x.moveTo(a, b); x.lineTo(a + (r() - .5) * 3, b - l); x.stroke(); }
   for (let i = 0; i < 40; i++) { x.fillStyle = "rgba(90,100,60,.07)"; x.beginPath(); x.arc(r() * n, r() * n, 4 + r() * 10, 0, 7); x.fill(); }
 }));
 const cloudTex = () => _cloud || (_cloud = mkCanvasTex(256, (x, n) => { const r = mulberry32(8); for (let i = 0; i < 18; i++) { const cx = r() * n, cy = r() * n, rad = 26 + r() * 40; for (const [ox, oy] of [[0, 0], [n, 0], [-n, 0], [0, n], [0, -n]]) { const g = x.createRadialGradient(cx + ox, cy + oy, 0, cx + ox, cy + oy, rad); g.addColorStop(0, "rgba(12,24,60,.34)"); g.addColorStop(1, "rgba(12,24,60,0)"); x.fillStyle = g; x.fillRect(0, 0, n, n); } } }));
 function outline(g, t = 1.1) {
-  if (RSTYLE === "pbr") return g; if (RSTYLE === "cel") t += .015;
+  if (PBRL) return g; if (RSTYLE === "cel") t += .015;
   const L = []; g.traverse(o => { if (o.isMesh && !o.userData.ol) L.push(o); });
   for (const m of L) { const o = new THREE.Mesh(m.geometry, OUTM); o.scale.setScalar(t); o.userData.ol = 1; m.add(o); }
   return g;
@@ -1246,7 +1292,7 @@ function terrainGroup(w, h, at, kind) {
     const c = at(x, y); if (c === undefined) continue; const H = hh(c);
     top.quad([x, H, y], [x, H, y + 1], [x + 1, H, y + 1], [x + 1, H, y], tileCol(kind, c, x, y), [0, 1, 0], [[x * .5, y * .5], [x * .5, (y + 1) * .5], [(x + 1) * .5, (y + 1) * .5], [(x + 1) * .5, y * .5]]);
     if (c === "w") water.quad([x, -.12, y], [x, -.12, y + 1], [x + 1, -.12, y + 1], [x + 1, -.12, y], [fc(x, y), fc(x, y + 1), fc(x + 1, y + 1), fc(x + 1, y)], [0, 1, 0]);
-    if (kind !== "dun" && (c === "." || c === "g") && rn(x, y, 3) < .55) tufts.push([x + .15 + rn(x, y, 4) * .7, H, y + .15 + rn(x, y, 5) * .7]);
+    if (kind !== "dun" && REAL && NAT && (c === "." || c === "g")) { for (let i = 0; i < 2; i++) if (rn(x, y, 60 + i) < .45) tufts.push([x + .1 + rn(x, y, 62 + i) * .8, H, y + .1 + rn(x, y, 64 + i) * .8]); } else if (kind !== "dun" && (c === "." || c === "g") && rn(x, y, 3) < .55) tufts.push([x + .15 + rn(x, y, 4) * .7, H, y + .15 + rn(x, y, 5) * .7]);
     for (const [dx, dy] of DIR) {
       const c2 = at(x + dx, y + dy); if (c2 === undefined) continue; const H2 = hh(c2); if (H2 >= H) continue;
       const ex = dx > 0 ? x + 1 : x, ez = dy > 0 ? y + 1 : y, nrm = [dx, 0, dy];
@@ -1259,7 +1305,10 @@ function terrainGroup(w, h, at, kind) {
   if (side.p.length) grp.add(side.build(VMAT()));
   if (brick.p.length) { const m = brick.build(TOON({ map: getBrick(), gradientMap: gradTex })); grp.add(m); }
   if (water.p.length) { const m = water.build(WATERMAT, false); m.userData.water = 1; grp.add(m); grp.userData.water = m; }
-  if (tufts.length) {
+  if (tufts.length && REAL && NAT) {
+    const by = {}; tufts.forEach((t, i) => { const v = i % 9 === 4 ? "Flower_3_Clump" : i % 2 ? "Grass_Small" : "Grass_Large"; (by[v] ||= []).push(t); }); const mm = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), sv = new THREE.Vector3(), pv = new THREE.Vector3();
+    for (const v in by) for (const p of NAT.parts[v]) { const L = by[v], im = new THREE.InstancedMesh(p.g, natMat(p.m), L.length); L.forEach((t, i) => { e.set(0, i * 2.4, 0); q.setFromEuler(e); const k = .8 + (i % 5) * .12; sv.set(k, k, k); pv.set(t[0], t[1], t[2]); mm.compose(pv, q, sv); im.setMatrixAt(i, mm); }); im.receiveShadow = true; grp.add(im); }
+  } else if (tufts.length) {
     const im = new THREE.InstancedMesh(geo("tuft", () => new THREE.ConeGeometry(.06, .3, 4)), windMat({ color: 0x4f9a3e }, .55), tufts.length), mm = new THREE.Matrix4();
     tufts.forEach((t, i) => { mm.makeRotationY(i); mm.setPosition(t[0], t[1] + .13, t[2]); im.setMatrixAt(i, mm); }); im.castShadow = false; grp.add(im);
   }
@@ -1356,7 +1405,7 @@ function loadKay() {
 }
 function kMat(m) { const t = toonPatch(TOON({ map: m.map || null, color: m.color ? m.color.clone() : 0xffffff, gradientMap: gradTex })); t.userData.own = 1; return t; }
 function kOutline(root) {
-  if (RSTYLE === "pbr") return;
+  if (PBRL) return;
   const L = []; root.traverse(o => { if (o.isMesh && !o.userData.ol && !/Cape/.test(o.name)) L.push(o); });
   for (const m of L) {
     let o; if (m.isSkinnedMesh) { o = new THREE.SkinnedMesh(m.geometry, KOUT); o.bind(m.skeleton, m.bindMatrix); o.position.copy(m.position); o.quaternion.copy(m.quaternion); o.scale.copy(m.scale); m.parent.add(o); }
@@ -1580,6 +1629,11 @@ function mkTreeBody(t) {
   const g = new THREE.Group(), inner = new THREE.Group(); g.add(inner);
   if (t.age < 20) { C(inner, .025, .035, .2, 0x4a9a4a, 0, .1, 0, 5); Sp(inner, .09, 0x6dbb4f, -.08, .22, 0, { s: [1.3, .5, .8] }); Sp(inner, .09, 0x6dbb4f, .08, .24, 0, { s: [1.3, .5, .8] }); }
   else if (t.age < 60) { C(inner, .05, .07, .55, 0x7d5433, 0, .28, 0, 6); Sp(inner, .38, 0x4a9a4a, 0, .8, 0); Sp(inner, .26, 0x6dbb4f, -.1, .95, .1); }
+  else if (REAL && NAT) {
+    inner.add(natModel(NATV.oak[(t.x * 7 + t.y * 3) % 3], .36));
+    const col = { apple: 0xe8505a, orange: 0xf0a23c, peach: 0xf6a8c8 }[t.kind];
+    t.fruitMeshes = []; [[-.55, 1.55, .45], [.2, 1.35, .62], [.6, 1.7, .2]].forEach((p, i) => { const f = Sp(inner, .1, col, p[0], p[1], p[2]); f.visible = i < t.fruit; t.fruitMeshes.push(f); });
+  }
   else {
     C(inner, .13, .19, .9, 0x7d5433, 0, .45, 0, 7);
     const cn = new THREE.Group(); cn.position.y = 1.2; inner.add(cn);
@@ -1589,9 +1643,9 @@ function mkTreeBody(t) {
   }
   return { g, inner, key: "" };
 }
-function mkPine() { const g = new THREE.Group(); C(g, .09, .13, .5, 0x7d5433, 0, .25, 0, 6); for (let k = 0; k < 3; k++) K(g, .62 - k * .14, .75, k % 2 ? 0x3d8444 : 0x2f6b3a, 0, .8 + k * .5, 0, 7); g.scale.setScalar(.95); g.traverse(m => { if (m.isMesh) m.castShadow = true; }); return g; }
-function mkRock() { const g = new THREE.Group(); I(g, .42, 0x8a8e9e, 0, .22, 0, { s: [1.1, .7, 1], r: [.2, .6, 0] }); I(g, .22, 0xb8bcc8, -.2, .2, .15, { s: [1, .7, 1] }); return g; }
-function mkBush() { const g = new THREE.Group(); Sp(g, .38, 0x3d8444, 0, .25, 0, { s: [1.2, .75, 1] }); Sp(g, .28, 0x6dbb4f, -.1, .38, .1); for (const [x, y, z] of [[.3, .3, .25], [-.25, .25, .3], [.1, .5, .2], [.35, .2, -.1]]) Sp(g, .06, 0x6b4a9e, x, y, z); return g; }
+function mkPine() { if (REAL && NAT) return natModel(NATV.pine[Math.floor(Math.random() * 3)], .5); const g = new THREE.Group(); C(g, .09, .13, .5, 0x7d5433, 0, .25, 0, 6); for (let k = 0; k < 3; k++) K(g, .62 - k * .14, .75, k % 2 ? 0x3d8444 : 0x2f6b3a, 0, .8 + k * .5, 0, 7); g.scale.setScalar(.95); g.traverse(m => { if (m.isMesh) m.castShadow = true; }); return g; }
+function mkRock() { if (REAL && NAT) return natModel(NATV.rock[Math.floor(Math.random() * 4)], .7); const g = new THREE.Group(); I(g, .42, 0x8a8e9e, 0, .22, 0, { s: [1.1, .7, 1], r: [.2, .6, 0] }); I(g, .22, 0xb8bcc8, -.2, .2, .15, { s: [1, .7, 1] }); return g; }
+function mkBush() { if (REAL && NAT) return natModel(NATV.bush[Math.floor(Math.random() * 4)], .75); const g = new THREE.Group(); Sp(g, .38, 0x3d8444, 0, .25, 0, { s: [1.2, .75, 1] }); Sp(g, .28, 0x6dbb4f, -.1, .38, .1); for (const [x, y, z] of [[.3, .3, .25], [-.25, .25, .3], [.1, .5, .2], [.35, .2, -.1]]) Sp(g, .06, 0x6b4a9e, x, y, z); return g; }
 const FLC = { "🌷": [0xe8505a, 0xf5d142], "🌼": [0xfff3d6, 0xf5b942], "🌸": [0xf6a8c8, 0xfff3d6], "🌺": [0xd9408a, 0xf5d142] };
 function mkFlower(em) { const [c, c2] = FLC[em] || FLC["🌷"], g = new THREE.Group(); C(g, .015, .015, .3, 0x3d8444, 0, .15, 0, 4); for (let i = 0; i < 5; i++) { const a = i * 1.2566; Sp(g, .06, c, Math.cos(a) * .08, .32, Math.sin(a) * .08, { s: [1, .6, 1] }); } Sp(g, .045, c2, 0, .34, 0); return g; }
 const FRC = { apple: 0xe8505a, orange: 0xf0a23c, peach: 0xf6a8c8 };
@@ -1654,6 +1708,10 @@ function groups() {
   const mk = () => { const g = new THREE.Group(); g.visible = false; S3.add(g); return g; };
   G = { village: mk(), vdyn: new THREE.Group(), home: mk(), hdyn: new THREE.Group(), dyn: mk(), cur: null };
   G.village.add(G.vdyn); G.home.add(G.hdyn);
+  if (REAL) { const sk = new THREE.Mesh(new THREE.SphereGeometry(120, 24, 12), new THREE.ShaderMaterial({ side: THREE.BackSide, depthWrite: false, fog: false, uniforms: { top: { value: new THREE.Color(0x5d9fe0) }, hor: { value: new THREE.Color(0xdcecf4) }, sun: { value: new THREE.Vector3(-.5, .6, .4).normalize() } },
+    vertexShader: "varying vec3 vD; void main(){ vD = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }",
+    fragmentShader: "uniform vec3 top, hor, sun; varying vec3 vD; void main(){ float h = clamp(vD.y, 0.0, 1.0); vec3 c = mix(hor, top, pow(h, .55)); c += vec3(1.0, .86, .6) * pow(max(dot(vD, sun), 0.0), 24.0) * .5; c = mix(c, hor * .92, smoothstep(0.02, -0.25, vD.y)); gl_FragColor = vec4(c, 1.0); }" }));
+    sk.renderOrder = -10; sk.frustumCulled = false; G.sky = sk; S3.add(sk); }
   const far = new THREE.Mesh(new THREE.PlaneGeometry(260, 260), TOON({ color: 0x5aa83e, gradientMap: gradTex })); far.rotation.x = -HALF; far.position.set(15, -.34, 10); far.receiveShadow = true; G.far = far; S3.add(far);
   const cm = document.createElement("canvas"); cm.width = cm.height = 64; const cx = cm.getContext("2d"); cx.fillStyle = "#fff"; for (const [x, y, sx, sy] of [[3, 3, 1, 1], [61, 3, -1, 1], [3, 61, 1, -1], [61, 61, -1, -1]]) { cx.fillRect(Math.min(x, x + sx * 18), Math.min(y, y + sy * 5), 18, 5); cx.fillRect(Math.min(x, x + sx * 5), Math.min(y, y + sy * 18), 5, 18); }
   const ct = new THREE.CanvasTexture(cm); G.cursor = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: ct, transparent: true, depthWrite: false })); G.cursor.rotation.x = -HALF; G.cursor.visible = false; S3.add(G.cursor);
@@ -1714,11 +1772,11 @@ function darkness() {
   if (h >= 17) return .55 * (h - 17) / 4;
   return 0;
 }
-const FOGD = new THREE.Fog(0x07050f, 18, 40), GR = { vig: .22, sat: 1.1, con: 1.05 };
+const RFOG = new THREE.Fog(0xdcecf4, 22, 62), FOGD = new THREE.Fog(0x07050f, 18, 40), GR = { vig: .22, sat: 1.1, con: 1.05 };
 function setEnv(kind) {
   const dk = clamp(darkness() / .55, 0, 1), c = new THREE.Color();
   if (kind === "village" || kind === "wild") {
-    S3.background = new THREE.Color(0x9fdcf5).lerp(new THREE.Color(0x0b1230), dk); S3.fog = null;
+    S3.background = new THREE.Color(REAL ? 0xdcecf4 : 0x9fdcf5).lerp(new THREE.Color(0x0b1230), dk); S3.fog = REAL ? RFOG : null; if (REAL) { RFOG.color.copy(S3.background); }
     amb.color.setHex(0xffffff).lerp(new THREE.Color(0x5a6ab0), dk); amb.intensity = .42 - dk * .12; hemi.intensity = .2 - dk * .1;
     sun.intensity = .72 * (1 - dk * .85); sun.color.setHex(0xfff2d6).lerp(new THREE.Color(0x7a8ad0), dk);
   } else if (kind === "home") {
@@ -1813,17 +1871,19 @@ function legacyLights(on) {
 function wxRestore(k) { sun.intensity = k.si; amb.intensity = k.ai; hemi.intensity = k.hi; S3.background = k.bg; S3.fog = k.fog; GR.sat = k.sat; GR.con = k.con; }
 function finish(D, dim) {
   const sh = shake > 0 ? (Math.random() - .5) * shake * .05 : 0, sv = shake > 0 ? (Math.random() - .5) * shake * .05 : 0;
-  cam.position.set(camT.x + sh, D * .82 + sv, camT.z + D * .574); cam.lookAt(camT.x + sh, 0, camT.z);
+  cam.position.set(camT.x + sh, D * (REAL ? .58 : .82) + sv, camT.z + D * (REAL ? .86 : .574)); cam.lookAt(camT.x + sh, 0, camT.z);
   if (lookMode() && curPE && innerWidth >= 700) { const hp = curPE.g.position, ox = .95; cam.position.set(hp.x + ox, 1.5, hp.z + 6.2); cam.lookAt(hp.x + ox, .95, hp.z); curPE.g.rotation.y = Math.sin(vtime * .8) * .9 + .25; }
+  PPOS.value.set(GKIND === "village" || GKIND === "wild" ? player.x / T : 1e4, 0, (player.y + 8) / T);
+  if (G && G.sky) { const out = GKIND === "village" || GKIND === "wild", nd = clamp(darkness() / .55, 0, 1); G.sky.visible = out; if (out) { G.sky.position.copy(cam.position); const u = G.sky.material.uniforms; u.top.value.setHex(0x5d9fe0).lerp(new THREE.Color(0x070b20), nd); u.hor.value.copy(S3.background); } }
   sun.position.set(camT.x - 9, 17, camT.z + 7); sun.target.position.set(camT.x, 0, camT.z); sun.target.updateMatrixWorld();
   const p0 = PLs[0]; p0.position.set(PL0.x, PL0.h, PL0.z); p0.color.setHex(PL0.c); p0.intensity = PL0.i; p0.distance = PL0.r;
   lights.sort((a, b) => ((a.x - camT.x) ** 2 + (a.z - camT.z) ** 2) - ((b.x - camT.x) ** 2 + (b.z - camT.z) ** 2));
   for (let i = 1; i < PLs.length; i++) { const L = lights[i - 1], l = PLs[i]; if (L) { l.position.set(L.x, L.h, L.z); l.color.setHex(L.c); l.intensity = L.i; l.distance = L.r; } else l.intensity = 0; }
   lights.length = 0; PL0.i = 0;
   drawParts(); updateMotes(); sweep();
-  const dk = darkness(); weatherTick(); const keep = wxApply(dk); RIM.value = (.16 + dk * .24) * (RSTYLE === "cel" ? 2.2 : RSTYLE === "pbr" ? .5 : 1); RIMC.value.setHex(0xbfe0ff).lerp(new THREE.Color(0x7f93ff), clamp(dk * 1.6, 0, 1)); WIND.value = vtime; WATERMAT.uniforms.uT.value = vtime; WATERMAT.uniforms.uDay.value = GKIND === "home" ? 1 : 1 - clamp(dk / .55, 0, 1) * .72;
+  const dk = darkness(); weatherTick(); const keep = wxApply(dk); RIM.value = (.16 + dk * .24) * (RSTYLE === "cel" ? 2.2 : PBRL ? .5 : 1); RIMC.value.setHex(0xbfe0ff).lerp(new THREE.Color(0x7f93ff), clamp(dk * 1.6, 0, 1)); WIND.value = vtime; WATERMAT.uniforms.uT.value = vtime; WATERMAT.uniforms.uDay.value = GKIND === "home" ? 1 : 1 - clamp(dk / .55, 0, 1) * .72;
   if (G.cloud) { const on = (GKIND === "village" || GKIND === "wild") && dk < .3, cm = G.cloud; cm.visible = on; if (on) { cm.position.set(camT.x, .1, camT.z); const t = cm.material.map; t.offset.set(camT.x / 90 + vtime * .004, -camT.z / 90 + vtime * .002); cm.material.opacity = clamp(1 - dk * 3, 0, 1) * .9; } }
-  if (composer && gradePass) { bloomPass.enabled = QUAL.bloom; bloomPass.strength = .55 + dk * .5 + (RSTYLE === "cel" ? .15 : 0); const u = gradePass.uniforms; u.vig.value = GR.vig; u.sat.value = GR.sat * (RSTYLE === "cel" ? 1.12 : 1); u.con.value = GR.con; legacyLights(true); try { composer.render(DT); legacyLights(false); wxRestore(keep); return; } catch (e) { legacyLights(false); composer = null; } }
+  if (composer && gradePass) { bloomPass.enabled = QUAL.bloom; bloomPass.strength = .55 + dk * .5 + (RSTYLE === "cel" ? .15 : 0); const u = gradePass.uniforms; u.vig.value = GR.vig; u.sat.value = GR.sat * (RSTYLE === "cel" ? 1.12 : REAL ? .94 : 1); u.con.value = GR.con * (REAL ? 1.06 : 1); legacyLights(true); try { composer.render(DT); legacyLights(false); wxRestore(keep); return; } catch (e) { legacyLights(false); composer = null; } }
   legacyLights(true); R3.render(S3, cam); legacyLights(false); wxRestore(keep);
 }
 function light(x, z, r, c = 0xffc870, h = 1.4, i = 1.5) { lights.push({ x, z, r, c, h, i }); }
@@ -2199,11 +2259,13 @@ function buildChunk(cx, cy) {
   const W = WORLD, M_ = wmats(), grp = new THREE.Group(), top = new GB(), side = new GB(), water = new GB(), inst = {}, ch = { grp, cx, cy, dirty: false, lit: [], flames: [], spins: [], crops: [], water: null };
   const x0 = cx * CHK, y0 = cy * CHK, hgt = (x, y) => wb(x, y) === 0 ? -.32 : wc(x, y) === CELL.CLIFF ? 1.3 : 0;
   const pushI = (name, x, y, h, sc = 1) => { (inst[name] ||= []).push([x, y, h, sc]); };
+  const VC = new Map(), vcol = (x, y) => { const k = y * 4096 + x; let v = VC.get(k); if (!v) { v = new THREE.Color(0, 0, 0); let n = 0; for (const [dx, dy] of [[-1, -1], [0, -1], [-1, 0], [0, 0]]) { const bb = wb(x + dx, y + dy); if (bb === 0 || bb === undefined) continue; v.add(biomeCol(bb, x + dx, y + dy)); n++; } if (n) v.multiplyScalar(1 / n); else v.copy(biomeCol(wb(x, y), x, y)); VC.set(k, v); } return v; };
   const wcol = new THREE.Color(0x4a94d8), dirt = new THREE.Color(0x8a6a44), cliff = new THREE.Color(0x8a7d62);
   for (let y = y0; y < y0 + CHK; y++) for (let x = x0; x < x0 + CHK; x++) {
     if (x >= WN || y >= WN) continue;
     const b = wb(x, y), c = wc(x, y), H = hgt(x, y); let col = biomeCol(b, x, y);
     if (c === CELL.FLOOR) col = new THREE.Color(0xc2945e).offsetHSL(0, 0, (rn(x, y, 2) - .5) * .06); else if (c === CELL.FARM) col = new THREE.Color(0x6a4a2a);
+    else if (REAL && b !== 0) col = [vcol(x, y), vcol(x, y + 1), vcol(x + 1, y + 1), vcol(x + 1, y)];
     top.quad([x, H, y], [x, H, y + 1], [x + 1, H, y + 1], [x + 1, H, y], col, [0, 1, 0], [[x * .5, y * .5], [x * .5, (y + 1) * .5], [(x + 1) * .5, (y + 1) * .5], [(x + 1) * .5, y * .5]]);
     if (b === 0) { const lw = (xx, yy) => wb(xx, yy) !== 0, f = (X, Y) => lw(X - 1, Y - 1) || lw(X, Y - 1) || lw(X - 1, Y) || lw(X, Y) ? FOAM1 : FOAM0; water.quad([x, -.12, y], [x, -.12, y + 1], [x + 1, -.12, y + 1], [x + 1, -.12, y], [f(x, y), f(x, y + 1), f(x + 1, y + 1), f(x + 1, y)], [0, 1, 0]); }
     for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
@@ -2215,6 +2277,7 @@ function buildChunk(cx, cy) {
     else if (c === CELL.ROCK) pushI("rock", x, y, H, .8 + rn(x, y, 6) * .6); else if (c === CELL.BUSH) pushI("bush", x, y, H, .9 + rn(x, y, 6) * .3);
     else if (c === CELL.ORE) pushI("ore", x, y, H, 1); else if (c === CELL.CACT) pushI("cactus", x, y, H, .8 + rn(x, y, 6) * .5);
     else if (c === CELL.WALL) pushI("wall", x, y, H, 1); else if (c === CELL.SWALL) pushI("swall", x, y, H, 1);
+    else if (REAL && NAT && c === 0 && (b === 2 || b === 3 || b === 6 || b === 7 || b === 8)) { const k = b === 3 ? 3 : 2; for (let i = 0; i < k; i++) if (rn(x, y, 20 + i) < .7) pushI("tuft", x + rn(x, y, 30 + i) * .9 - .45, y + rn(x, y, 40 + i) * .9 - .45, H, .7 + rn(x, y, 50 + i) * .6); }
     else if (c === 0 && (b === 2 || b === 3 || b === 8) && rn(x, y, 4) < .4) pushI("tuft", x + rn(x, y, 5) * .8 - .4, y + rn(x, y, 9) * .8 - .4, H, .8 + rn(x, y, 10) * .5);
     else if (c === CELL.FIRE) { const m = mkCampfire(); m.position.set(x + .5, H, y + .5); grp.add(m); ch.flames.push(m.userData.flame); ch.lit.push({ x: x + .5, z: y + .5, c: 0xffa040, r: 7, h: 1, i: 1.4 }); }
     else if (c === CELL.BED) { const m = mkFurn("bed"); m.position.set(x + .5, H, y + .5); grp.add(m); }
@@ -2223,6 +2286,16 @@ function buildChunk(cx, cy) {
   grp.add(top.build(M_.top)); if (side.p.length) grp.add(side.build(M_.side)); if (water.p.length) { const m = water.build(M_.water, false); grp.add(m); ch.water = m; }
   const mm = new THREE.Matrix4(), q = new THREE.Quaternion(), sv = new THREE.Vector3(), pv = new THREE.Vector3(), eu = new THREE.Euler();
   for (const nm in inst) {
+    if (REAL && NAT && NATV[nm]) {
+      const vs = NATV[nm], by = {};
+      for (const it of inst[nm]) { const v = vs[Math.floor(rn(Math.floor(it[0] * 3), Math.floor(it[1] * 3), 11) * vs.length)]; (by[v] ||= []).push(it); }
+      for (const v in by) for (const p of NAT.parts[v]) {
+        const L = by[v], desert = nm === "rock" && wb(Math.floor(L[0][0]), Math.floor(L[0][1])) === 4, im = new THREE.InstancedMesh(p.g, natMat(desert && p.m === "Rock" ? "RockD" : p.m), L.length);
+        L.forEach(([x, y, h, sc], i) => { eu.set(0, rn(Math.floor(x * 3), Math.floor(y * 3), 8) * 6.283, 0); q.setFromEuler(eu); const k = sc * NATS[nm]; sv.set(k, k, k); pv.set(x + .5, h, y + .5); mm.compose(pv, q, sv); im.setMatrixAt(i, mm); });
+        im.castShadow = nm !== "tuft"; im.receiveShadow = true; im.frustumCulled = false; grp.add(im);
+      }
+      continue;
+    }
     const list = inst[nm], im = new THREE.InstancedMesh(baked(nm, MK[nm === "spine" || nm === "pine" || nm === "oak" || nm === "dead" || nm === "willow" ? nm : nm]), (RIGIDN.has(nm) ? M_.rigid : M_.inst), list.length);
     list.forEach(([x, y, h, sc], i) => { eu.set(0, rn(Math.floor(x), Math.floor(y), 8) * 6.283, 0); q.setFromEuler(eu); sv.set(sc, sc, sc); pv.set(x + .5, h, y + .5); if (nm === "tuft") pv.set(x + .5, h, y + .5); mm.compose(pv, q, sv); im.setMatrixAt(i, mm); });
     im.castShadow = nm !== "tuft"; im.frustumCulled = false; grp.add(im);
@@ -2245,7 +2318,7 @@ function buildChunk(cx, cy) {
   return ch;
 }
 function disposeChunk(ch) { ch.grp.traverse(m => { if (m.geometry && !m.geometry.userData.shared) m.geometry.dispose(); }); }
-const WFOG = new THREE.Fog(0x9fdcf5, 36, 70);
+const WFOG = REAL ? new THREE.Fog(0xdcecf4, 24, 64) : new THREE.Fog(0x9fdcf5, 36, 70);
 function drawWorldTerrain() {
   const W = WORLD, P = player, pcx = Math.floor(P.x / T / CHK), pcy = Math.floor(P.y / T / CHK), R = 3, NC = WN / CHK;
   if (!G.wgrp) { G.wgrp = new THREE.Group(); S3.add(G.wgrp); const sea = new THREE.Mesh(new THREE.PlaneGeometry(900, 900), TOON({ color: 0x4a94d8, gradientMap: gradTex })); sea.rotation.x = -HALF; G.sea = sea; S3.add(sea); }
@@ -2910,10 +2983,10 @@ function frame(now) {
 player.hp = pstats().maxhp;
 resize(); hud(); loadKay(); $("clock").textContent = clockText(); setMute(muted);
 $("snd").onclick = () => { setMute(!muted); sfx("ui"); };
-const STY_N = { toon: "툰", cel: "원신풍 셀", pbr: "PBR" };
+const STY_N = { toon: "툰", cel: "원신풍 셀", pbr: "PBR", real: "듀랑고풍" };
 $("sty").textContent = "🖌️ " + STY_N[RSTYLE];
 $("sty").onclick = () => {
-  const nx = { toon: "cel", cel: "pbr", pbr: "toon" }[RSTYLE]; save(); sfx("ui"); say(`🖌️ ${STY_N[nx]} 스타일로 바꾸는 중…`, 3000);
+  const nx = { real: "toon", toon: "cel", cel: "pbr", pbr: "real" }[RSTYLE]; save(); sfx("ui"); say(`🖌️ ${STY_N[nx]} 스타일로 바꾸는 중…`, 3000);
   try { localStorage.setItem("pokgeun-style", nx); } catch (e) {}
   try { const u = new URL(location.href); u.searchParams.delete("style"); u.hash = "style=" + nx; history.replaceState(null, "", u); } catch (e) { location.hash = "style=" + nx; }
   setTimeout(() => location.reload(), 150);

@@ -28,7 +28,7 @@ const server = http.createServer((req, res) => {
   } else if (u.startsWith("/assets/")) {
     const f = path.normalize(path.join(ROOT, decodeURIComponent(u))), A = path.join(ROOT, "assets") + path.sep;
     if (!f.startsWith(A)) { res.writeHead(403); return res.end(); }
-    fs.readFile(f, (e, b) => { if (e) { res.writeHead(404); return res.end(); } res.writeHead(200, { "Content-Type": { ".glb": "model/gltf-binary", ".png": "image/png", ".txt": "text/plain; charset=utf-8" }[path.extname(f)] || "application/octet-stream", "Cache-Control": "max-age=3600" }); res.end(b); });
+    fs.readFile(f, (e, b) => { if (e) { res.writeHead(404); return res.end(); } res.writeHead(200, { "Content-Type": { ".glb": "model/gltf-binary", ".png": "image/png", ".webp": "image/webp", ".json": "application/json", ".txt": "text/plain; charset=utf-8" }[path.extname(f)] || "application/octet-stream", "Cache-Control": "max-age=3600" }); res.end(b); });
   } else if (u === "/health") { res.writeHead(200, { "Content-Type": "application/json" }); res.end(JSON.stringify({ players: players.size, edits: Object.keys(edits).length })); }
   else { res.writeHead(404); res.end("not found"); }
 });
