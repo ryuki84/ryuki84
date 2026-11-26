@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>떠돌이 섬</title>
+<link rel="stylesheet" href="style.css">
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }
+</script>
+</head>
+<body>
+<div id="app"></div>
+
+<!-- HUD -->
+<div id="hud" class="hidden">
+  <div id="stats">
+    <div class="row"><span id="lvl">Lv 1</span><span id="gold">🪙 0</span></div>
+    <div class="bar hp"><div id="hpFill"></div><span id="hpText">100/100</span></div>
+    <div class="bar xp"><div id="xpFill"></div></div>
+    <div id="weapon"></div>
+  </div>
+  <div id="side">
+    <canvas id="minimap" width="170" height="170"></canvas>
+    <div id="clock">☀️ 아침</div>
+    <div id="quest"></div>
+  </div>
+  <div id="hotbar">
+    <div class="slot"><b>🪵</b><span id="rWood">0</span></div>
+    <div class="slot"><b>🪨</b><span id="rStone">0</span></div>
+    <div class="slot"><b>🍓</b><span id="rBerry">0</span></div>
+    <div class="slot"><b>🧪</b><span id="rPotion">0</span><i>R</i></div>
+    <div class="slot skill"><b>🌀</b><div class="cd" id="cdQ"></div><i>Q</i></div>
+    <div class="slot skill"><b>💨</b><div class="cd" id="cdRoll"></div><i>Shift</i></div>
+  </div>
+  <div id="prompt" class="hidden"></div>
+  <div id="toasts"></div>
+  <div id="hint">WASD 이동 · 좌클릭 공격 · Q 회오리 · Shift 구르기 · Space 점프 · E 상호작용 · C 제작 · I 가방 · 우클릭 드래그 시점</div>
+</div>
+
+<div id="floaters"></div>
+
+<!-- Dialogue -->
+<div id="dialog" class="hidden">
+  <div id="dName"></div>
+  <div id="dText"></div>
+  <div id="dBtns"></div>
+</div>
+
+<!-- Craft -->
+<div id="craft" class="panel hidden">
+  <h2>🔨 제작 <small>(C)</small></h2>
+  <div id="craftList"></div>
+</div>
+
+<!-- Inventory -->
+<div id="inv" class="panel hidden">
+  <h2>🎒 가방 <small>(I)</small></h2>
+  <div id="invList"></div>
+</div>
+
+<!-- Build mode hint -->
+<div id="buildHint" class="hidden">좌클릭: 설치 · R: 회전 · 우클릭/Esc: 취소</div>
+
+<!-- Death -->
+<div id="death" class="hidden"><div>쓰러졌습니다…</div><small>마을에서 다시 깨어납니다</small></div>
+
+<!-- Title -->
+<div id="title">
+  <div class="card">
+    <h1>떠돌이 섬</h1>
+    <p class="sub">탐험 · 전투 · 생존 · 마을살이</p>
+    <ul>
+      <li>⚔️ 몬스터를 쓰러뜨리고 <b style="color:#5a8cff">마법</b> · <b style="color:#ffd84a">희귀</b> · <b style="color:#ff8a1f">전설</b> 무기를 얻으세요</li>
+      <li>🪓 나무와 돌을 모아 모닥불, 울타리, 오두막을 지으세요</li>
+      <li>🏡 마을 주민 모코와 피오의 부탁을 들어주세요</li>
+      <li>🗿 서쪽 유적의 수수께끼를 풀면 활공 날개를 얻을 수 있습니다</li>
+      <li>🌙 밤이 되면 몬스터가 늘어납니다. 모닥불 곁은 안전해요</li>
+    </ul>
+    <div class="btns">
+      <button id="btnContinue" class="hidden">이어하기</button>
+      <button id="btnNew">새로 시작</button>
+    </div>
+    <p class="keys">WASD 이동 · 좌클릭 공격 · Q 회오리 · Shift 구르기 · Space 점프(공중에서 길게: 활공)<br>E 상호작용 · R 물약 · C 제작 · I 가방 · 우클릭 드래그 시점 회전 · 휠 줌</p>
+  </div>
+</div>
+
+<script type="module" src="main.js"></script>
+</body>
+</html>

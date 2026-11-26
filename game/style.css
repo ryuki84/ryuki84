@@ -1,0 +1,84 @@
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: #0d1b2a; color: #fff;
+  font-family: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif; user-select: none; }
+#app canvas { display: block; }
+.hidden { display: none !important; }
+
+#hud { position: fixed; inset: 0; pointer-events: none; }
+#stats { position: absolute; left: 16px; top: 16px; width: 260px; padding: 12px; border-radius: 14px;
+  background: rgba(10, 20, 35, .62); backdrop-filter: blur(4px); }
+#stats .row { display: flex; justify-content: space-between; font-weight: 700; margin-bottom: 6px; }
+.bar { position: relative; height: 16px; border-radius: 8px; background: rgba(255,255,255,.12); overflow: hidden; margin-bottom: 6px; }
+.bar div { height: 100%; transition: width .15s; }
+.bar.hp div { background: linear-gradient(90deg, #e2364b, #ff6b6b); }
+.bar.xp { height: 6px; }
+.bar.xp div { background: #8be36b; }
+.bar span { position: absolute; inset: 0; text-align: center; font-size: 11px; line-height: 16px; font-weight: 700; }
+#weapon { font-size: 12px; opacity: .95; }
+
+#side { position: absolute; right: 16px; top: 16px; width: 186px; display: flex; flex-direction: column; gap: 8px; align-items: stretch; }
+#minimap { width: 170px; height: 170px; border-radius: 50%; border: 3px solid rgba(255,255,255,.7); align-self: center;
+  background: #234; box-shadow: 0 4px 16px rgba(0,0,0,.4); }
+#clock, #quest { padding: 8px 10px; border-radius: 12px; background: rgba(10, 20, 35, .62); font-size: 13px; }
+#clock { text-align: center; font-weight: 700; }
+#quest b { color: #ffd84a; display: block; margin-bottom: 2px; }
+#quest:empty { display: none; }
+
+#hotbar { position: absolute; left: 50%; bottom: 36px; transform: translateX(-50%); display: flex; gap: 8px; }
+.slot { position: relative; width: 58px; height: 58px; border-radius: 12px; background: rgba(10, 20, 35, .7);
+  border: 2px solid rgba(255,255,255,.25); display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; }
+.slot b { font-size: 22px; line-height: 1; }
+.slot span { font-size: 13px; font-weight: 700; }
+.slot i { position: absolute; right: 4px; top: 2px; font-size: 9px; font-style: normal; opacity: .7; }
+.slot .cd { position: absolute; left: 0; right: 0; bottom: 0; height: 0; background: rgba(0,0,0,.65); }
+#hint { position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%); font-size: 11px; opacity: .65; white-space: nowrap; }
+#prompt { position: absolute; left: 50%; bottom: 110px; transform: translateX(-50%); padding: 6px 14px; border-radius: 10px;
+  background: rgba(0,0,0,.6); font-weight: 700; }
+#toasts { position: absolute; top: 18px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.toast { padding: 7px 16px; border-radius: 10px; background: rgba(10,20,35,.8); font-weight: 600; font-size: 14px; animation: toast 3.2s forwards; }
+@keyframes toast { 0% { opacity: 0; transform: translateY(-8px); } 8%, 80% { opacity: 1; transform: none; } 100% { opacity: 0; } }
+
+#floaters { position: fixed; inset: 0; pointer-events: none; }
+.floater { position: absolute; font-weight: 800; font-size: 18px; text-shadow: 0 2px 2px #000, 0 0 4px #000; transform: translate(-50%, -50%); white-space: nowrap; }
+
+#dialog { position: fixed; left: 50%; bottom: 120px; transform: translateX(-50%); width: min(560px, calc(100% - 32px));
+  background: #fff8e7; color: #4a3b2a; border-radius: 22px; padding: 18px 22px; box-shadow: 0 8px 30px rgba(0,0,0,.4); border: 4px solid #e8c98a; }
+#dName { position: absolute; top: -16px; left: 22px; background: #f2a65a; color: #fff; padding: 3px 14px; border-radius: 12px; font-weight: 800; }
+#dText { font-size: 16px; line-height: 1.6; min-height: 52px; white-space: pre-line; }
+#dBtns { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; margin-top: 10px; }
+#dBtns button, .panel button, #title button { pointer-events: auto; cursor: pointer; border: 0; border-radius: 12px; padding: 8px 14px;
+  font: inherit; font-weight: 700; background: #f2a65a; color: #fff; }
+#dBtns button:hover, .panel button:hover, #title button:hover { filter: brightness(1.1); }
+button:disabled { opacity: .45; cursor: default; }
+
+.panel { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: min(460px, calc(100% - 32px)); max-height: 76vh; overflow: auto;
+  background: rgba(14, 26, 44, .94); border-radius: 18px; padding: 16px 18px; border: 2px solid rgba(255,255,255,.2); }
+.panel h2 { margin: 0 0 10px; font-size: 18px; }
+.panel h2 small { opacity: .5; font-weight: 400; }
+.item { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 12px; background: rgba(255,255,255,.06); margin-bottom: 6px; }
+.item .info { flex: 1; font-size: 13px; }
+.item .info b { font-size: 14px; }
+.item .info .cost { opacity: .75; }
+.item.equipped { outline: 2px solid #8be36b; }
+#buildHint { position: fixed; top: 70px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,.65); padding: 6px 14px; border-radius: 10px; font-weight: 700; }
+
+#death { position: fixed; inset: 0; background: rgba(60, 0, 0, .55); display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 36px; font-weight: 800; }
+#death small { font-size: 16px; font-weight: 400; margin-top: 8px; }
+
+#title { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; padding: 16px;
+  background: radial-gradient(circle at 50% 30%, rgba(40,90,140,.55), rgba(5,12,24,.92)); }
+#title .card { max-width: 560px; text-align: center; }
+#title h1 { font-size: 56px; margin: 0; letter-spacing: 4px; text-shadow: 0 4px 0 #2b6a4a, 0 8px 24px rgba(0,0,0,.5); }
+#title .sub { margin: 4px 0 18px; opacity: .85; letter-spacing: 6px; }
+#title ul { text-align: left; background: rgba(0,0,0,.3); border-radius: 14px; padding: 14px 18px 14px 36px; line-height: 1.8; font-size: 14px; }
+#title .btns { display: flex; gap: 10px; justify-content: center; margin: 18px 0 10px; }
+#title button { font-size: 18px; padding: 12px 28px; }
+#title .keys { font-size: 12px; opacity: .7; line-height: 1.7; }
+
+@media (max-width: 700px) {
+  #stats { width: 200px; }
+  #side { width: 130px; }
+  #minimap { width: 120px; height: 120px; }
+  #hint { display: none; }
+  .slot { width: 46px; height: 46px; }
+}
