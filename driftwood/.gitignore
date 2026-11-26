@@ -1,0 +1,15 @@
+# server
+server/build/
+server/.gradle/
+# unity
+client-unity/[Ll]ibrary/
+client-unity/[Tt]emp/
+client-unity/[Oo]bj/
+client-unity/[Bb]uild/
+client-unity/[Bb]uilds/
+client-unity/[Ll]ogs/
+client-unity/[Uu]ser[Ss]ettings/
+*.csproj
+*.sln
+.idea/
+.vs/
