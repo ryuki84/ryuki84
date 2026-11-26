@@ -9,3 +9,8 @@
   Ultimate Stylized Nature Pack — Quaternius (quaternius.com), CC0
   (FBX 소스: github.com/walterpalladino/godot-quaternius-ultimate-stylized-nature)
   웹용 변환: FBX → glb, 폴리곤 감소(meshoptimizer), 텍스처는 webp(최대 512px)로 분리해 공유.
+
+정상 비율 사람 캐릭터·애니메이션 — assets/human/mannequin.glb
+  Universal Animation Library (Standard) — Quaternius (quaternius.com), CC0 (LICENSE-UAL.txt)
+  (glTF: github.com/J-Ponzo/gltf-universal-animation-library)
+  웹용 변환: 애니메이션 19종만 남기고 리샘플. 옷 색은 게임에서 뼈대 부위별로 칠해요.

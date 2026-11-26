@@ -18,6 +18,7 @@
   #online { left:12px; top:118px; }
   #gfx { left:64px; top:82px; cursor:pointer; }
   #sty { left:164px; top:82px; cursor:pointer; }
+  #view { left:290px; top:82px; cursor:pointer; }
   #chat { position:absolute; left:12px; top:158px; width:min(300px,46%); font-size:clamp(11px,1.5vw,14px); pointer-events:none; }
   #chatlog div { background:rgba(28,20,32,.72); color:#fff3d6; padding:2px 8px; border-radius:8px; margin-top:3px; width:fit-content; max-width:100%; word-break:break-all; }
   #chatin { pointer-events:auto; width:100%; margin-top:5px; padding:5px 9px; border-radius:9px; border:3px solid var(--ink); font:inherit; background:var(--paper); color:var(--ink); }
@@ -85,7 +86,7 @@
     #inv { display:none; top:40px; right:6px; min-width:110px; font-size:11px; padding:6px 8px; }
     body.showinv #inv { display:block; }
     .pill { font-size:11px; padding:2px 10px; border-width:2px; }
-    #bells { left:6px; top:6px; } #clock { left:6px; top:32px; } #snd { left:6px; top:58px; } #online { left:6px; top:84px; } #gfx { left:54px; top:58px; } #sty { left:124px; top:58px; } #chat { top:114px; }
+    #bells { left:6px; top:6px; } #clock { left:6px; top:32px; } #snd { left:6px; top:58px; } #online { left:6px; top:84px; } #gfx { left:54px; top:58px; } #sty { left:124px; top:58px; } #view { left:228px; top:58px; } #chat { top:114px; }
     #msg { bottom:6px; font-size:12px; padding:6px 12px; max-width:92%; }
     #shop, #gear, #help { position:fixed; max-height:92vh; overflow:auto; width:min(94vw,440px); }
     #touch { display:flex; justify-content:space-between; align-items:center; gap:8px; padding:12px 10px 0; }
@@ -117,6 +118,7 @@
   <div id="online" class="pill" hidden></div>
   <div id="gfx" class="pill" title="그래픽 품질 (눌러서 변경)">🎨</div>
   <div id="sty" class="pill" title="렌더링 스타일 비교 (눌러서 변경, 새로고침돼요)">🖌️</div>
+  <div id="view" class="pill" title="시점 전환 (P)">🎥</div>
   <div id="bells" class="pill"></div>
   <div id="clock" class="pill"></div>
   <div id="inv"></div>
@@ -994,6 +996,7 @@ function press(code) {
   else if (code === "KeyJ") togglePanel("quest");
   else if (code === "KeyL") togglePanel("king");
   else if (code === "KeyY") togglePanel("arena");
+  else if (code === "KeyP") toggleView();
   else if (code === "KeyO") togglePanel("look");
   else if (code === "KeyN") togglePanel("map");
   else if (code === "KeyX" && scene === "dun" && dun.kind === "world") worldRemove();
@@ -1037,12 +1040,14 @@ function update(dt) {
   // 이동
   let ix = (keys.has("ArrowRight") || keys.has("KeyD") ? 1 : 0) - (keys.has("ArrowLeft") || keys.has("KeyA") ? 1 : 0);
   let iy = (keys.has("ArrowDown") || keys.has("KeyS") ? 1 : 0) - (keys.has("ArrowUp") || keys.has("KeyW") ? 1 : 0);
-  player.mv = !!(ix || iy);
-  if (scene === "dun" && player.dash > 0 && !(ix || iy)) { ix = Math.sign(player.dx); iy = Math.sign(player.dy); }
+  player.mv = !!(ix || iy); player.rawF = iy < 0 && !ix;
+  if (keys.has("Comma") || keys.has("Period")) { camYaw += (keys.has("Comma") ? 1 : -1) * 2.2 * dt; camManT = vtime; }
+  if (TPV() && (ix || iy)) { const c = Math.cos(camYaw), sn = Math.sin(camYaw), wx = ix * c + iy * sn, wz = -ix * sn + iy * c; ix = Math.abs(wx) < 1e-6 ? 0 : wx; iy = Math.abs(wz) < 1e-6 ? 0 : wz; }
+  if (scene === "dun" && player.dash > 0 && !(ix || iy)) { ix = player.dx; iy = player.dy; }
   if (ix || iy) {
     cancelFish();
     if (scene === "dun") { const l = Math.hypot(ix, iy); if (player.dash <= 0) { player.dx = ix / l; player.dy = iy / l; } }
-    else if (ix) { player.dx = ix; player.dy = 0; } else { player.dx = 0; player.dy = iy; }
+    else if (Math.abs(ix) >= Math.abs(iy)) { player.dx = Math.sign(ix); player.dy = 0; } else { player.dx = 0; player.dy = Math.sign(iy); }
     const len = Math.hypot(ix, iy), sp = (scene === "dun" ? (player.dash > 0 ? 340 : 120 * pstats().ms) : 120) * dt / len;
     if (!blocked(player.x + ix * sp, player.y + 8, 9, 6)) player.x += ix * sp;
     if (!blocked(player.x, player.y + 8 + iy * sp, 9, 6)) player.y += iy * sp;
@@ -1192,13 +1197,13 @@ function addWind(m, amp, key) {
   m.onBeforeCompile = sh => { if (prev) prev.call(m, sh); sh.uniforms.uWind = WIND; sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nuniform float uWind;").replace("#include <begin_vertex>", `#include <begin_vertex>\n{ float ph = 0.0;\n#ifdef USE_INSTANCING\n ph = instanceMatrix[3].x * .7 + instanceMatrix[3].z * .5;\n#endif\n float hy = max(position.y - .4, 0.0); transformed.x += sin(uWind * 1.6 + ph) * ${amp.toFixed(4)} * hy; transformed.z += cos(uWind * 1.2 + ph) * ${(amp * .6).toFixed(4)} * hy; }`); };
   return m;
 }
-const PPOS = { value: new THREE.Vector3(1e4, 0, 1e4) };
+const PPOS = { value: new THREE.Vector3(1e4, 0, 1e4) }, CPOS = { value: new THREE.Vector3(1e4, 0, 1e4) };
 function addFade(m) {
   const prev = m.onBeforeCompile; m.userData.pk = (m.userData.pk || "") + "fade";
   m.onBeforeCompile = sh => {
-    if (prev) prev.call(m, sh); sh.uniforms.uPP = PPOS;
+    if (prev) prev.call(m, sh); sh.uniforms.uPP = PPOS; sh.uniforms.uCP = CPOS;
     sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nvarying vec3 vWP;").replace("#include <fog_vertex>", "#include <fog_vertex>\n{ vec4 wpp = vec4(transformed, 1.0);\n#ifdef USE_INSTANCING\n wpp = instanceMatrix * wpp;\n#endif\n vWP = (modelMatrix * wpp).xyz; }");
-    sh.fragmentShader = sh.fragmentShader.replace("#include <common>", "#include <common>\nvarying vec3 vWP; uniform vec3 uPP;").replace("#include <clipping_planes_fragment>", "#include <clipping_planes_fragment>\n{ vec2 d = vWP.xz - (uPP.xz + vec2(0.0, 1.3)); d.y *= .7; float r = length(d); if (vWP.y > .9 && r < 3.0) { float a = smoothstep(1.7, 3.0, r); if (fract(sin(dot(floor(gl_FragCoord.xy), vec2(12.9898, 78.233))) * 43758.5453) > a) discard; } }");
+    sh.fragmentShader = sh.fragmentShader.replace("#include <common>", "#include <common>\nvarying vec3 vWP; uniform vec3 uPP, uCP;").replace("#include <clipping_planes_fragment>", "#include <clipping_planes_fragment>\n{ vec2 a0 = uPP.xz, ab = uCP.xz - a0; float tt = clamp(dot(vWP.xz - a0, ab) / max(dot(ab, ab), 1e-4), 0.0, .92); vec2 d = vWP.xz - (a0 + ab * tt); float r = length(d) + (tt < .05 ? 0.0 : 0.0); if (vWP.y > .9 && r < 3.0) { float a = smoothstep(1.7, 3.0, r); if (fract(sin(dot(floor(gl_FragCoord.xy), vec2(12.9898, 78.233))) * 43758.5453) > a) discard; } }");
   };
   return m;
 }
@@ -1211,7 +1216,7 @@ function natMat(name) {
   if (leaf) addWind(m, /Grass|Flowers/.test(name) ? .09 : .012, name); if (/Tree|Palm/.test(name)) addFade(m); toonPatch(m); return (NAT.mats[name] = m);
 }
 function natModel(n, sc = 1, desert) { const g = new THREE.Group(); for (const p of NAT.parts[n]) { const me = new THREE.Mesh(p.g, natMat(desert && p.m === "Rock" ? "RockD" : p.m)); me.castShadow = !/Grass|Flower/.test(n); me.receiveShadow = true; g.add(me); } g.scale.setScalar(sc); return g; }
-const NATV = { oak: ["NormalTree_1", "NormalTree_2", "NormalTree_3"], pine: ["PineTree_1", "PineTree_2", "PineTree_3"], spine: ["PineTree_1", "PineTree_3"], dead: ["DeadTree_1", "DeadTree_2"], willow: ["BirchTree_1", "BirchTree_2"], rock: ["Rock_1", "Rock_2", "Rock_3", "Rock_4"], bush: ["Bush", "Bush_Flowers", "Bush_Large", "Bush_Large_Flowers"], tuft: ["Grass_Large", "Grass_Small", "Grass_Large", "Flower_3_Clump", "Grass_Small", "Grass_Large", "Flower_4_Clump"] };
+const NATV = { oak: ["NormalTree_1", "NormalTree_2", "NormalTree_3"], pine: ["PineTree_1", "PineTree_2", "PineTree_3"], spine: ["PineTree_1", "PineTree_3"], dead: ["DeadTree_1", "DeadTree_2"], willow: ["BirchTree_1", "BirchTree_2"], rock: ["Rock_1", "Rock_2", "Rock_3", "Rock_4"], bush: ["Bush", "Bush_Flowers", "Bush_Large", "Bush_Large_Flowers"], tuft: ["Grass_Large", "Grass_Small", "Grass_Large", "Grass_Small", "Grass_Large", "Grass_Small", "Flower_1_Clump"] };
 const NATS = { oak: .52, pine: .55, spine: .5, dead: .5, willow: .5, rock: .75, bush: .8, tuft: 1.1 };
 const WATERMAT = new THREE.ShaderMaterial({
   transparent: true, depthWrite: false, vertexColors: true, uniforms: { uT: { value: 0 }, uDay: { value: 1 } },
@@ -1379,6 +1384,7 @@ function mkHuman(o) {
   return { g, body, head, la, ra, legs: [ll, rl], hum: true, h: 1.95, blinkG, tail, seed: Math.random() * 10 };
 }
 function mkHeroFromLook(look, col, eq) {
+  if (MAN.ready) return mkMan(look, eq, false);
   if (KAY.ready) return mkKay(look, eq, false);
   const L = lookOf(look), tp = look ? LOOK.out[L.tp] : (col || LOOK.out[0]);
   return uq(() => mkHuman({ shirt: tp, pants: shade(tp, .45), skin: LOOK.skin[L.sk], hair: LOOK.hair[L.hc], eye: LOOK.eye[L.ey], hs: L.h, eq: eq || {} }));
@@ -1449,8 +1455,61 @@ function kayTick(e, mv) {
   e.mixer.update(Math.min(DT, .1));
 }
 function kayEvents(e) { if (!e.kay) return; if (e.evk === undefined) e.evk = PEV.k; if (e.evk !== PEV.k) { e.evk = PEV.k; if (PEV.n) kayPlay(e, PEV.n, PEV.d); } }
-const lookSig = () => { const L = lookOf(S.look), q = S.eq; return [KAY.ready, L.h, L.hc, L.sk, L.ey, L.tp, L.c, L.hat, L.cc, q.armor ? q.armor.id : 0, q.ring ? q.ring.id : 0, q.weapon ? q.weapon.e : 0, q.armor ? q.armor.e + q.armor.rar : 0].join(","); };
-const mkPlayer = o => { const armed = o === PK.d, e = KAY.ready ? mkKay(S.look, S.eq, armed) : mkHeroFromLook(S.look, 0, S.eq); e.sig = lookSig() + (armed ? "A" : ""); return e; };
+/* ----- 정상 비율 캐릭터: Quaternius Universal Animation Library 마네킹(CC0) + 옷 색 칠하기 + 장비 ----- */
+const MAN = { ready: false, failed: false, started: false, src: null, clips: {}, head: null };
+const MCLIP = { Idle: "Sword_Idle", Unarmed_Idle: "Idle_Loop", Running_A: "Jog_Fwd_Loop", "1H_Melee_Attack_Slice_Diagonal": "Sword_Attack", "1H_Melee_Attack_Slice_Horizontal": "Punch_Cross", "1H_Melee_Attack_Chop": "Sword_Attack", "2H_Melee_Attack_Chop": "Sword_Attack", "2H_Melee_Attack_Spin": "Sword_Attack", Dodge_Forward: "Roll", Spellcast_Shoot: "Spell_Simple_Shoot", Use_Item: "Interact", Hit_A: "Hit_Chest", Cheer: "Dance_Loop", Interact: "Interact", Throw: "Spell_Simple_Shoot", PickUp: "PickUp_Table", Sit_Chair_Idle: "Sitting_Idle_Loop" };
+function loadMan() {
+  if (MAN.started || !R3) return; MAN.started = true;
+  new THREE.GLTFLoader().loadAsync(`assets/human/mannequin.${KEXT}`).then(gl => {
+    MAN.src = gl.scene; gl.animations.forEach(a => { a.tracks = a.tracks.filter(t => !/^root\.(position|scale)/.test(t.name)); MAN.clips[a.name] = a; });
+    const hb = new THREE.Box3(); let n = 0; gl.scene.updateMatrixWorld(true);
+    gl.scene.traverse(o => { if (!o.isSkinnedMesh) return; const bn = o.skeleton.bones.map(b => b.name), si = o.geometry.attributes.skinIndex, sw = o.geometry.attributes.skinWeight, p = o.geometry.attributes.position, v = new THREE.Vector3(), reg = new Uint8Array(p.count);
+      for (let i = 0; i < p.count; i++) { let bi = 0, bw = -1; for (let k = 0; k < 4; k++) { const w = sw.getComponent(i, k); if (w > bw) { bw = w; bi = si.getComponent(i, k); } } const name = bn[bi] || "", y = p.getY(i);
+        reg[i] = /head|neck/.test(name) ? 0 : /hand|f_|thumb/.test(name) ? 5 : /foot|toe/.test(name) || (/shin/.test(name) && y < .42) ? 3 : /thigh|shin/.test(name) ? 2 : /hips/.test(name) ? (y > .93 ? 4 : 2) : /forearm/.test(name) ? 6 : 1;
+        if (/head/.test(name)) { v.fromBufferAttribute(p, i).applyMatrix4(o.matrixWorld); hb.expandByPoint(v); n++; } }
+      o.geometry.userData.reg = reg; });
+    MAN.head = n ? { c: hb.getCenter(new THREE.Vector3()), r: hb.getSize(new THREE.Vector3()).y / 2 } : { c: new THREE.Vector3(0, 1.66, .02), r: .13 };
+    MAN.ready = true;
+  }).catch(err => { MAN.failed = true; console.warn("정상 비율 캐릭터를 불러오지 못해 기존 캐릭터로 표시해요.", err); });
+}
+function attachAt(root, bone, obj) { root.updateMatrixWorld(true); obj.updateMatrix(); const m = new THREE.Matrix4().copy(bone.matrixWorld).invert().multiply(obj.matrix); m.decompose(obj.position, obj.quaternion, obj.scale); bone.add(obj); return obj; }
+function mkMan(look, eq, armed) {
+  const L = lookOf(look), root = THREE.SkeletonUtils.clone(MAN.src), g = new THREE.Group(), body = new THREE.Group(); g.add(body); body.add(root);
+  const shirt = new THREE.Color(eq && eq.armor && eq.armor.e === "🥋" ? RTINT[eq.armor.rar] ?? RTINT[0] : LOOK.out[L.tp]), pants = new THREE.Color(shade(LOOK.out[L.tp], .38)).lerp(new THREE.Color(0x4a3a2a), .5), skin = new THREE.Color(LOOK.skin[L.sk]);
+  const RC = [skin, shirt, pants, new THREE.Color(0x3a2a20), new THREE.Color(0x5a3a22), eq && eq.armor ? new THREE.Color(0x5a4a3a) : skin, shirt.clone().multiplyScalar(.82)];
+  const bones = {}; root.traverse(o => { if (o.isBone) bones[o.name] = o; });
+  root.traverse(o => { if (!o.isSkinnedMesh) return; const reg = o.geometry.userData.reg, geo2 = o.geometry.clone(), col = new Float32Array(reg.length * 3);
+    for (let i = 0; i < reg.length; i++) { const c = RC[reg[i]]; col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b; }
+    geo2.setAttribute("color", new THREE.BufferAttribute(col, 3)); o.geometry = geo2; o.material = toonPatch(TOON({ vertexColors: true, color: 0xffffff, gradientMap: gradTex })); o.material.userData.own = 1; o.castShadow = true; o.frustumCulled = false; });
+  root.updateMatrixWorld(true);
+  const hd = bones["DEF-head"], H = MAN.head;
+  if (hd) {
+    const hg = new THREE.Group(); hg.position.copy(H.c); hg.scale.setScalar(H.r / .3 * 1.02);
+    if (L.hat) { Sq(hg, .345, 0xa8acb8, 0, .05, -.01, { s: [1, .9, 1.04] }); K(hg, .05, .26, 0xd8383a, 0, .4, 0, 5); B(hg, .26, .06, .05, 0x2a2a34, 0, .02, .32); }
+    else addHair(hg, L.h, LOOK.hair[L.hc], false);
+    for (const s of [-1, 1]) { noOl(Sq(hg, .038, 0x2a1e18, s * .11, .0, .27, { s: [1, 1.2, .5], cs: false }, 8)); noOl(B(hg, .09, .016, .02, LOOK.hair[L.hc], s * .11, .085, .28, { r: [0, 0, -s * .12], cs: false })); }
+    attachAt(root, hd, hg);
+  }
+  const chest = bones["DEF-spine003"];
+  if (L.cc && chest) { const cp = new THREE.Group(); cp.position.set(0, 1.4, -.13); const m = B(cp, .42, .95, .03, LOOK.out[L.cc - 1], 0, -.45, 0, { r: [.12, 0, 0] }); m.material = TOON({ color: LOOK.out[L.cc - 1], side: THREE.DoubleSide, gradientMap: gradTex }); attachAt(root, chest, cp); }
+  const hr = bones["DEF-handR"], hl = bones["DEF-handL"], wp = armed && eq && eq.weapon ? eq.weapon.e : null, P = new THREE.Vector3();
+  if (wp && hr && KAY.ready) {
+    const w = new THREE.Group(); hr.getWorldPosition(P); w.position.copy(P).add(new THREE.Vector3(.02, -.03, .02)); w.rotation.set(HALF, 0, 0);
+    if (KW[wp]) kAttach(w, KAY.wpn[KW[wp]]).scale.setScalar(.6); else { const ww = weaponModel(wp); ww.children[0].rotation.x = 0; ww.children[0].position.set(0, -.1, 0); w.add(ww); }
+    attachAt(root, hr, w);
+  }
+  if (armed && eq && eq.armor && eq.armor.e === "🛡️" && hl && KAY.ready) { const s = new THREE.Group(); hl.getWorldPosition(P); s.position.copy(P).add(new THREE.Vector3(.04, 0, .06)); s.rotation.set(0, HALF, 0); kAttach(s, KAY.wpn[KSH[Math.min(4, eq.armor.rar | 0)]]).scale.setScalar(.55); attachAt(root, hl, s); }
+  if (eq && eq.ring && hl) { const r = new THREE.Mesh(geo("kring", () => new THREE.TorusGeometry(.07, .018, 6, 14)), HDR(0xf5d142, 2)); r.scale.setScalar(.6); hl.getWorldPosition(P); r.position.copy(P); r.userData.ol = 1; attachAt(root, hl, r); }
+  kOutline(root);
+  const mixer = new THREE.AnimationMixer(root), acts = {};
+  const act = n => { const k = MCLIP[n] || n; return acts[k] || (MAN.clips[k] ? (acts[k] = mixer.clipAction(MAN.clips[k])) : null); };
+  return { g, body, root, la: new THREE.Group(), ra: new THREE.Group(), legs: [], h: 2.1, kay: true, man: true, armed: !!armed, mixer, act, base: null, baseA: null, one: null, seed: Math.random() * 10 };
+}
+/* ----- 3인칭 카메라 ----- */
+let camYaw = 0, camManT = -99, TPV_ON = true; try { TPV_ON = localStorage.getItem("pokgeun-tpv") !== "0"; } catch (e) {}
+const TPV = () => TPV_ON && started && !lookMode() && (scene === "out" || (scene === "dun" && dun && (dun.kind === "world" || dun.kind === "wild") && !dun.arena));
+const lookSig = () => { const L = lookOf(S.look), q = S.eq; return [KAY.ready, MAN.ready, L.h, L.hc, L.sk, L.ey, L.tp, L.c, L.hat, L.cc, q.armor ? q.armor.id : 0, q.ring ? q.ring.id : 0, q.weapon ? q.weapon.e : 0, q.armor ? q.armor.e + q.armor.rar : 0].join(","); };
+const mkPlayer = o => { const armed = o === PK.d, e = MAN.ready ? mkMan(S.look, S.eq, armed) : KAY.ready ? mkKay(S.look, S.eq, armed) : mkHeroFromLook(S.look, 0, S.eq); e.sig = lookSig() + (armed ? "A" : ""); return e; };
 let curPE = null;
 function refreshLook(e) {
   curPE = e; const armed = e.key0 === PK.d, sig = lookSig() + (armed ? "A" : "");
@@ -1469,6 +1528,7 @@ function bodyLook() {
   const L = lookOf(S.look), hex = v => "#" + v.toString(16).padStart(6, "0");
   const sw = (k, arr, hexes) => `<div style="display:flex;gap:7px;flex-wrap:wrap;margin:4px 0 8px">${arr.map((v, i) => `<button style="margin:0;${hexes ? "width:36px;height:36px;padding:0;border-radius:50%;background:" + (hexes[i] < 0 ? "linear-gradient(135deg,#fff,#ccc)" : hex(hexes[i])) : "padding:4px 10px"};outline:${L[k] === i ? "3px solid #ff8f5e" : "1px solid rgba(0,0,0,.18)"};outline-offset:2px" data-look="${k}:${i}">${hexes ? (hexes[i] < 0 ? "<small style=\"font-size:10px\">기본</small>" : "") : v}</button>`).join("")}</div>`;
   const head = `<h2>🧑 외형</h2><div><small>바로 적용돼요. 멀티플레이에서도 다른 사람에게 보여요.</small></div>`, gear = `<div><small>⚔️ 무기(검·도끼·망치)와 🛡️ 방패는 던전·오픈월드에서 손에 들려요. 💍 반지는 손에서 빛나요.</small></div>`;
+  if (MAN.ready) return head + `<h3>머리 모양 · ${LOOK.hs[L.h]}</h3>${sw("h", LOOK.hs)}<h3>머리 색</h3>${sw("hc", LOOK.hair, LOOK.hair)}<h3>피부색</h3>${sw("sk", LOOK.skin, LOOK.skin)}<h3>옷 색</h3>${sw("tp", LOOK.out, LOOK.out)}<h3>투구</h3>${sw("hat", ["없음", "쓰기"])}<h3>망토</h3>${sw("cc", [0, ...LOOK.out], [-1, ...LOOK.out])}<div><small>🥋 갑옷을 입으면 옷이 금속색으로, 🛡️ 방패는 왼손에 들려요.</small></div>${gear}`;
   if (KAY.ready) return head + `<h3>캐릭터 · ${KCLS[L.c][1]}</h3>${sw("c", KCLS.map(c => c[1]))}<h3>모자 · 투구</h3>${sw("hat", ["쓰기", "벗기"])}<h3>망토 색</h3>${sw("cc", [0, ...LOOK.out], [-1, ...LOOK.out])}${gear}`;
   return head + (KAY.failed ? "" : `<div><small>⏳ 3D 캐릭터를 불러오는 중이에요…</small></div>`) + `<h3>머리 모양 · ${LOOK.hs[L.h]}</h3>${sw("h", LOOK.hs.map((n, i) => i + 1))}<h3>머리 색</h3>${sw("hc", LOOK.hair, LOOK.hair)}<h3>피부색</h3>${sw("sk", LOOK.skin, LOOK.skin)}<h3>눈 색</h3>${sw("ey", LOOK.eye, LOOK.eye)}<h3>옷 색</h3>${sw("tp", LOOK.out, LOOK.out)}${gear}`;
 }
@@ -1501,7 +1561,7 @@ function mkAnimal(k) {
       for (const [x, y, r] of [[-.02, .03, .026], [.02, -.025, .013]]) { const m = new THREE.Mesh(geo("ah" + r, () => new THREE.SphereGeometry(r, 8, 6)), hi); m.position.set(x, y, .05); m.userData.ol = 1; e.add(m); }
       if (k !== "🐻") Sq(head, .05, 0xff8a9a, s * .22, -.07, .26, { s: [1, .6, .3], cs: false }, 8).userData.ol = 1;
     }
-    return { g, body, legs: [l1, l2], head, h: 1.7, blinkG, tailG, seed: Math.random() * 10 };
+    g.scale.setScalar(.82); return { g, body, legs: [l1, l2], head, h: 1.45, blinkG, tailG, seed: Math.random() * 10 };
   });
 }
 const mkRat = () => uq(() => { const g = new THREE.Group(), b = new THREE.Group(); g.add(b); const c = 0x8a8e9e;
@@ -1788,6 +1848,7 @@ function setEnv(kind) {
   GKIND = kind; if (kind === "village" || kind === "wild") { GR.vig = .2 + dk * .12; GR.sat = 1.14 - dk * .14; GR.con = 1.06; } else if (kind === "home") { GR.vig = .28; GR.sat = 1.08; GR.con = 1.04; } else { GR.vig = .4; GR.sat = 1.02; GR.con = 1.1; }
 }
 function follow(tx, tz, mw, mh, D) {
+  if (TPV()) { const fx = player.x / T - Math.sin(camYaw) * 4, fz = (player.y + 8) / T - Math.cos(camYaw) * 4; camT.x = fx; camT.z = fz; camInit = true; return; }
   const k = camInit && Math.hypot(camT.x - tx, camT.z - tz) < 20 ? Math.min(1, DT * 7) : 1; camInit = true;
   const hx = Math.min(mw / 2, D * .402 * .72), hz = Math.min(mh / 2, D * .268 * 1.15);
   const cx = clamp(tx, hx, Math.max(hx, mw - hx)), cz = clamp(tz, hz, Math.max(hz, mh - hz));
@@ -1871,9 +1932,14 @@ function legacyLights(on) {
 function wxRestore(k) { sun.intensity = k.si; amb.intensity = k.ai; hemi.intensity = k.hi; S3.background = k.bg; S3.fog = k.fog; GR.sat = k.sat; GR.con = k.con; }
 function finish(D, dim) {
   const sh = shake > 0 ? (Math.random() - .5) * shake * .05 : 0, sv = shake > 0 ? (Math.random() - .5) * shake * .05 : 0;
-  cam.position.set(camT.x + sh, D * (REAL ? .58 : .82) + sv, camT.z + D * (REAL ? .86 : .574)); cam.lookAt(camT.x + sh, 0, camT.z);
+  const tp = TPV(), fov = tp ? 52 : 30; if (cam.fov !== fov) { cam.fov = fov; cam.updateProjectionMatrix(); }
+  if (tp) {
+    const P = player; if (P.mv && P.rawF && vtime - camManT > 1.2) { let d = Math.atan2(-P.dx, -P.dy) - camYaw; d = Math.atan2(Math.sin(d), Math.cos(d)); if (Math.abs(d) < 2.2) camYaw += clamp(d, -DT * 1.6, DT * 1.6); }
+    const px = P.x / T, pz = (P.y + 8) / T, R = 7.2, pt = .33, sy = Math.sin(camYaw), cy = Math.cos(camYaw);
+    cam.position.set(px + sy * R * Math.cos(pt) + sh, 1.4 + R * Math.sin(pt) + sv, pz + cy * R * Math.cos(pt)); cam.lookAt(px - sy * 3, 1.15, pz - cy * 3);
+  } else { cam.position.set(camT.x + sh, D * (REAL ? .58 : .82) + sv, camT.z + D * (REAL ? .86 : .574)); cam.lookAt(camT.x + sh, 0, camT.z); }
   if (lookMode() && curPE && innerWidth >= 700) { const hp = curPE.g.position, ox = .95; cam.position.set(hp.x + ox, 1.5, hp.z + 6.2); cam.lookAt(hp.x + ox, .95, hp.z); curPE.g.rotation.y = Math.sin(vtime * .8) * .9 + .25; }
-  PPOS.value.set(GKIND === "village" || GKIND === "wild" ? player.x / T : 1e4, 0, (player.y + 8) / T);
+  PPOS.value.set(GKIND === "village" || GKIND === "wild" ? player.x / T : 1e4, 0, (player.y + 8) / T); if (TPV()) CPOS.value.copy(cam.position); else CPOS.value.set(PPOS.value.x, 0, PPOS.value.z + 1.8);
   if (G && G.sky) { const out = GKIND === "village" || GKIND === "wild", nd = clamp(darkness() / .55, 0, 1); G.sky.visible = out; if (out) { G.sky.position.copy(cam.position); const u = G.sky.material.uniforms; u.top.value.setHex(0x5d9fe0).lerp(new THREE.Color(0x070b20), nd); u.hor.value.copy(S3.background); } }
   sun.position.set(camT.x - 9, 17, camT.z + 7); sun.target.position.set(camT.x, 0, camT.z); sun.target.updateMatrixWorld();
   const p0 = PLs[0]; p0.position.set(PL0.x, PL0.h, PL0.z); p0.color.setHex(PL0.c); p0.intensity = PL0.i; p0.distance = PL0.r;
@@ -2618,7 +2684,7 @@ function drawWorldEnts(g, P, pz) {
     if (v.model === "king") { labelT("👑 " + v.name, v.x / T, (v.y + 8) / T, 2.4, "#ffe27a"); if (S.story.stage < STORY.length) labelT(storyReady() ? "❗" : "❓", v.x / T, (v.y + 8) / T, 3.1, "#ffd34d"); } else if (Math.hypot(v.x - P.x, v.y - P.y) < 90) labelT(v.name, v.x / T, (v.y + 8) / T, 2, "#fff3d6");
   }
   for (const o of NET.others.values()) {
-    const e = ent(o, () => mkHeroFromLook(o.look, o.col || 0x3d6ed0), g.dyn); { const sg = KAY.ready + JSON.stringify(o.look || 0); if (e.osig !== undefined && e.osig !== sg) swapInto(e, mkHeroFromLook(o.look, o.col || 0x3d6ed0)); e.osig = sg; } e.g.position.set(o.x / T, 0, (o.y + 8) / T); face(e.g, o.dx || 0, o.dy || 1); animE(e, !!o.mv, 10, .75);
+    const e = ent(o, () => mkHeroFromLook(o.look, o.col || 0x3d6ed0), g.dyn); { const sg = KAY.ready + "" + MAN.ready + JSON.stringify(o.look || 0); if (e.osig !== undefined && e.osig !== sg) swapInto(e, mkHeroFromLook(o.look, o.col || 0x3d6ed0)); e.osig = sg; } e.g.position.set(o.x / T, 0, (o.y + 8) / T); face(e.g, o.dx || 0, o.dy || 1); animE(e, !!o.mv, 10, .75);
     labelT(o.name || "모험가", o.x / T, (o.y + 8) / T, 2.1, "#9be39b"); if (o.sayT > 0) labelT(o.say, o.x / T, (o.y + 8) / T, 2.7, "#ffffff");
   }
   if (NET.on) { labelT(NET.name, P.x / T, pz, 2.1, "#ffe27a"); if (NET.mySayT > 0) labelT(NET.mySay, P.x / T, pz, 2.7, "#ffffff"); }
@@ -2981,7 +3047,7 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 player.hp = pstats().maxhp;
-resize(); hud(); loadKay(); $("clock").textContent = clockText(); setMute(muted);
+resize(); hud(); loadKay(); loadMan(); $("clock").textContent = clockText(); setMute(muted);
 $("snd").onclick = () => { setMute(!muted); sfx("ui"); };
 const STY_N = { toon: "툰", cel: "원신풍 셀", pbr: "PBR", real: "듀랑고풍" };
 $("sty").textContent = "🖌️ " + STY_N[RSTYLE];
@@ -2991,9 +3057,16 @@ $("sty").onclick = () => {
   try { const u = new URL(location.href); u.searchParams.delete("style"); u.hash = "style=" + nx; history.replaceState(null, "", u); } catch (e) { location.hash = "style=" + nx; }
   setTimeout(() => location.reload(), 150);
 };
+function toggleView() { TPV_ON = !TPV_ON; try { localStorage.setItem("pokgeun-tpv", TPV_ON ? "1" : "0"); } catch (e) {} $("view").textContent = TPV_ON ? "🎥 3인칭" : "🎥 탑뷰"; sfx("ui"); say(TPV_ON ? "🎥 3인칭 시점 — 마우스 드래그(또는 , . 키)로 카메라를 돌려요" : "🎥 위에서 보는 시점", 2200); }
+$("view").textContent = TPV_ON ? "🎥 3인칭" : "🎥 탑뷰"; $("view").onclick = toggleView;
+{ let drag = null; const cv0 = $("c");
+  cv0.addEventListener("pointerdown", e => { drag = { x: e.clientX, id: e.pointerId }; });
+  addEventListener("pointermove", e => { if (!drag || e.pointerId !== drag.id) return; const dx = e.clientX - drag.x; drag.x = e.clientX; if (TPV()) { camYaw -= dx * .008; camManT = vtime; } });
+  addEventListener("pointerup", e => { if (drag && e.pointerId === drag.id) drag = null; }); addEventListener("pointercancel", () => { drag = null; });
+  cv0.style.touchAction = "none"; }
 $("gfx").onclick = () => { applyQuality({ high: "mid", mid: "low", low: "high" }[gfxLv]); sfx("ui"); say(`🎨 그래픽 품질: ${QUAL.n}`, 1600); };
 requestAnimationFrame(frame);
-window.__game = { get S3() { return S3; }, get KAY() { return KAY; }, get curPE() { return curPE; }, pAnim, WX, setWeather: t => { WX.type = t; WX.t = 9999; }, startArena, arenaTick, startWave, gemGain, choosePerk, finishArena, openPerk, autoFight, idleStored, dailyTouch, genArena, mkMonT, get PERKS() { return PERKS; }, get ARES() { return ARES; }, sEvent, storyReady, reportStory, openKing, nearKing, demonAI, finalizeDemon, enterDemon, onDemonDefeat, mkDemon, damageP, addFame, get STORY() { return STORY; }, NET, spawnNear, worldTick, killMon, setBuild: i => { buildSel = i == null ? null : BUILD[i]; }, farmAct, winteract, genOffers, turnIn, warpTo, worldAct, enterWorld, getWorld, get WORLD() { return WORLD; }, get dun() { return dun; }, wc, wb, setClock: v => { clock = v; }, fireball, feed, toggleMount, craft, togglePanel, enterDungeon, get dun() { return dun; }, pstats, genGear, attack, scene: () => scene, furnSelSet: v => { furnSel = v; renderFurn(); }, player, trees, S, keys, act, get fishing() { return fishing; }, bugs, villagers }; // 디버그/테스트용
+window.__game = { get S3() { return S3; }, setYaw: v => { camYaw = v; camManT = vtime + 999; }, get MAN() { return MAN; }, get KAY() { return KAY; }, get curPE() { return curPE; }, pAnim, WX, setWeather: t => { WX.type = t; WX.t = 9999; }, startArena, arenaTick, startWave, gemGain, choosePerk, finishArena, openPerk, autoFight, idleStored, dailyTouch, genArena, mkMonT, get PERKS() { return PERKS; }, get ARES() { return ARES; }, sEvent, storyReady, reportStory, openKing, nearKing, demonAI, finalizeDemon, enterDemon, onDemonDefeat, mkDemon, damageP, addFame, get STORY() { return STORY; }, NET, spawnNear, worldTick, killMon, setBuild: i => { buildSel = i == null ? null : BUILD[i]; }, farmAct, winteract, genOffers, turnIn, warpTo, worldAct, enterWorld, getWorld, get WORLD() { return WORLD; }, get dun() { return dun; }, wc, wb, setClock: v => { clock = v; }, fireball, feed, toggleMount, craft, togglePanel, enterDungeon, get dun() { return dun; }, pstats, genGear, attack, scene: () => scene, furnSelSet: v => { furnSel = v; renderFurn(); }, player, trees, S, keys, act, get fishing() { return fishing; }, bugs, villagers }; // 디버그/테스트용
 </script>
 </body>
 </html>
