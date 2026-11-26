@@ -25,6 +25,10 @@ const server = http.createServer((req, res) => {
       if (e) { res.writeHead(500); return res.end("index.html 을 찾을 수 없어요"); }
       res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" }); res.end(b);
     });
+  } else if (u.startsWith("/assets/")) {
+    const f = path.normalize(path.join(ROOT, decodeURIComponent(u))), A = path.join(ROOT, "assets") + path.sep;
+    if (!f.startsWith(A)) { res.writeHead(403); return res.end(); }
+    fs.readFile(f, (e, b) => { if (e) { res.writeHead(404); return res.end(); } res.writeHead(200, { "Content-Type": { ".glb": "model/gltf-binary", ".png": "image/png", ".txt": "text/plain; charset=utf-8" }[path.extname(f)] || "application/octet-stream", "Cache-Control": "max-age=3600" }); res.end(b); });
   } else if (u === "/health") { res.writeHead(200, { "Content-Type": "application/json" }); res.end(JSON.stringify({ players: players.size, edits: Object.keys(edits).length })); }
   else { res.writeHead(404); res.end("not found"); }
 });
@@ -32,7 +36,7 @@ const wss = new WebSocketServer({ server, maxPayload: 4096 });
 
 function send(p, m) { if (p.ws.readyState === 1) p.ws.send(JSON.stringify(m)); }
 function broadcast(m, except) { const s = JSON.stringify(m); for (const p of players.values()) if (p !== except && p.ws.readyState === 1) p.ws.send(s); }
-const cleanLook = l => { const o = {}; for (const k of ["h", "hc", "sk", "ey", "tp"]) o[k] = Math.max(0, Math.min(9, (l && +l[k]) | 0)); return o; };
+const cleanLook = l => { const o = {}; for (const k of ["h", "hc", "sk", "ey", "tp", "c", "hat", "cc"]) o[k] = Math.max(0, Math.min(9, (l && +l[k]) | 0)); return o; };
 const pub = p => ({ id: p.id, name: p.name, col: p.col, look: p.look, x: p.x, y: p.y, dx: p.dx, dy: p.dy, mv: p.mv });
 const clean = (s, n) => String(s ?? "").replace(/[\u0000-\u001f<>]/g, "").trim().slice(0, n);
 const num = (v, lo, hi, d = 0) => Number.isFinite(+v) ? Math.min(hi, Math.max(lo, +v)) : d;

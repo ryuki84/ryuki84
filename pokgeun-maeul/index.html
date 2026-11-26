@@ -443,7 +443,7 @@ function act() {
   if (inRect(CAVE, tx, ty)) return enterDungeon(1);
   if (inRect(WILDG, tx, ty)) return enterWorld();
   if (inRect(HOUSE, tx, ty)) return enterHome();
-  const tool = player.tool;
+  const tool = player.tool; pAnim(tool === 2 ? "Throw" : tool === 3 ? "1H_Melee_Attack_Chop" : tool === 1 ? "1H_Melee_Attack_Slice_Horizontal" : tool === 4 ? "PickUp" : "Interact", .6);
   if (tool === 0) {
     const tr = treeAt(tx, ty), fl = flowerAt(tx, ty);
     if (tr && tr.age >= 60) { if (tr.fruit > 0) { dropFruit(tr); say("우수수! 열매가 떨어졌어요 🍎"); } else say("열매가 없어요. 조금 기다려 봐요."); }
@@ -757,7 +757,7 @@ function gainXp(n) {
   S.xp += n;
   while (S.xp >= xpNeed(S.lv)) {
     S.xp -= xpNeed(S.lv); S.lv++; S.pts += 5; S.sp += 1; player.hp = pstats().maxhp;
-    sfx("lvl"); burst(player.x, player.y - 10, 30, ["#ffd34d", "#fff3d6", "#f5b942"], 130, .9, 60);
+    sfx("lvl"); pAnim("Cheer", 1.4); burst(player.x, player.y - 10, 30, ["#ffd34d", "#fff3d6", "#f5b942"], 130, .9, 60);
     fx(player.x, player.y - 30, "LEVEL UP!", "#ffd34d"); say(`⚔️ 레벨 ${S.lv}! 능력치 +5, 스킬 +1 포인트 (K 캐릭터창)`, 3000);
   }
   storyCheck(); hud();
@@ -819,27 +819,27 @@ function gatherNode() {
 function attack(held) {
   if (scene !== "dun" || modal) return; const P = player, st = pstats();
   if (dun.kind === "world") { if (!held && worldAct()) return; if (buildSel) return; }
-  if (P.atkCd > 0) return; P.atkCd = .42 / st.as; sfx("swing"); dun.arcs.push({ a: Math.atan2(P.dy, P.dx), t: .15, r: 58, whirl: false });
+  if (P.atkCd > 0) return; P.atkCd = .42 / st.as; sfx("swing"); pAnim(S.eq.weapon && S.eq.weapon.e === "🔨" ? "2H_Melee_Attack_Chop" : S.eq.weapon && S.eq.weapon.e === "🪓" ? "1H_Melee_Attack_Chop" : (P.swingN = (P.swingN || 0) + 1) % 2 ? "1H_Melee_Attack_Slice_Diagonal" : "1H_Melee_Attack_Slice_Horizontal", Math.max(.3, P.atkCd + .05)); dun.arcs.push({ a: Math.atan2(P.dy, P.dx), t: .15, r: 58, whirl: false });
   for (const m of [...dun.mons]) { const dx = m.x - P.x, dy = m.y - P.y, d = Math.hypot(dx, dy); if (d < 58 + (dun.arena ? 12 * (dun.run.perk.multi || 0) : 0) + (m.boss ? 12 : 0) && (dx * P.dx + dy * P.dy) / (d || 1) > .1) hitMon(m, 1); }
   if (dun.kind === "wild") gatherNode(); else if (dun.kind === "world") worldGather();
 }
 function whirl() {
   const P = player; if (scene !== "dun" || P.qCd > 0 || modal) return; const L = skLv("whirl"), r = 84 + 4 * (L - 1);
-  P.qCd = Math.max(2, 5 - .3 * (L - 1)); sfx("whirl"); shake = Math.max(shake, 2); dun.arcs.push({ a: 0, t: .25, r, whirl: true });
+  P.qCd = Math.max(2, 5 - .3 * (L - 1)); sfx("whirl"); pAnim("2H_Melee_Attack_Spin", .55); shake = Math.max(shake, 2); dun.arcs.push({ a: 0, t: .25, r, whirl: true });
   for (const m of [...dun.mons]) if (Math.hypot(m.x - P.x, m.y - P.y) < r + (m.boss ? 12 : 0)) hitMon(m, 1.8 + .25 * (L - 1));
 }
 function fireball() {
   const P = player; if (scene !== "dun" || modal) return; const L = skLv("fire");
   if (L < 1) return say("🔥 화염구는 K 캐릭터창에서 스킬 포인트로 배워요 (Lv.3 이상).", 2500);
-  if (P.rCd > 0) return; P.rCd = 3; sfx("fire"); const l = Math.hypot(P.dx, P.dy) || 1;
+  if (P.rCd > 0) return; P.rCd = 3; sfx("fire"); pAnim("Spellcast_Shoot", .6); const l = Math.hypot(P.dx, P.dy) || 1;
   dun.proj.push({ x: P.x, y: P.y, vx: P.dx / l * 380, vy: P.dy / l * 380, m: 2 + .35 * (L - 1), life: 1.1, pierce: L >= 5, hit: new Set() });
 }
-function dash() { const P = player; if (scene !== "dun" || P.eCd > 0 || modal) return; P.eCd = 2.5; P.dash = .16; P.inv = .3; sfx("dash"); burst(P.x, P.y + 12, 8, ["#d8dce8", "#b8bcc8"], 50, .3, 0); }
+function dash() { const P = player; if (scene !== "dun" || P.eCd > 0 || modal) return; P.eCd = 2.5; P.dash = .16; P.inv = .3; sfx("dash"); pAnim("Dodge_Forward", .5); burst(P.x, P.y + 12, 8, ["#d8dce8", "#b8bcc8"], 50, .3, 0); }
 function drinkPotion() {
   const P = player, m = pstats().maxhp; if (scene !== "dun") return;
   if (S.potions <= 0) return say("물약이 없어요. 상점에서 사거나 제작할 수 있어요.", 1500);
   if (P.fCd > 0 || P.hp >= m) return;
-  sfx("potion"); burst(P.x, P.y, 10, ["#7bd88f", "#fff"], 60, .5, -60); S.potions--; P.fCd = 1; heal(Math.round(m * .45)); fx(P.x, P.y - 24, "+HP", "#7bd88f"); hud();
+  sfx("potion"); pAnim("Use_Item", .7); burst(P.x, P.y, 10, ["#7bd88f", "#fff"], 60, .5, -60); S.potions--; P.fCd = 1; heal(Math.round(m * .45)); fx(P.x, P.y - 24, "+HP", "#7bd88f"); hud();
 }
 function feed() {
   const P = player; if (scene !== "dun" || modal || !(dun.kind === "wild" || dun.kind === "world")) return;
@@ -1262,7 +1262,7 @@ function terrainGroup(w, h, at, kind) {
 const leg = (par, x, y, z, w, h, col, d = w) => { const p = new THREE.Group(); p.position.set(x, y, z); B(p, w, h, d, col, 0, -h / 2, 0); par.add(p); return p; };
 /* ----- 모던 캐릭터: 부드러운 체형 · 표정 있는 얼굴 · 헤어 4종 · 장비 외형 ----- */
 const LOOK = { hair: [0x3a2a22, 0x1c1c28, 0xe8c070, 0xc8503a, 0x6a4ac8, 0x4a9ad8, 0xf0f0f4], skin: [0xffe0c8, 0xf2c79a, 0xd9a273, 0x9a6a46, 0x6a4430], eye: [0x4a7ad8, 0x3a9a5a, 0x8a5a34, 0xd8503a, 0x8a5ad0], out: [0x3d6ed0, 0xd9534f, 0x4a9a4a, 0x8a5ad0, 0x2fb0b0, 0x2e2e3e], hs: ["단발", "긴 머리", "포니테일", "삐죽머리"] };
-const lookOf = l => ({ h: ((l && l.h) | 0) % 4, hc: ((l && l.hc) | 0) % 7, sk: ((l && l.sk) | 0) % 5, ey: ((l && l.ey) | 0) % 5, tp: ((l && l.tp) | 0) % 6 });
+const lookOf = l => ({ h: ((l && l.h) | 0) % 4, hc: ((l && l.hc) | 0) % 7, sk: ((l && l.sk) | 0) % 5, ey: ((l && l.ey) | 0) % 5, tp: ((l && l.tp) | 0) % 6, c: ((l && l.c) | 0) % 5, hat: ((l && l.hat) | 0) % 2, cc: ((l && l.cc) | 0) % 7 });
 const shade = (hex, f) => new THREE.Color(hex).multiplyScalar(f).getHex();
 const RTINT = [0xb8bcc8, 0x6fa8ff, 0xffd34d, 0xff8a2b, 0x5be37d];
 const Sq = (p, r, c, x, y, z, o, sg = 20) => addM(p, geo(`q${r},${sg}`, () => new THREE.SphereGeometry(r, sg, Math.round(sg * .7))), c, x, y, z, o);
@@ -1322,27 +1322,95 @@ function mkHuman(o) {
   return { g, body, head, la, ra, legs: [ll, rl], hum: true, h: 1.95, blinkG, tail, seed: Math.random() * 10 };
 }
 function mkHeroFromLook(look, col, eq) {
+  if (KAY.ready) return mkKay(look, eq, false);
   const L = lookOf(look), tp = look ? LOOK.out[L.tp] : (col || LOOK.out[0]);
   return uq(() => mkHuman({ shirt: tp, pants: shade(tp, .45), skin: LOOK.skin[L.sk], hair: LOOK.hair[L.hc], eye: LOOK.eye[L.ey], hs: L.h, eq: eq || {} }));
 }
-const lookSig = () => { const L = lookOf(S.look); return `${L.h},${L.hc},${L.sk},${L.ey},${L.tp},${S.eq.armor ? S.eq.armor.id : 0},${S.eq.ring ? S.eq.ring.id : 0}`; };
-const mkPlayer = () => { const e = mkHeroFromLook(S.look, 0, S.eq); e.sig = lookSig(); return e; };
+/* ----- 3D 캐릭터 에셋: KayKit Adventurers (Kay Lousberg, CC0) — 뼈대 애니메이션 ----- */
+const KCLS = [["knight", "기사"], ["barbarian", "바바리안"], ["mage", "마법사"], ["rogue", "도적"], ["rogue_hooded", "후드 도적"]];
+const KW = { "🗡️": "sword_1handed", "🪓": "axe_1handed" }, KSH = ["shield_round", "shield_square", "shield_badge", "shield_spikes", "shield_badge_color"];
+const KAY = { ready: false, failed: false, started: false, src: {}, clips: {}, wpn: {}, sc: 1 };
+const KOUT = new THREE.MeshBasicMaterial({ color: INK, side: THREE.BackSide });
+KOUT.onBeforeCompile = sh => { sh.vertexShader = sh.vertexShader.replace("#include <skinning_vertex>", "#include <skinning_vertex>\n#ifdef USE_SKINNING\n transformed += normalize(objectNormal) * 0.03;\n#else\n transformed += normalize(normal) * 0.03;\n#endif"); };
+KOUT.customProgramCacheKey = () => "kout";
+function loadKay() {
+  if (KAY.started || !R3) return; KAY.started = true;
+  const L = new THREE.GLTFLoader(), WS = [...Object.values(KW), ...KSH];
+  const raw = sc => { sc.traverse(o => { if (o.isMesh && o.material && o.material.map) o.material.map.colorSpace = THREE.NoColorSpace; }); return sc; };
+  Promise.all([...KCLS.map(c => L.loadAsync(`assets/chars/${c[0]}.glb`)), L.loadAsync("assets/anims.glb"), ...WS.map(w => L.loadAsync(`assets/weapons/${w}.glb`))]).then(r => {
+    KCLS.forEach((c, i) => { KAY.src[c[0]] = raw(r[i].scene); });
+    r[KCLS.length].animations.forEach(a => { KAY.clips[a.name] = a; });
+    WS.forEach((w, i) => { KAY.wpn[w] = raw(r[KCLS.length + 1 + i].scene); });
+    const bb = new THREE.Box3().setFromObject(KAY.src.rogue); KAY.sc = 1.9 / Math.max(.5, bb.max.y - bb.min.y); KAY.ready = true;
+  }).catch(err => { KAY.failed = true; console.warn("캐릭터 모델을 불러오지 못해 기본 캐릭터로 표시해요.", err); });
+}
+function kMat(m) { const t = toonPatch(new THREE.MeshToonMaterial({ map: m.map || null, color: m.color ? m.color.clone() : 0xffffff, gradientMap: gradTex })); t.userData.own = 1; return t; }
+function kOutline(root) {
+  const L = []; root.traverse(o => { if (o.isMesh && !o.userData.ol && !/Cape/.test(o.name)) L.push(o); });
+  for (const m of L) {
+    let o; if (m.isSkinnedMesh) { o = new THREE.SkinnedMesh(m.geometry, KOUT); o.bind(m.skeleton, m.bindMatrix); o.position.copy(m.position); o.quaternion.copy(m.quaternion); o.scale.copy(m.scale); m.parent.add(o); }
+    else { o = new THREE.Mesh(m.geometry, KOUT); m.add(o); }
+    o.userData.ol = 1; o.frustumCulled = false; o.visible = m.visible; m.userData.olm = o;
+  }
+}
+function kAttach(par, src) {
+  const w = src.clone(true); w.traverse(o => { if (o.isMesh) { o.material = kMat(o.material); o.castShadow = true; } }); par.add(w); return w;
+}
+function mkKay(look, eq, armed) {
+  const L = lookOf(look), root = THREE.SkeletonUtils.clone(KAY.src[KCLS[L.c][0]]), g = new THREE.Group(), body = new THREE.Group(); g.add(body); body.add(root); root.scale.setScalar(KAY.sc);
+  const bones = {}, meshes = []; root.traverse(o => { bones[o.name] = o; if (o.isMesh) meshes.push(o); });
+  for (const m of meshes) {
+    m.material = kMat(m.material); m.castShadow = true; m.frustumCulled = false;
+    if (/Helmet|Hat$/.test(m.name) && L.hat) m.visible = false;
+    if (/Cape/.test(m.name) && L.cc) { m.material.map = null; m.material.color.setHex(LOOK.out[L.cc - 1]); }
+  }
+  const hr = bones.handslotr, hl = bones.handslotl, wp = armed && eq && eq.weapon ? eq.weapon.e : null;
+  if (wp && hr) { if (KW[wp]) kAttach(hr, KAY.wpn[KW[wp]]); else { const w = weaponModel(wp), k = 1 / KAY.sc; w.children[0].rotation.x = 0; w.children[0].position.set(0, -.12, 0); w.scale.setScalar(k * .9); w.traverse(o => { if (o.isMesh) o.material = Mu(o.material.color.getHex()); }); hr.add(w); } }
+  if (armed && eq && eq.armor && eq.armor.e === "🛡️" && hl) kAttach(hl, KAY.wpn[KSH[Math.min(4, eq.armor.rar | 0)]]);
+  kOutline(root);
+  if (eq && eq.ring && bones.handl) { const r = new THREE.Mesh(geo("kring", () => new THREE.TorusGeometry(.07, .018, 6, 14)), HDR(0xf5d142, 2)); r.rotation.x = HALF; r.userData.ol = 1; bones.handl.add(r); }
+  const mixer = new THREE.AnimationMixer(root), acts = {};
+  const act = n => acts[n] || (KAY.clips[n] ? (acts[n] = mixer.clipAction(KAY.clips[n])) : null);
+  return { g, body, root, la: new THREE.Group(), ra: new THREE.Group(), legs: [], h: 2.15, kay: true, armed: !!armed, mixer, act, base: null, baseA: null, one: null, seed: Math.random() * 10 };
+}
+/* 동작 이벤트: 게임 로직이 pAnim("이름", 길이)를 부르면 플레이어 모델이 한 번 재생 */
+const PEV = { n: null, d: 0, k: 0 };
+const pAnim = (n, d = 0) => { PEV.n = n; PEV.d = d; PEV.k++; };
+function kayPlay(e, n, dur) {
+  const a = e.act(n); if (!a) return; if (e.one && e.one !== a) e.one.fadeOut(.06);
+  a.reset(); a.setLoop(THREE.LoopOnce, 1); a.clampWhenFinished = true; a.timeScale = dur ? clamp(a.getClip().duration / dur, .7, 3.2) : 1; a.setEffectiveWeight(1); a.fadeIn(.06).play();
+  if (e.baseA) e.baseA.fadeOut(.08); e.one = a; e.base = null;
+}
+function kayTick(e, mv) {
+  if (e.one && (!e.one.isRunning() || e.one.time >= e.one.getClip().duration - .02)) { e.one.fadeOut(.16); e.one = null; }
+  const want = e.pose || (mv ? "Running_A" : e.armed ? "Idle" : "Unarmed_Idle");
+  if (!e.one && e.base !== want) { const a = e.act(want); if (a) { if (e.baseA && e.baseA !== a) e.baseA.fadeOut(.2); a.reset().setEffectiveWeight(1).fadeIn(.2).play(); e.baseA = a; e.base = want; } }
+  if (e.baseA) e.baseA.timeScale = e.base === "Running_A" ? 1.05 : 1;
+  e.mixer.update(Math.min(DT, .1));
+}
+function kayEvents(e) { if (!e.kay) return; if (e.evk === undefined) e.evk = PEV.k; if (e.evk !== PEV.k) { e.evk = PEV.k; if (PEV.n) kayPlay(e, PEV.n, PEV.d); } }
+const lookSig = () => { const L = lookOf(S.look), q = S.eq; return [KAY.ready, L.h, L.hc, L.sk, L.ey, L.tp, L.c, L.hat, L.cc, q.armor ? q.armor.id : 0, q.ring ? q.ring.id : 0, q.weapon ? q.weapon.e : 0, q.armor ? q.armor.e + q.armor.rar : 0].join(","); };
+const mkPlayer = o => { const armed = o === PK.d, e = KAY.ready ? mkKay(S.look, S.eq, armed) : mkHeroFromLook(S.look, 0, S.eq); e.sig = lookSig() + (armed ? "A" : ""); return e; };
 let curPE = null;
 function refreshLook(e) {
-  curPE = e; const sig = lookSig(); if (e.sig === sig) return e;
-  swapInto(e, mkPlayer()); e.sig = sig; return e;
+  curPE = e; const armed = e.key0 === PK.d, sig = lookSig() + (armed ? "A" : "");
+  if (e.sig !== sig) { swapInto(e, mkPlayer(e.key0)); e.sig = sig; }
+  kayEvents(e); return e;
 }
 function swapInto(e, n) {
   e.g.traverse(m => { if (m.isMesh && m.material && m.material.userData.own) m.material.dispose(); });
   e.g.clear(); n.g.children.slice().forEach(c => e.g.add(c));
-  for (const k of ["body", "head", "la", "ra", "legs", "blinkG", "tail", "seed"]) e[k] = n[k]; e.wk = undefined; e.wm = null; e.fl = false;
+  for (const k of Object.keys(e)) if (!["g", "par", "key0", "seen", "sig", "osig", "evk"].includes(k)) delete e[k];
+  for (const k of Object.keys(n)) if (k !== "g") e[k] = n[k]; e.wk = undefined; e.wm = null; e.fl = false;
 }
 const netLook = () => { if (NET.on) NET.send({ t: "look", look: lookOf(S.look) }); };
 const lookMode = () => modal && gearTab === "look" && !$("gear").hidden;
 function bodyLook() {
   const L = lookOf(S.look), hex = v => "#" + v.toString(16).padStart(6, "0");
-  const sw = (k, arr, hexes) => `<div style="display:flex;gap:7px;flex-wrap:wrap;margin:4px 0 8px">${arr.map((v, i) => `<button style="margin:0;width:36px;height:36px;padding:0;border-radius:50%;background:${hexes ? hex(hexes[i]) : "#fff"};outline:${L[k] === i ? "3px solid #ff8f5e" : "1px solid rgba(0,0,0,.18)"};outline-offset:2px" data-look="${k}:${i}">${hexes ? "" : v}</button>`).join("")}</div>`;
-  return `<h2>🧑 외형</h2><div><small>바로 적용돼요. 멀티플레이에서도 다른 사람에게 보여요.</small></div><h3>머리 모양 · ${LOOK.hs[L.h]}</h3>${sw("h", LOOK.hs.map((n, i) => i + 1))}<h3>머리 색</h3>${sw("hc", LOOK.hair, LOOK.hair)}<h3>피부색</h3>${sw("sk", LOOK.skin, LOOK.skin)}<h3>눈 색</h3>${sw("ey", LOOK.eye, LOOK.eye)}<h3>옷 색</h3>${sw("tp", LOOK.out, LOOK.out)}<div><small>🛡️ 갑옷과 💍 반지를 착용하면 겉모습에도 반영돼요.</small></div>`;
+  const sw = (k, arr, hexes) => `<div style="display:flex;gap:7px;flex-wrap:wrap;margin:4px 0 8px">${arr.map((v, i) => `<button style="margin:0;${hexes ? "width:36px;height:36px;padding:0;border-radius:50%;background:" + (hexes[i] < 0 ? "linear-gradient(135deg,#fff,#ccc)" : hex(hexes[i])) : "padding:4px 10px"};outline:${L[k] === i ? "3px solid #ff8f5e" : "1px solid rgba(0,0,0,.18)"};outline-offset:2px" data-look="${k}:${i}">${hexes ? (hexes[i] < 0 ? "<small style=\"font-size:10px\">기본</small>" : "") : v}</button>`).join("")}</div>`;
+  const head = `<h2>🧑 외형</h2><div><small>바로 적용돼요. 멀티플레이에서도 다른 사람에게 보여요.</small></div>`, gear = `<div><small>⚔️ 무기(검·도끼·망치)와 🛡️ 방패는 던전·오픈월드에서 손에 들려요. 💍 반지는 손에서 빛나요.</small></div>`;
+  if (KAY.ready) return head + `<h3>캐릭터 · ${KCLS[L.c][1]}</h3>${sw("c", KCLS.map(c => c[1]))}<h3>모자 · 투구</h3>${sw("hat", ["쓰기", "벗기"])}<h3>망토 색</h3>${sw("cc", [0, ...LOOK.out], [-1, ...LOOK.out])}${gear}`;
+  return head + (KAY.failed ? "" : `<div><small>⏳ 3D 캐릭터를 불러오는 중이에요…</small></div>`) + `<h3>머리 모양 · ${LOOK.hs[L.h]}</h3>${sw("h", LOOK.hs.map((n, i) => i + 1))}<h3>머리 색</h3>${sw("hc", LOOK.hair, LOOK.hair)}<h3>피부색</h3>${sw("sk", LOOK.skin, LOOK.skin)}<h3>눈 색</h3>${sw("ey", LOOK.eye, LOOK.eye)}<h3>옷 색</h3>${sw("tp", LOOK.out, LOOK.out)}${gear}`;
 }
 function weaponModel(e) {
   const g = new THREE.Group();
@@ -1443,6 +1511,7 @@ const mkDragon = () => uq(() => {
 const MON3 = { "🐀": mkRat, "🦇": mkBat, "🕷️": mkSpider, "💀": mkSkel, "🧟": mkZombie, "👹": mkOgre, "🐲": mkDragon };
 const DINO3 = [mkLizard, mkBoar, mkBrachio, mkCroc, mkRaptor];
 function animE(e, mv, spd = 9, amp = .6) {
+  if (e.kay) return kayTick(e, mv);
   const t = vtime * spd, sd = e.seed || 0;
   if (e.legs) e.legs.forEach((l, i) => { l.rotation.x = mv ? Math.sin(t + (i % 2) * Math.PI + (i > 1 ? 1.2 : 0)) * amp : l.rotation.x * .8; });
   if (e.hum && !e.fixedArms) { e.la.rotation.x = e.legs[1].rotation.x * .9; e.ra.rotation.x = e.legs[0].rotation.x * .9; }
@@ -1694,13 +1763,13 @@ function wxObjs() {
   for (const W of [WXR, WXS]) { for (let i = 0; i < W.n; i++) { W.p[i * 3] = (Math.random() - .5) * 36; W.p[i * 3 + 1] = Math.random() * 15; W.p[i * 3 + 2] = (Math.random() - .5) * 28; } W.o.frustumCulled = false; W.o.visible = false; S3.add(W.o); }
 }
 function weatherTick() {
-  const dt = Math.min(DT, .1); wxObjs();
+  const dt = clamp(DT, 0, .1); wxObjs();
   if ((WX.t -= dt) <= 0) { const r = Math.random(); WX.type = r < .46 ? "clear" : r < .68 ? "rain" : r < .8 ? "fog" : r < .88 ? "storm" : "snow"; WX.t = 80 + Math.random() * 130; }
   const e = WX.eff = wxEff(), up = (k, tg, s) => { WX[k] += clamp(tg - WX[k], -dt * s, dt * s); };
   up("rain", e === "rain" || e === "storm" ? 1 : 0, .5); up("storm", e === "storm" ? 1 : 0, .4); up("snow", e === "snow" ? 1 : 0, .5); up("fog", e === "fog" ? 1 : 0, .4);
   WX.cloud = clamp(Math.max(WX.rain * .62, WX.fog * .45, WX.snow * .5) + WX.storm * .3, 0, 1);
   if (WX.storm > .6) { if ((WX.bolt -= dt) <= 0) { WX.flash = 1; WX.bolt = 4 + Math.random() * 9; WX.thunder.push(.35 + Math.random() * 1.2); if (Math.random() < .4) WX.bolt = .25; } }
-  WX.flash = Math.max(0, WX.flash - dt * 3.2); { const th = []; for (const d of WX.thunder) { if (d - dt <= 0) thunder(); else th.push(d - dt); } WX.thunder = th; } rainAudio();
+  WX.flash = clamp(WX.flash - dt * 3.2, 0, 1); for (const k of ["rain", "snow", "fog", "storm"]) WX[k] = clamp(WX[k], 0, 1); { const th = []; for (const d of WX.thunder) { if (d - dt <= 0) thunder(); else th.push(d - dt); } WX.thunder = th; } rainAudio();
   const cx = camT.x, cz = camT.z, R = WXR, Sn = WXS;
   R.o.visible = WX.rain > .02; if (R.o.visible) {
     const n = Math.round(R.n * clamp(.35 + WX.rain * .3 + WX.storm * .35, 0, 1)), p = R.p, a = R.o.geometry.attributes.position.array, sl = .06 + WX.storm * .08; R.o.material.opacity = .75 * WX.rain;
@@ -1917,8 +1986,9 @@ function drawDun() {
   const lift = P.mounted && pet && pe ? [.8, .9, 1.3, .9, 1.4][pe.idx] : 0;
   e.g.position.set(P.x / T, lift, pz); face(e.g, P.dx, P.dy, 18); animE(e, P.mv && !modal && !P.mounted, 10, .75); flash(e, P.flash > 0);
   e.g.visible = !(P.inv > 0 && Math.floor(vtime * 20) % 2);
-  const wp = S.eq.weapon && S.eq.weapon.e; if (e.wk !== wp) { if (e.wm) e.ra.remove(e.wm); e.wk = wp; e.wm = wp ? outline(weaponModel(wp)) : null; if (e.wm) e.ra.add(e.wm); }
-  if (e.wm && !P.mounted) { const sw = P.atkCd > 0 ? 1 - P.atkCd / (.42 / pstats().as) : 1; e.ra.rotation.x = P.atkCd > 0 ? -2.3 + sw * 3.2 : e.ra.rotation.x; }
+  e.pose = P.mounted ? "Sit_Chair_Idle" : null;
+  if (!e.kay) { const wp = S.eq.weapon && S.eq.weapon.e; if (e.wk !== wp) { if (e.wm) e.ra.remove(e.wm); e.wk = wp; e.wm = wp ? outline(weaponModel(wp)) : null; if (e.wm) e.ra.add(e.wm); }
+  if (e.wm && !P.mounted) { const sw = P.atkCd > 0 ? 1 - P.atkCd / (.42 / pstats().as) : 1; e.ra.rotation.x = P.atkCd > 0 ? -2.3 + sw * 3.2 : e.ra.rotation.x; } }
   for (const q of dun.proj) { const pr = ent(q, () => { const gg = new THREE.Group(), s = new THREE.Mesh(geo("fbs", () => new THREE.SphereGeometry(.2, 10, 8)), HDR(0xffa534)); gg.add(s); const s2 = new THREE.Mesh(geo("fbs2", () => new THREE.SphereGeometry(.11, 8, 6)), HDR(0xfff3a0)); gg.add(s2); return { g: gg }; }, g.dyn); pr.g.position.set(q.x / T, .7, (q.y + 8) / T); if (q.col) pr.g.children[0].material.color.setHex(q.col).multiplyScalar(2.4); if (q.sz) pr.g.scale.setScalar(q.sz); light(q.x / T, (q.y + 8) / T, 5, 0xffa534, .8, 1.6); if (Math.random() < .5) { parts.push({ x: q.x / T, z: (q.y + 8) / T, h: .7, vx: (Math.random() - .5), vz: (Math.random() - .5), vh: .3, g: 0, l: .25, c: new THREE.Color(Math.random() < .5 ? 0xf5d142 : 0xe8913a) }); } }
   if (dun.arena) {
     const ob = dun.run.perk.orbit || 0; for (let i = 0; i < ob; i++) { const o = ((dun.orbObjs ||= [])[i] ||= {}), e = ent(o, mkBlade, g.dyn), a = (dun.orbA || 0) + i * 6.283 / ob; e.g.position.set((P.x + Math.cos(a) * 64) / T, .7, (P.y + 8 + Math.sin(a) * 64) / T); e.g.rotation.y += DT * 12; }
@@ -2464,7 +2534,7 @@ function drawWorldEnts(g, P, pz) {
     if (v.model === "king") { labelT("👑 " + v.name, v.x / T, (v.y + 8) / T, 2.4, "#ffe27a"); if (S.story.stage < STORY.length) labelT(storyReady() ? "❗" : "❓", v.x / T, (v.y + 8) / T, 3.1, "#ffd34d"); } else if (Math.hypot(v.x - P.x, v.y - P.y) < 90) labelT(v.name, v.x / T, (v.y + 8) / T, 2, "#fff3d6");
   }
   for (const o of NET.others.values()) {
-    const e = ent(o, () => mkHeroFromLook(o.look, o.col || 0x3d6ed0), g.dyn); { const sg = JSON.stringify(o.look || 0); if (e.osig !== undefined && e.osig !== sg) swapInto(e, mkHeroFromLook(o.look, o.col || 0x3d6ed0)); e.osig = sg; } e.g.position.set(o.x / T, 0, (o.y + 8) / T); face(e.g, o.dx || 0, o.dy || 1); animE(e, !!o.mv, 10, .75);
+    const e = ent(o, () => mkHeroFromLook(o.look, o.col || 0x3d6ed0), g.dyn); { const sg = KAY.ready + JSON.stringify(o.look || 0); if (e.osig !== undefined && e.osig !== sg) swapInto(e, mkHeroFromLook(o.look, o.col || 0x3d6ed0)); e.osig = sg; } e.g.position.set(o.x / T, 0, (o.y + 8) / T); face(e.g, o.dx || 0, o.dy || 1); animE(e, !!o.mv, 10, .75);
     labelT(o.name || "모험가", o.x / T, (o.y + 8) / T, 2.1, "#9be39b"); if (o.sayT > 0) labelT(o.say, o.x / T, (o.y + 8) / T, 2.7, "#ffffff");
   }
   if (NET.on) { labelT(NET.name, P.x / T, pz, 2.1, "#ffe27a"); if (NET.mySayT > 0) labelT(NET.mySay, P.x / T, pz, 2.7, "#ffffff"); }
@@ -2564,7 +2634,7 @@ function finalizeDemon() {
 }
 function damageP(n) {
   const P = player; if (P.inv > 0) return; const d = Math.max(1, Math.round(n * (100 / (100 + pstats().armor))));
-  P.hp -= d; P.inv = .35; P.flash = .15; shake = Math.max(shake, 5); burst(P.x, P.y, 8, ["#e8505a", "#a8323c"], 90, .4); sfx("hurt"); fx(P.x, P.y - 20, "-" + d, "#ff6b6b");
+  P.hp -= d; P.inv = .35; P.flash = .15; pAnim("Hit_A", .4); shake = Math.max(shake, 5); burst(P.x, P.y, 8, ["#e8505a", "#a8323c"], 90, .4); sfx("hurt"); fx(P.x, P.y - 20, "-" + d, "#ff6b6b");
 }
 function demonAI(m, dt) {
   const P = player, r = m.hp / m.mhp, ph = r > .66 ? 1 : r > .33 ? 2 : 3;
@@ -2820,18 +2890,18 @@ function setMute(m) { muted = m; try { localStorage.setItem("pokgeun-mute", m ? 
 /* ---------- 메인 루프 ---------- */
 let last = performance.now(), hudT = 0, rpgT = 0;
 function frame(now) {
-  const dt = Math.min(.05, (now - last) / 1000); last = now;
+  const dt = clamp((now - last) / 1000, 0, .05); last = now;
   update(dt); netTick(dt); stepParts(dt); draw();
   if ((hudT += dt) > .5) { hudT = 0; $("clock").textContent = clockText(); }
   if (scene === "dun" && (rpgT += dt) > .1) { rpgT = 0; renderRpg(); }
   requestAnimationFrame(frame);
 }
 player.hp = pstats().maxhp;
-resize(); hud(); $("clock").textContent = clockText(); setMute(muted);
+resize(); hud(); loadKay(); $("clock").textContent = clockText(); setMute(muted);
 $("snd").onclick = () => { setMute(!muted); sfx("ui"); };
 $("gfx").onclick = () => { applyQuality({ high: "mid", mid: "low", low: "high" }[gfxLv]); sfx("ui"); say(`🎨 그래픽 품질: ${QUAL.n}`, 1600); };
 requestAnimationFrame(frame);
-window.__game = { WX, setWeather: t => { WX.type = t; WX.t = 9999; }, startArena, arenaTick, startWave, gemGain, choosePerk, finishArena, openPerk, autoFight, idleStored, dailyTouch, genArena, mkMonT, get PERKS() { return PERKS; }, get ARES() { return ARES; }, sEvent, storyReady, reportStory, openKing, nearKing, demonAI, finalizeDemon, enterDemon, onDemonDefeat, mkDemon, damageP, addFame, get STORY() { return STORY; }, NET, spawnNear, worldTick, killMon, setBuild: i => { buildSel = i == null ? null : BUILD[i]; }, farmAct, winteract, genOffers, turnIn, warpTo, worldAct, enterWorld, getWorld, get WORLD() { return WORLD; }, get dun() { return dun; }, wc, wb, setClock: v => { clock = v; }, fireball, feed, toggleMount, craft, togglePanel, enterDungeon, get dun() { return dun; }, pstats, genGear, attack, scene: () => scene, furnSelSet: v => { furnSel = v; renderFurn(); }, player, trees, S, keys, act, get fishing() { return fishing; }, bugs, villagers }; // 디버그/테스트용
+window.__game = { get KAY() { return KAY; }, get curPE() { return curPE; }, pAnim, WX, setWeather: t => { WX.type = t; WX.t = 9999; }, startArena, arenaTick, startWave, gemGain, choosePerk, finishArena, openPerk, autoFight, idleStored, dailyTouch, genArena, mkMonT, get PERKS() { return PERKS; }, get ARES() { return ARES; }, sEvent, storyReady, reportStory, openKing, nearKing, demonAI, finalizeDemon, enterDemon, onDemonDefeat, mkDemon, damageP, addFame, get STORY() { return STORY; }, NET, spawnNear, worldTick, killMon, setBuild: i => { buildSel = i == null ? null : BUILD[i]; }, farmAct, winteract, genOffers, turnIn, warpTo, worldAct, enterWorld, getWorld, get WORLD() { return WORLD; }, get dun() { return dun; }, wc, wb, setClock: v => { clock = v; }, fireball, feed, toggleMount, craft, togglePanel, enterDungeon, get dun() { return dun; }, pstats, genGear, attack, scene: () => scene, furnSelSet: v => { furnSel = v; renderFurn(); }, player, trees, S, keys, act, get fishing() { return fishing; }, bugs, villagers }; // 디버그/테스트용
 </script>
 </body>
 </html>

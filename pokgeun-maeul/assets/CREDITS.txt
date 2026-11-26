@@ -1,0 +1,6 @@
+3D 캐릭터·무기·애니메이션
+  KayKit : Adventurers Character Pack (1.0) — Kay Lousberg (www.kaylousberg.com)
+  라이선스: Creative Commons Zero (CC0) — http://creativecommons.org/publicdomain/zero/1.0/
+  원본: https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0
+
+웹용 변환: 캐릭터에서 애니메이션·무기 분리, 애니메이션 22종만 남겨 리샘플(@gltf-transform).
