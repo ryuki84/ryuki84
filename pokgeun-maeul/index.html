@@ -404,6 +404,20 @@ const MONS = [
   { e: "🕷️", n: "버섯돌이", hp: 30, dmg: 8, spd: 85, xp: 9 }, { e: "💀", n: "유령", hp: 48, dmg: 10, spd: 62, xp: 12 },
   { e: "🧟", n: "오크", hp: 80, dmg: 13, spd: 48, xp: 16 }, { e: "👹", n: "도깨비", hp: 130, dmg: 18, spd: 66, xp: 26 },
 ];
+/* 정예 몬스터: 일반 몬스터가 낮은 확률로 강한 변종이 돼요. 각자 특수 패턴이 있어요 */
+const ELITE = {
+  spiky: { base: "🐀", n: "가시 슬라임", model: "spikyslime", ai: "charge", tip: "❗ 뒤에 돌진" },
+  hornet: { base: "🦇", n: "장수말벌", model: "hornet", ai: "shoot", tip: "독침 발사" },
+  mushking: { base: "🕷️", n: "버섯 대장", model: "mushking", ai: "spore", tip: "포자 장판" },
+  skullghost: { base: "💀", n: "해골 유령", model: "skullghost", ai: "blink", tip: "순간이동" },
+  skullorc: { base: "🧟", n: "해골 오크", model: "skullorc", ai: "slam", tip: "광역 내려찍기" },
+};
+const ELITE_BY = Object.fromEntries(Object.entries(ELITE).map(([k, v]) => [v.base, k]));
+const ELITE_P = .08;   // 정예 등장 확률(깊이 3 이상)
+function eliteify(m, force) {
+  const k = ELITE_BY[m.e]; if (!k || m.boss || m.wild || m.demon || !(force || ((m.dpt || 1) >= 3 && Math.random() < ELITE_P))) return m;
+  const E = ELITE[k]; m.elite = k; m.n = "★ " + E.n; m.hp = m.mhp = Math.round(m.mhp * 3); m.dmg = Math.round(m.dmg * 1.4); m.xp = Math.round(m.xp * 4); m.sk = 1.5 + Math.random(); return m;
+}
 const ri = n => Math.random() * n | 0;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 let uidN = Date.now(); const uid = () => ++uidN;
@@ -935,7 +949,7 @@ function genDun(depth) {
 function mkMon(depth, x, y, boss) {
   const base = boss ? { e: "🐲", n: "대왕 용", hp: 130, dmg: 18, spd: 70, xp: 26 } : MONS[Math.min(MONS.length - 1, ri(Math.min(MONS.length, 2 + (depth >> 1))))];
   const sc = 1 + .3 * (depth - 1), hp = Math.round(base.hp * sc * (boss ? 7 : 1));
-  return { ...base, x, y, hp, mhp: hp, dmg: Math.round(base.dmg * sc * (boss ? 1.5 : 1)), xp: Math.round(base.xp * sc * (boss ? 8 : 1)), cd: 0, flash: 0, kb: 0, kx: 0, ky: 0, boss };
+  return eliteify({ ...base, x, y, hp, mhp: hp, dmg: Math.round(base.dmg * sc * (boss ? 1.5 : 1)), xp: Math.round(base.xp * sc * (boss ? 8 : 1)), cd: 0, flash: 0, kb: 0, kx: 0, ky: 0, boss, dpt: depth });
 }
 function mkDino(idx, tier, x, y, boss) {
   const b = DINOS[idx], sc = 1 + .25 * tier, hp = Math.round(b.hp * sc * (boss ? 6 : 1));
@@ -1033,6 +1047,7 @@ function killMon(m) {
   dun.loot.push({ t: "bell", n: wild ? Math.round((2 + ri(4)) * (1 + m.tier * .4) * (m.boss ? 6 : 1)) : Math.round((3 + ri(6)) * (1 + (m.dpt || dun.depth) * .3) * (m.boss ? 6 : 1)), ...sp() });
   const ilvl = Math.max(1, Math.round((wild ? 2 + m.tier * 2 : (m.dpt || dun.depth) * 1.5) + S.lv * .5));
   if (m.boss) for (let k = 0; k < 2; k++) dun.loot.push({ t: "gear", it: genGear(ilvl, 3), ...sp() });
+  else if (m.elite) dun.loot.push({ t: "gear", it: genGear(ilvl + 2, 2), ...sp() });
   else if (Math.random() < (wild ? .12 : .2)) dun.loot.push({ t: "gear", it: genGear(ilvl), ...sp() });
   if (Math.random() < .07) dun.loot.push({ t: "pot", ...sp() });
   if (Math.random() < .05) dun.loot.push({ t: "furn", id: Object.keys(FURN)[ri(Object.keys(FURN).length)], ...sp() });
@@ -1108,6 +1123,28 @@ function toggleMount() {
   say(P.mounted ? `${DINOS[pe.idx].e} 탑승! 이동속도 ↑ (동료는 공격을 쉬어요)` : "내렸어요.", 1800);
 }
 const MON_WIND = .4;   // 몬스터 공격 예비 동작 시간(초)
+// 정예 패턴. true를 돌려주면 이번 프레임의 일반 이동·공격을 건너뛰어요
+function eliteAI(m, dt, d, dx, dy, st) {
+  const P = player, ai = ELITE[m.elite].ai; m.sk = (m.sk || 0) - dt;
+  if (m.dashT > 0) {   // 돌진 중
+    m.dashT -= dt; tryMove(m, m.dvx * dt, m.dvy * dt); if (Math.random() < .5) burst(m.x, m.y + 6, 1, ["#cfe8a0", "#8fbf5a"], 30, .3);
+    if (!m.dashHit && d < 30) { m.dashHit = true; damageP(Math.round(m.dmg * 1.3)); }
+    return true;
+  }
+  if (m.cw > 0) {      // 특수 패턴 예비 동작(❗)
+    if ((m.cw -= dt) > 0) return true; m.cw = 0;
+    if (ai === "charge") { const L = Math.max(1, d); m.dvx = dx / L * 330; m.dvy = dy / L * 330; m.dashT = .45; m.dashHit = false; sfx("dash"); }
+    else if (ai === "slam") { dun.tele.push({ x: m.x, y: m.y + 8, r: 85, t: .05, t0: .05, dmg: Math.round(m.dmg * 1.6) }); shake = Math.max(shake, 6); }
+    return true;
+  }
+  if (m.sk > 0 || d > 260) return false;
+  if (ai === "charge" && d > 60 && d < 200) { m.cw = .6; m.sk = 4; return true; }
+  if (ai === "slam" && d < 60) { m.cw = .8; m.sk = 4.5; m.cd = 1.5; dun.tele.push({ x: m.x, y: m.y + 8, r: 85, t: .8, t0: .8, dmg: 0, warn: true }); return true; }
+  if (ai === "shoot" && d > 70) { const L = Math.max(1, d); dun.eproj.push({ x: m.x, y: m.y, vx: dx / L * 190, vy: dy / L * 190, life: 2.5, dmg: Math.round(m.dmg * .9), col: 0xf5d040 }); m.sk = 2.6; m.cw = .25; return false; }
+  if (ai === "spore") { dun.tele.push({ x: P.x, y: P.y + 8, r: 65, t: 1.3, t0: 1.3, dmg: Math.round(m.dmg * 1.2) }); m.sk = 4.2; m.cw = .35; return true; }
+  if (ai === "blink" && d > 70) { const a = Math.atan2(P.y - m.y, P.x - m.x); burst(m.x, m.y, 12, ["#b8a8ff", "#fff"], 90, .4); const nx = P.x + Math.cos(a) * 40, ny = P.y + Math.sin(a) * 40; if (!blocked(nx, ny + 8, 8, 6)) { m.x = nx; m.y = ny; } burst(m.x, m.y, 12, ["#b8a8ff", "#fff"], 90, .4); m.sk = 5; m.cd = 0; return false; }
+  return false;
+}
 function tryMove(e, vx, vy) { if (!blocked(e.x + vx, e.y + 8, 8, 6)) e.x += vx; if (!blocked(e.x, e.y + 8 + vy, 8, 6)) e.y += vy; }
 function updateDun(dt) {
   const P = player, st = pstats(), wild = dun.kind === "wild", world = dun.kind === "world";
@@ -1119,7 +1156,8 @@ function updateDun(dt) {
   for (const m of dun.mons) {
     m.flash = Math.max(0, m.flash - dt); m.cd = Math.max(0, m.cd - dt); if (m.demon) demonAI(m, dt);
     const dx = P.x - m.x, dy = P.y - m.y, d = Math.hypot(dx, dy);
-    if (m.kb > 0) { m.kb -= dt; m.wind = 0; tryMove(m, m.kx * dt, m.ky * dt); continue; }
+    if (m.kb > 0) { m.kb -= dt; m.wind = 0; m.cw = 0; tryMove(m, m.kx * dt, m.ky * dt); continue; }
+    if (m.elite && eliteAI(m, dt, d, dx, dy, st)) continue;
     if (m.wild && !m.hostile) {
       m.wt -= dt;
       if (m.wt <= 0) { m.wt = 1 + Math.random() * 2.5; const a = Math.random() < .4 ? null : Math.random() * 6.28; m.wvx = a === null ? 0 : Math.cos(a) * 28; m.wvy = a === null ? 0 : Math.sin(a) * 28; }
@@ -1153,7 +1191,7 @@ function updateDun(dt) {
     for (const m of [...dun.mons]) if (!q.hit.has(m) && Math.hypot(m.x - q.x, m.y - q.y) < 22 + (m.boss ? 12 : 0)) { q.hit.add(m); hitMon(m, q.m); if (!q.pierce) { q.life = 0; break; } }
   }
   dun.proj = dun.proj.filter(q => q.life > 0);
-  for (const t of dun.tele) { t.t -= dt; if (t.t <= 0) { t.done = true; burst(t.x, t.y - 8, 24, ["#ff5a2a", "#ffb02a", "#fff"], 130, .6, 80, .6); sfx("kill"); shake = Math.max(shake, 5); if (Math.hypot(P.x - t.x, P.y + 8 - t.y) < t.r) damageP(t.dmg); } }
+  for (const t of dun.tele) { t.t -= dt; if (t.t <= 0) { t.done = true; if (t.warn) continue; burst(t.x, t.y - 8, 24, ["#ff5a2a", "#ffb02a", "#fff"], 130, .6, 80, .6); sfx("kill"); shake = Math.max(shake, 5); if (t.dmg > 0 && Math.hypot(P.x - t.x, P.y + 8 - t.y) < t.r) damageP(t.dmg); } }
   dun.tele = dun.tele.filter(t => !t.done);
   for (const q of dun.eproj) { q.life -= dt; q.x += q.vx * dt; q.y += q.vy * dt; if (solidTile(Math.floor(q.x / T), Math.floor(q.y / T))) q.life = 0; else if (Math.hypot(P.x - q.x, P.y - q.y) < 20) { q.life = 0; damageP(q.dmg); } }
   dun.eproj = dun.eproj.filter(q => q.life > 0);
@@ -1959,7 +1997,7 @@ const DINO_K = idx => [null, null, "parasaurolophus", "triceratops", "velocirapt
 const mkWildDino = (idx, boss) => { const k = boss ? "trex" : DINO_K(idx); return DINOM.ready && k ? mkDinoG(k) : boss ? mkTrex() : DINO3[idx](); };
 /* ----- 몬스터 모델: Quaternius Ultimate Monsters (CC0) — 대기·걷기·달리기·공격·피격·죽음 ----- */
 const MONK = { "🐀": "slime", "🦇": "bee", "🕷️": "mushnub", "💀": "ghost", "🧟": "orc", "👹": "bluedemon", "🐲": "dragon" };
-const MTGT = { slime: .95, bee: 1.15, mushnub: 1.05, ghost: 1.5, orc: 1.95, bluedemon: 2.3, dragon: 2.1 };
+const MTGT = { slime: .95, bee: 1.15, mushnub: 1.05, ghost: 1.5, orc: 1.95, bluedemon: 2.3, dragon: 2.1, spikyslime: 1.15, hornet: 1.35, mushking: 1.35, skullghost: 1.65, skullorc: 2.15 };
 const MONCLIP = { Idle: [/^Idle$/, /Flying_Idle/, /Idle/], Walk: [/^Walk$/, /^Flying$/, /Fast_Flying/, /Walk/], Run: [/^Run$/, /Fast_Flying/, /^Walk$/, /Flying/], Attack: [/Bite_Front/, /Headbutt/, /^Punch$/, /Weapon/, /Bite/, /Punch/, /Attack/], Hit: [/Hit/], Death: [/Death/] };
 const MONM = { ready: false, started: false, src: {}, clips: {}, sc: {}, map: {} };
 function loadMonsters() {
@@ -1982,7 +2020,7 @@ function monTick(e, mv, fast) {
   if (e.cur !== want) { const a = e.act(want), once = want !== "Idle" && want !== "Walk" && want !== "Run"; a.reset(); a.setLoop(once ? THREE.LoopOnce : THREE.LoopRepeat, once ? 1 : Infinity); a.clampWhenFinished = once; a.fadeIn(.12).play(); if (e.curA && e.curA !== a) e.curA.fadeOut(.12); e.curA = a; e.cur = want; }
   e.mixer.update(Math.min(DT, .1));
 }
-const mkMonModel = em => MONM.ready && MONK[em] ? mkMonG(MONK[em]) : MON3[em]();
+const mkMonModel = (em, el) => MONM.ready && (el ? ELITE[el].model : MONK[em]) ? mkMonG(el ? ELITE[el].model : MONK[em]) : MON3[em]();
 const MON3 = { "🐀": mkRat, "🦇": mkBat, "🕷️": mkSpider, "💀": mkSkel, "🧟": mkZombie, "👹": mkOgre, "🐲": mkDragon };
 const DINO3 = [mkLizard, mkBoar, mkBrachio, mkCroc, mkRaptor];
 function animE(e, mv, spd = 9, amp = .6) {
@@ -2533,14 +2571,14 @@ function drawDun() {
   }
   for (const m of dun.mons) {
     if (Math.abs(m.x / T - camT.x) > 20 || Math.abs((m.y + 8) / T - camT.z) > 14) continue;
-    const e = ent(m, () => { const b = m.wild ? mkWildDino(m.idx, m.boss) : mkMonModel(m.e); b.g.scale.multiplyScalar(m.demon ? 1.45 : m.boss && !m.wild ? 1.8 : 1); return b; }, g.dyn);
-    if (e.mon) { e.mv = e.px !== undefined && Math.hypot(m.x - e.px, m.y - e.py) > 6 * DT; e.px = m.x; e.py = m.y; if (m.wind > 0 && !(e.atkT > 0)) e.atkT = (m.wind || 0) + .45; if (m.flash > (e.lfl || 0) + .02 && !(e.atkT > 0)) e.hitT = .35; e.lfl = m.flash; }
+    const e = ent(m, () => { const b = m.wild ? mkWildDino(m.idx, m.boss) : mkMonModel(m.e, m.elite); b.g.scale.multiplyScalar(m.demon ? 1.45 : m.boss && !m.wild ? 1.8 : m.elite ? 1.2 : 1); return b; }, g.dyn);
+    if (e.mon) { e.mv = e.px !== undefined && Math.hypot(m.x - e.px, m.y - e.py) > 6 * DT; e.px = m.x; e.py = m.y; if ((m.wind > 0 || m.cw > 0) && !(e.atkT > 0)) e.atkT = Math.max(m.wind || 0, m.cw || 0) + .45; if (m.flash > (e.lfl || 0) + .02 && !(e.atkT > 0)) e.hitT = .35; e.lfl = m.flash; }
     const chase = !(m.wild && !m.hostile), dx = P.x - m.x, dy = P.y - m.y, mv = chase ? Math.hypot(dx, dy) < 260 && Math.hypot(dx, dy) > 24 : (m.wvx || m.wvy);
     e.g.position.set(m.x / T, 0, (m.y + 8) / T); if (chase) face(e.g, dx, dy, 10); else if (mv) face(e.g, m.wvx, m.wvy, 6); if (e.dino && m.cd > (e.lcd || 0) + .5) e.atkT = .7; e.lcd = m.cd; animE(e, e.mon ? e.mv || m.kb > 0 : mv, e.mon ? (m.spd >= 90 ? 9 : 5) : m.boss ? 5 : 8, .55); flash(e, m.flash > 0);
-    const top = e.h * (m.demon ? 1.45 : m.boss && !m.wild ? 1.8 : 1) + .2;
-    if (m.hp < m.mhp || m.boss) labelT("▮".repeat(Math.max(1, Math.round(8 * m.hp / m.mhp))) + "▯".repeat(8 - Math.max(1, Math.round(8 * m.hp / m.mhp))), m.x / T, (m.y + 8) / T, top, m.boss ? "#f5b942" : m.wild && !m.hostile ? "#7be07b" : "#ff6a6a");
-    if (m.wind > 0) labelT("❗", m.x / T, (m.y + 8) / T, top + .75, "#ff9a3c");
-    if (m.boss) labelT(m.n, m.x / T, (m.y + 8) / T, top + .4, "#f5b942"); else if (m.tame && Math.hypot(m.x - P.x, m.y - P.y) < 90) labelT(`${m.n} 🐾${Math.min(m.tp, m.tame)}/${m.tame}`, m.x / T, (m.y + 8) / T, top + .35, "#fff3d6");
+    const top = e.h * (m.demon ? 1.45 : m.boss && !m.wild ? 1.8 : m.elite ? 1.2 : 1) + .2;
+    if (m.hp < m.mhp || m.boss || m.elite) labelT("▮".repeat(Math.max(1, Math.round(8 * m.hp / m.mhp))) + "▯".repeat(8 - Math.max(1, Math.round(8 * m.hp / m.mhp))), m.x / T, (m.y + 8) / T, top, m.boss ? "#f5b942" : m.wild && !m.hostile ? "#7be07b" : "#ff6a6a");
+    if (m.wind > 0 || m.cw > 0) labelT("❗", m.x / T, (m.y + 8) / T, top + .75, "#ff9a3c");
+    if (m.boss) labelT(m.n, m.x / T, (m.y + 8) / T, top + .4, "#f5b942"); else if (m.elite) labelT(m.n, m.x / T, (m.y + 8) / T, top + .4, "#c79bff"); else if (m.tame && Math.hypot(m.x - P.x, m.y - P.y) < 90) labelT(`${m.n} 🐾${Math.min(m.tp, m.tame)}/${m.tame}`, m.x / T, (m.y + 8) / T, top + .35, "#fff3d6");
   }
   if (dun.dead) for (let i = dun.dead.length - 1; i >= 0; i--) {   // 쓰러지는 동작을 끝까지 보여 주고 지워요
     const c = dun.dead[i], e = ENT.get(c.m); c.t -= DT; if (c.t <= 0 || !e) { dun.dead.splice(i, 1); continue; }
@@ -2565,7 +2603,7 @@ function drawDun() {
     for (const bl of dun.bolts || []) { const be = ent(bl, () => { const gg = new THREE.Group(), m = new THREE.Mesh(geo("bolt", () => new THREE.BoxGeometry(.18, 7, .18)), HDR(0xbfefff, 2.6, { transparent: true })); m.position.y = 3.5; m.material.userData.own = 1; gg.add(m); return { g: gg, m }; }, g.dyn); be.g.position.set(bl.x / T, 0, (bl.y + 8) / T); be.m.material.opacity = Math.min(1, bl.t * 4); light(bl.x / T, (bl.y + 8) / T, 5, 0xbfefff, 1.5, 1.2); }
   }
   for (const t of dun.tele) { const te = ent(t, () => { const gg = new THREE.Group(), ring = new THREE.Mesh(new THREE.RingGeometry(.92, 1, 40), new THREE.MeshBasicMaterial({ color: 0xff3a2a, transparent: true, opacity: .9, side: THREE.DoubleSide, depthWrite: false })), fill = new THREE.Mesh(new THREE.CircleGeometry(1, 36), new THREE.MeshBasicMaterial({ color: 0xff5a2a, transparent: true, opacity: .4, side: THREE.DoubleSide, depthWrite: false })); for (const m of [ring, fill]) { m.geometry.rotateX(-HALF); m.material.userData.own = 1; m.userData.ownGeo = 1; gg.add(m); } fill.position.y = .02; return { g: gg, fill }; }, g.dyn); te.g.position.set(t.x / T, .06, t.y / T); te.g.scale.setScalar(t.r / T); te.fill.scale.setScalar(Math.max(.05, 1 - t.t / t.t0)); light(t.x / T, t.y / T, 5, 0xff4a2a, .6, .8); }
-  for (const q of dun.eproj) { const eq = ent(q, () => { const gg = new THREE.Group(); gg.add(new THREE.Mesh(geo("eorb", () => new THREE.SphereGeometry(.24, 10, 8)), HDR(0xc03aff))); return { g: gg }; }, g.dyn); eq.g.position.set(q.x / T, .8, (q.y + 8) / T); light(q.x / T, (q.y + 8) / T, 4, 0xc03aff, .8, 1); }
+  for (const q of dun.eproj) { const eq = ent(q, () => { const gg = new THREE.Group(); gg.add(new THREE.Mesh(geo("eorb", () => new THREE.SphereGeometry(.24, 10, 8)), HDR(q.col || 0xc03aff))); return { g: gg }; }, g.dyn); eq.g.position.set(q.x / T, .8, (q.y + 8) / T); light(q.x / T, (q.y + 8) / T, 4, 0xc03aff, .8, 1); }
   for (const a of dun.arcs) {
     if (!a.whirl && a.t0) {   // 칼 높이에서 대각선으로 휘두르는 빛 궤적
       const ar = ent(a, () => { const gg = new THREE.Group(), pv = new THREE.Group(); gg.add(pv); const geo2 = geo("slash", () => { const g2 = new THREE.RingGeometry(.45, 1.45, 28, 1, -HALF - 1.2, 2.4); g2.rotateX(-HALF); return g2; });
@@ -2989,7 +3027,7 @@ function enterWorld(pos, msg) {
   dun.pet = activePet() ? { x: P.x - 20, y: P.y, cd: 0 } : null; S.wpos = { x: P.x, y: P.y }; WDUN = dun; storyCheck(); hud();
   say(msg || "🌍 오픈월드 — 어디로든 갈 수 있어요. 마을·동굴·이동석을 찾아보세요! (B 건설 · N 지도 · J 의뢰)", 4500);
 }
-function mkMonT(i, depth, x, y) { const b = MONS[i], sc = 1 + .3 * (depth - 1), hp = Math.round(b.hp * sc); return { ...b, x, y, hp, mhp: hp, dmg: Math.round(b.dmg * sc), xp: Math.round(b.xp * sc), cd: 0, flash: 0, kb: 0, kx: 0, ky: 0, boss: false, dpt: depth, tier: Math.floor((depth - 1) / 2), world: true }; }
+function mkMonT(i, depth, x, y) { const b = MONS[i], sc = 1 + .3 * (depth - 1), hp = Math.round(b.hp * sc); return eliteify({ ...b, x, y, hp, mhp: hp, dmg: Math.round(b.dmg * sc), xp: Math.round(b.xp * sc), cd: 0, flash: 0, kb: 0, kx: 0, ky: 0, boss: false, dpt: depth, tier: Math.floor((depth - 1) / 2), world: true }); }
 function spawnNear() {
   const P = player, a = Math.random() * 6.283, d = 16 + Math.random() * 11, x = Math.floor(P.x / T + Math.cos(a) * d), y = Math.floor((P.y + 8) / T + Math.sin(a) * d);
   if (x < 2 || y < 2 || x >= WN - 2 || y >= WN - 2) return; const b = wb(x, y); if (b < 1 || b === 8 || wsolid(x, y)) return;
@@ -3737,7 +3775,7 @@ for (const id of ["gear", "shop"]) { const el = $(id); let y0 = null;
   const up = e => { if (y0 === null) return; const dy = e.clientY - y0; y0 = null; el.style.transform = ""; if (dy > 70 && !(id === "gear" && gearTab === "perk")) closeShop(); };
   el.addEventListener("pointerup", up); el.addEventListener("pointercancel", up); }
 renderDock();
-window.__game = { get MONM() { return MONM; }, ENT, MON_WIND, saveApi: { save, exportSave, importSave, listBackups, restoreBackup, backupNow, SAVE, SAVE_VER },  get DINOM() { return DINOM; }, wsolid, bioBase,  equipBag, unequip, homeTileAt, openShop, enterHome: () => enterHome(), get furnSel() { return furnSel; }, ctxHint, renderBar,  get sun() { return sun; }, get GRD() { return GRD; }, get S3() { return S3; }, setYaw: v => { camYaw = v; camManT = vtime + 999; }, get MAN() { return MAN; }, get KAY() { return KAY; }, get curPE() { return curPE; }, pAnim, WX, setWeather: t => { WX.type = t; WX.t = 9999; }, startArena, arenaTick, startWave, gemGain, choosePerk, finishArena, openPerk, autoFight, idleStored, dailyTouch, genArena, mkMonT, get PERKS() { return PERKS; }, get ARES() { return ARES; }, sEvent, storyReady, reportStory, openKing, nearKing, demonAI, finalizeDemon, enterDemon, onDemonDefeat, mkDemon, damageP, addFame, get STORY() { return STORY; }, NET, spawnNear, worldTick, killMon, setBuild: i => { buildSel = i == null ? null : BUILD[i]; }, farmAct, winteract, genOffers, turnIn, warpTo, worldAct, enterWorld, getWorld, get WORLD() { return WORLD; }, get dun() { return dun; }, wc, wb, setClock: v => { clock = v; }, fireball, feed, toggleMount, craft, togglePanel, enterDungeon, get dun() { return dun; }, pstats, genGear, attack, scene: () => scene, furnSelSet: v => { furnSel = v; renderFurn(); }, player, trees, S, keys, act, get fishing() { return fishing; }, bugs, villagers }; // 디버그/테스트용
+window.__game = { get MONM() { return MONM; }, ENT, MON_WIND, ELITE, eliteify, eliteAI, saveApi: { save, exportSave, importSave, listBackups, restoreBackup, backupNow, SAVE, SAVE_VER },  get DINOM() { return DINOM; }, wsolid, bioBase,  equipBag, unequip, homeTileAt, openShop, enterHome: () => enterHome(), get furnSel() { return furnSel; }, ctxHint, renderBar,  get sun() { return sun; }, get GRD() { return GRD; }, get S3() { return S3; }, setYaw: v => { camYaw = v; camManT = vtime + 999; }, get MAN() { return MAN; }, get KAY() { return KAY; }, get curPE() { return curPE; }, pAnim, WX, setWeather: t => { WX.type = t; WX.t = 9999; }, startArena, arenaTick, startWave, gemGain, choosePerk, finishArena, openPerk, autoFight, idleStored, dailyTouch, genArena, mkMonT, get PERKS() { return PERKS; }, get ARES() { return ARES; }, sEvent, storyReady, reportStory, openKing, nearKing, demonAI, finalizeDemon, enterDemon, onDemonDefeat, mkDemon, damageP, addFame, get STORY() { return STORY; }, NET, spawnNear, worldTick, killMon, setBuild: i => { buildSel = i == null ? null : BUILD[i]; }, farmAct, winteract, genOffers, turnIn, warpTo, worldAct, enterWorld, getWorld, get WORLD() { return WORLD; }, get dun() { return dun; }, wc, wb, setClock: v => { clock = v; }, fireball, feed, toggleMount, craft, togglePanel, enterDungeon, get dun() { return dun; }, pstats, genGear, attack, scene: () => scene, furnSelSet: v => { furnSel = v; renderFurn(); }, player, trees, S, keys, act, get fishing() { return fishing; }, bugs, villagers }; // 디버그/테스트용
 </script>
 </body>
 </html>
