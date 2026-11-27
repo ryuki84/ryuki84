@@ -364,7 +364,7 @@ THREE.ShaderChunk.lights_pars_begin = THREE.ShaderChunk.lights_pars_begin.replac
 "use strict";
 /* ---------- 상수 / 데이터 ---------- */
 const T = 32, W = 30, H = 20, VW = W * T, VH = H * T;
-const HOUSE = { x: 3, y: 3, w: 3, h: 2 };
+const HOUSE = { x: -60, y: -60, w: 3, h: 2 };   // 집은 마을 서쪽의 실제 건물(걸어 들어가는 집)로 옮김
 const SHOP  = { x: 13, y: 3, w: 3, h: 2 };
 const CAP = 30;
 
@@ -412,8 +412,8 @@ const MAT = { wood: ["🪵", "나무"], stone: ["🪨", "돌"], fiber: ["🌿", 
 const DINOS = [
   { e: "🦎", n: "도마뱀", hp: 20, dmg: 4, spd: 90, xp: 5, tame: 3, ride: false },
   { e: "🐗", n: "멧돼지", hp: 45, dmg: 8, spd: 80, xp: 9, tame: 4, ride: true },
-  { e: "🦕", n: "브라키오", hp: 120, dmg: 10, spd: 45, xp: 20, tame: 6, ride: true, big: true },
-  { e: "🐊", n: "악어", hp: 90, dmg: 15, spd: 70, xp: 22, tame: 6, ride: true, aggro: true },
+  { e: "🦕", n: "파라사우롤로푸스", hp: 120, dmg: 10, spd: 45, xp: 20, tame: 6, ride: true, big: true },
+  { e: "🦏", n: "트리케라톱스", hp: 90, dmg: 15, spd: 70, xp: 22, tame: 6, ride: true, aggro: true },
   { e: "🦖", n: "랩터", hp: 110, dmg: 18, spd: 105, xp: 30, tame: 8, ride: true, aggro: true },
 ];
 const SETS = {
@@ -519,8 +519,8 @@ function solidTile(x, y) {
   if (scene === "home") return roomSolid(x, y);
   if (scene === "dun" && dun.kind === "world") return wsolid(x, y);
   if (scene === "dun") { const c = dun.map[y]?.[x]; return c === undefined || c === "#" || c === "w" || c === "T" || c === "R"; }
-  if (x < 0 || y < 0 || x >= W || y >= H) return true;
-  return terrain[y][x] === "w" || inRect(HOUSE, x, y) || inRect(SHOP, x, y) || inRect(CAVE, x, y) || inRect(WILDG, x, y) || inRect(ARENA, x, y) || !!treeAt(x, y) || !!rockAt(x, y);
+  if (x < 0 || y < 0 || x >= W || y >= H) return WORLD && WORLD.vreg ? wsolid(x + WORLD.vreg.x, y + WORLD.vreg.y) : true;
+  return terrain[y][x] === "w" || inRect(HOUSE, x, y) || inRect(SHOP, x, y) || inRect(CAVE, x, y) || inRect(ARENA, x, y) || !!treeAt(x, y) || !!rockAt(x, y);
 }
 function blocked(cx, cy, hw, hh) {
   for (const [ox, oy] of [[-hw, -hh], [hw, -hh], [-hw, hh], [hw, hh]])
@@ -631,7 +631,6 @@ function act() {
   if (inRect(SHOP, tx, ty)) return openShop();
   if (inRect(ARENA, tx, ty)) return togglePanel("arena");
   if (inRect(CAVE, tx, ty)) return enterDungeon(1);
-  if (inRect(WILDG, tx, ty)) return enterWorld();
   if (inRect(HOUSE, tx, ty)) return enterHome();
   const tool = player.tool; pAnim(tool === 2 ? "Throw" : tool === 3 ? "1H_Melee_Attack_Chop" : tool === 1 ? "1H_Melee_Attack_Slice_Horizontal" : tool === 4 ? "PickUp" : "Interact", .6);
   if (tool === 0) {
@@ -662,12 +661,24 @@ function act() {
     hud(); say("🌱 묘목을 심었어요! 1분쯤 지나면 자라요."); save();
   }
 }
+let WDUN = null;
+function seamToWorld() {
+  const r = scene === "home" ? WORLD.hreg : WORLD.vreg, P = player, wx = P.x + r.x * T, wy = P.y + r.y * T, dx = P.dx, dy = P.dy; cancelFish(); furnSel = null; save();
+  if (WDUN && WDUN.kind === "world") { scene = "dun"; dun = WDUN; hud(); } else enterWorld({ x: wx, y: wy }, "🌍 넓은 세상으로 나왔어요 — 북쪽 길을 따라가면 포근 왕국 왕도예요.");
+  P.x = wx; P.y = wy; P.dx = dx; P.dy = dy; S.wpos = { x: wx, y: wy }; hud();
+}
+function seamToLocal(kind) {
+  const r = kind === "home" ? WORLD.hreg : WORLD.vreg, P = player, dx = P.dx, dy = P.dy; WDUN = dun; S.wpos = { x: P.x, y: P.y };
+  scene = kind === "home" ? "home" : "out"; dun = null; P.x -= r.x * T; P.y -= r.y * T; P.dx = dx; P.dy = dy; P.mounted = false; furnSel = null; cancelFish(); hud(); renderBar();
+  if (kind === "home") say("🏠 집 안이에요. 가구를 놓아 보세요 (지붕이 사라져 안이 보여요)", 2200); else say("🏡 포근 마을", 1200);
+}
 function enterHome() {
   save(); scene = "home"; furnSel = null; cancelFish();
   player.x = 6 * T; player.y = (RH - 1) * T + 16; player.dx = 0; player.dy = -1;
   hud(); say("집에 들어왔어요. 가구를 놓아 보세요 🏠", 3000);
 }
 function leaveHome() {
+  if (WORLD && WORLD.vreg) return seamToWorld();
   scene = "out"; save();
   player.x = 4.5 * T; player.y = 5.5 * T; player.dx = 0; player.dy = 1;
   hud(); say("저장했어요 💾");
@@ -1223,6 +1234,11 @@ function update(dt) {
     if (!blocked(player.x + ix * sp, player.y + 8, 9, 6)) player.x += ix * sp;
     if (!blocked(player.x, player.y + 8 + iy * sp, 9, 6)) player.y += iy * sp;
   }
+  if (WORLD && WORLD.vreg && started) {   // 한 맵: 지역 경계를 걸어서 넘으면 바로 이어짐
+    const ftx = Math.floor(player.x / T), fty = Math.floor((player.y + 8) / T);
+    if (scene === "out" && (ftx < 0 || fty < 0 || ftx >= W || fty >= H)) seamToWorld();
+    else if (scene === "dun" && dun && dun.kind === "world") { const v = WORLD.vreg, h = WORLD.hreg; if (ftx >= v.x && ftx < v.x + W && fty >= v.y && fty < v.y + H) seamToLocal("village"); else if (ftx >= h.x && ftx < h.x + RW && fty >= h.y + 2 && fty < h.y + RH) seamToLocal("home"); }
+  }
   if (scene === "dun") { updateDun(dt); return; }
   if (scene === "home") { if (Math.floor((player.y + 8) / T) >= RH) leaveHome(); return; }
   // 바닥 아이템 줍기
@@ -1512,7 +1528,7 @@ function tileCol(kind, c, x, y) {
   if (c === "p") return col.setHex(0xcfa870).offsetHSL(0, 0, v * .6);
   if (c === "w") return col.setHex(0xb9a56c);
   if (c === "#") return col.setHex(0x4f9a3e).offsetHSL(0, 0, v);
-  return col.setHex(0x6dbb4f).offsetHSL(0, 0, v);
+  return col.setHex(kind === "village" ? 0x78c455 : 0x6dbb4f).offsetHSL(0, 0, v);
 }
 function terrainGroup(w, h, at, kind) {
   const top = new GB(), side = new GB(), brick = new GB(), water = new GB(), grp = new THREE.Group();
@@ -1752,7 +1768,7 @@ function mkMan(look, eq, armed) {
 }
 /* ----- 3인칭 카메라 ----- */
 let lookYaw = .3, lookManT = -99, camYaw = 0, camManT = -99, TPV_ON = true, camZoom = 1; try { camZoom = clamp(+localStorage.getItem("pokgeun-zoom") || 1, .55, 1.7); } catch (e) {} try { TPV_ON = localStorage.getItem("pokgeun-tpv") !== "0"; } catch (e) {}
-const TPV = () => TPV_ON && started && !lookMode() && (scene === "out" || (scene === "dun" && dun && (dun.kind === "world" || dun.kind === "wild") && !dun.arena));
+const TPV = () => TPV_ON && started && !lookMode() && (scene === "out" || (scene === "home" && WORLD && WORLD.vreg) || (scene === "dun" && dun && (dun.kind === "world" || dun.kind === "wild") && !dun.arena));
 const lookSig = () => { const L = lookOf(S.look), q = S.eq; return [KAY.ready, MAN.ready, JSON.stringify(L), q.armor ? q.armor.id : 0, q.ring ? q.ring.id : 0, q.weapon ? q.weapon.e : 0, q.armor ? q.armor.e + q.armor.rar : 0].join(","); };
 const mkPlayer = o => { const armed = o === PK.d, e = MAN.ready ? mkMan(S.look, S.eq, armed) : KAY.ready ? mkKay(S.look, S.eq, armed) : mkHeroFromLook(S.look, 0, S.eq); e.sig = lookSig() + (armed ? "A" : ""); return e; };
 let curPE = null;
@@ -1878,9 +1894,30 @@ const mkDragon = () => uq(() => {
   const wings = [wing(1), wing(-1)];
   const l = [leg(b, -.3, .55, .4, .22, .55, c), leg(b, .3, .55, .4, .22, .55, c), leg(b, -.3, .55, -.4, .22, .55, c), leg(b, .3, .55, -.4, .22, .55, c)];
   outline(g); return { g, body: b, legs: l, wings, slow: 1, h: 3.4 }; });
+/* ----- 공룡: Quaternius Ultimate Animated Dinosaurs (CC0) — 대기·걷기·달리기·공격 애니메이션 ----- */
+const DINOM = { ready: false, started: false, src: {}, clips: {}, sc: {} }, DTGT = { trex: 4.6, velociraptor: 1.8, triceratops: 2.1, parasaurolophus: 2.7 };
+function loadDinos() {
+  if (DINOM.started || !R3) return; DINOM.started = true; const L = new THREE.GLTFLoader(), ks = Object.keys(DTGT);
+  Promise.all(ks.map(k => L.loadAsync(`assets/dinos/${k}.${KEXT}`))).then(r => { ks.forEach((k, i) => { const sc = r[i].scene; DINOM.src[k] = sc; DINOM.clips[k] = r[i].animations; const bb = new THREE.Box3().setFromObject(sc); DINOM.sc[k] = DTGT[k] / Math.max(.1, bb.max.y - bb.min.y); }); DINOM.ready = true; }).catch(e => console.warn("공룡 모델을 불러오지 못해 기본 모델로 표시해요.", e));
+}
+function mkDinoG(k) {
+  const root = THREE.SkeletonUtils.clone(DINOM.src[k]), g = new THREE.Group(), body = new THREE.Group(); g.add(body); body.add(root); root.scale.setScalar(DINOM.sc[k]);
+  root.traverse(o => { if (o.isMesh) { const cc = o.material.color ? o.material.color.clone() : new THREE.Color(1, 1, 1); if (!THREE.ColorManagement.enabled) cc.convertLinearToSRGB(); cc.multiplyScalar(1.25); const c = cc.getHex(), m = toonPatch(TOON({ color: c, gradientMap: gradTex, ...(PBRL ? { roughness: .8 } : {}) })); if (GRD) addDetail(m, "plaster", true); m.userData.own = 1; o.material = m; o.castShadow = true; o.frustumCulled = false; } });
+  const mixer = new THREE.AnimationMixer(root), acts = {}, act = n => acts[n] || (acts[n] = mixer.clipAction(DINOM.clips[k].find(c => c.name === n) || DINOM.clips[k][0]));
+  return { g, body, legs: [], la: new THREE.Group(), ra: new THREE.Group(), h: DTGT[k] + .2, dino: k, mixer, act, cur: null, seed: Math.random() * 10 };
+}
+function dinoTick(e, mv, fast) {
+  if (e.atkT > 0) e.atkT -= DT;
+  const want = e.atkT > 0 ? "Attack" : mv ? (fast ? "Run" : "Walk") : "Idle";
+  if (e.cur !== want) { const a = e.act(want); if (want === "Attack") { a.reset(); a.setLoop(THREE.LoopOnce, 1); a.clampWhenFinished = true; } a.reset().fadeIn(.18).play(); if (e.curA && e.curA !== a) e.curA.fadeOut(.18); e.curA = a; e.cur = want; }
+  e.mixer.update(Math.min(DT, .1));
+}
+const DINO_K = idx => [null, null, "parasaurolophus", "triceratops", "velociraptor"][idx];
+const mkWildDino = (idx, boss) => { const k = boss ? "trex" : DINO_K(idx); return DINOM.ready && k ? mkDinoG(k) : boss ? mkTrex() : DINO3[idx](); };
 const MON3 = { "🐀": mkRat, "🦇": mkBat, "🕷️": mkSpider, "💀": mkSkel, "🧟": mkZombie, "👹": mkOgre, "🐲": mkDragon };
 const DINO3 = [mkLizard, mkBoar, mkBrachio, mkCroc, mkRaptor];
 function animE(e, mv, spd = 9, amp = .6) {
+  if (e.dino) return dinoTick(e, mv, spd >= 8);
   if (e.kay) return kayTick(e, mv);
   const t = vtime * spd, sd = e.seed || 0;
   if (e.legs) e.legs.forEach((l, i) => { l.rotation.x = mv ? Math.sin(t + (i % 2) * Math.PI + (i > 1 ? 1.2 : 0)) * amp : l.rotation.x * .8; });
@@ -2040,7 +2077,14 @@ function groups() {
   G.cloud = new THREE.Mesh(new THREE.PlaneGeometry(90, 90), new THREE.MeshBasicMaterial({ map: cloudTex(), transparent: true, depthWrite: false })); G.cloud.rotation.x = -HALF; G.cloud.position.y = .1; G.cloud.visible = false; S3.add(G.cloud);
   return G;
 }
-function showScene(k) { const g = groups(); if (g.wgrp) { g.wgrp.visible = false; g.sea.visible = false; } if (g.cur !== k) { g.cur = k; camInit = false; } g.village.visible = k === "village"; g.home.visible = k === "home"; g.dyn.visible = k === "dun"; g.far.visible = k === "village" || k === "wild"; }
+let ORIGIN = [0, 0];
+const SEAM = () => !!(WORLD && WORLD.vreg) && (scene === "out" || scene === "home" || (scene === "dun" && dun && dun.kind === "world"));
+function showScene(k) { const g = groups();
+  if (SEAM()) { if (!VBUILT) buildVillage(); if (!HBUILT) buildHome(); if (g.cur !== k) g.cur = k; const V = WORLD.vreg, Hr = WORLD.hreg; ORIGIN = k === "village" ? [V.x, V.y] : k === "home" ? [Hr.x, Hr.y] : [0, 0];
+    g.village.visible = true; g.home.visible = true; g.village.position.set(V.x - ORIGIN[0], 0, V.y - ORIGIN[1]); g.home.position.set(Hr.x - ORIGIN[0], 0, Hr.y - ORIGIN[1]); g.dyn.visible = k === "dun"; g.far.visible = false;
+    if (G.homeRoof) G.homeRoof.visible = k !== "home"; if (G.homeOut) G.homeOut.visible = false; return; }
+  ORIGIN = [0, 0]; g.village.position.set(0, 0, 0); g.home.position.set(0, 0, 0); if (G.homeRoof) G.homeRoof.visible = false; if (G.homeOut) G.homeOut.visible = true;
+  if (g.wgrp) { g.wgrp.visible = false; g.sea.visible = false; } if (g.cur !== k) { g.cur = k; camInit = false; } g.village.visible = k === "village"; g.home.visible = k === "home"; g.dyn.visible = k === "dun"; g.far.visible = k === "village" || k === "wild"; }
 
 /* ----- 라벨 · 파티클 · 환경 ----- */
 function labelT(text, x, z, h, col) { labels.push({ t: text, x, z, h, col: col || "#fff3d6", box: true }); }
@@ -2267,9 +2311,8 @@ function buildVillage() {
   put(mkHouse(), HOUSE); put(mkShop(), SHOP); put(mkCave(), CAVE); put(mkGate(), WILDG, .0); put(mkArena(), ARENA);
   G.gateX = WILDG.x + WILDG.w / 2; G.gateZ = WILDG.y + WILDG.h / 2 + .1;
 }
-function drawVillage() {
-  const g = groups(); if (!VBUILT) buildVillage(); showScene("village"); setEnv("village");
-  const P = player, dk = darkness(), night = dk > .25, D = 22 / (Z > 1 ? 1.55 : 1);
+function drawVillageEnts(act) {
+  const g = G, P = player, night = darkness() > .25;
   g.vterr.userData.water.position.y = Math.sin(vtime * 1.6) * .02;
   flames.forEach((f, i) => { f.scale.setScalar(1.2 + Math.sin(vtime * 12 + i * 2) * .15); });
   for (const t of trees) {
@@ -2284,14 +2327,19 @@ function drawVillage() {
   for (const it of ground) { const e = ent(it, () => { const m = Sp(new THREE.Group(), .13, FRC[it.k] || 0xe8505a, 0, 0, 0); return { g: m.parent }; }, g.vdyn); e.g.position.set(it.x + .5, .2 + Math.abs(Math.sin(vtime * 4 + it.x)) * .12, it.y + .5); }
   for (const v of villagers) {
     const e = ent(v, () => mkAnimal(v.e), g.vdyn), mv = v.talk <= 0 && (v.vx || v.vy);
-    e.g.position.set(v.x / T, 0, (v.y + 8) / T); if (mv) face(e.g, v.vx, v.vy); else if (v.talk > 0) face(e.g, P.x - v.x, P.y - v.y);
-    animE(e, mv, 8, .5); if (Math.hypot(v.x - P.x, v.y - P.y) < 80) labelT(v.name, v.x / T, (v.y + 8) / T, 2, "#fff3d6");
+    e.g.position.set(v.x / T, 0, (v.y + 8) / T); if (mv) face(e.g, v.vx, v.vy); else if (act && v.talk > 0) face(e.g, P.x - v.x, P.y - v.y);
+    animE(e, mv, 8, .5); if (act && Math.hypot(v.x - P.x, v.y - P.y) < 80) labelT(v.name, v.x / T, (v.y + 8) / T, 2, "#fff3d6");
   }
   for (const b of bugs) {
     const e = ent(b, () => mkBug(b.id), g.vdyn); e.g.position.set(b.x / T, .7 + Math.sin(vtime * 6 + b.a) * .1, (b.y + 8) / T); face(e.g, Math.cos(b.a), Math.sin(b.a));
-    if (e.ff) { const on = Math.sin(vtime * 5 + b.a) > -.3; e.ff.material.color.setHex(on ? 0xf5ff8a : 0x6a7030).multiplyScalar(on ? 3 : 1); if (on && night) light(b.x / T, (b.y + 8) / T, 2.5, 0xe8ff8a, .8, 1); }
+    if (e.ff) { const on = Math.sin(vtime * 5 + b.a) > -.3; e.ff.material.color.setHex(on ? 0xf5ff8a : 0x6a7030).multiplyScalar(on ? 3 : 1); if (act && on && night) light(b.x / T, (b.y + 8) / T, 2.5, 0xe8ff8a, .8, 1); }
     else e.wings.forEach((w, i) => w.rotation.z = (i ? -1 : 1) * (.2 + Math.abs(Math.sin(vtime * 14 + b.a)) * 1.1));
   }
+}
+function drawVillage() {
+  const g = groups(); if (!VBUILT) buildVillage(); showScene("village"); setEnv("village");
+  const P = player, dk = darkness(), night = dk > .25, D = 22 / (Z > 1 ? 1.55 : 1);
+  drawVillageEnts(true); if (SEAM()) { drawWorldTerrain(ORIGIN[0], ORIGIN[1]); drawHomeEnts(false); }
   const pe = refreshLook(ent(PK.v, mkPlayer, g.vdyn)), pz = (P.y + 8) / T; pe.g.position.set(P.x / T, 0, pz); face(pe.g, P.dx, P.dy, 16);
   animE(pe, P.mv && !modal, 10, .75); pe.ra.rotation.x = pe.ra.rotation.x; flash(pe, false);
   if (fishing) {
@@ -2300,7 +2348,7 @@ function drawVillage() {
   }
   if (night) { for (const wx of [-.9, .9]) light(HOUSE.x + HOUSE.w / 2 + wx, HOUSE.y + HOUSE.h / 2 + 1.1, 4.5, 0xffd870, .8, 1.3); light(SHOP.x + SHOP.w / 2, SHOP.y + SHOP.h / 2 + 1.2, 5, 0xffd870, 1, 1.4); light(G.gateX - .75, G.gateZ, 4, 0xffa534, 2, 1.3); light(G.gateX + .75, G.gateZ, 4, 0xffa534, 2, 1.3); }
   PL0.x = P.x / T; PL0.z = pz; PL0.r = night ? 6 : 3; PL0.i = night ? 1.5 : .0; PL0.h = 1.8; PL0.c = 0xffd9a0;
-  labelT("내 집", HOUSE.x + HOUSE.w / 2, HOUSE.y + HOUSE.h + .3, .3); labelT("다람쥐 상점", SHOP.x + SHOP.w / 2, SHOP.y + SHOP.h + .3, .3); labelT("던전 입구", CAVE.x + CAVE.w / 2, CAVE.y + CAVE.h + .35, .3); labelT("오픈월드", G.gateX, G.gateZ + .3, .3); labelT("서바이벌 아레나", ARENA.x + 1.5, ARENA.y + ARENA.h + .3, .3);
+  labelT("내 집", HOUSE.x + HOUSE.w / 2, HOUSE.y + HOUSE.h + .3, .3); labelT("다람쥐 상점", SHOP.x + SHOP.w / 2, SHOP.y + SHOP.h + .3, .3); labelT("던전 입구", CAVE.x + CAVE.w / 2, CAVE.y + CAVE.h + .35, .3); labelT("🏠 내 집 ←", G.gateX, G.gateZ + .3, .3); labelT("🏰 왕도 ↑", 15, -.6, .3); labelT("서바이벌 아레나", ARENA.x + 1.5, ARENA.y + ARENA.h + .3, .3);
   if (started && !modal) { const { tx, ty } = target(); cursorAt(tx, ty, terrain[ty] && terrain[ty][tx] === "w" ? -.1 : .03); } else G.cursor.visible = false;
   follow(P.x / T, pz, W, H, D); finish(D); overlay();
 }
@@ -2317,16 +2365,32 @@ function buildHome() {
   wl.quad([0, 0, 2], [0, H2, 2], [RW, H2, 2], [RW, 0, 2], wc, [0, 0, 1]); wl.quad([0, 0, 2.001], [0, .9, 2.001], [RW, .9, 2.001], [RW, 0, 2.001], wd, [0, 0, 1]);
   for (const x of [0, RW]) { wl.quad([x, 0, 2], [x, H2, 2], [x, H2, RH], [x, 0, RH], wc, [x ? -1 : 1, 0, 0]); wl.quad([x, 0, 2], [x, .9, 2], [x, .9, RH], [x, 0, RH], wd, [x ? -1 : 1, 0, 0]); }
   g.add(wl.build(VMAT())); B(g, RW + .4, .15, .15, dark, RW / 2, H2 + .07, 2); B(g, .15, .15, RH - 2, dark, 0, H2 + .07, 2 + (RH - 2) / 2); B(g, .15, .15, RH - 2, dark, RW, H2 + .07, 2 + (RH - 2) / 2);
-  const out = new THREE.Mesh(new THREE.PlaneGeometry(40, 30), TOON({ color: 0x2a1c14, gradientMap: gradTex })); out.rotation.x = -HALF; out.position.set(RW / 2, -.01, RH / 2); g.add(out);
+  const out = new THREE.Mesh(new THREE.PlaneGeometry(40, 30), TOON({ color: 0x2a1c14, gradientMap: gradTex })); out.rotation.x = -HALF; out.position.set(RW / 2, -.01, RH / 2); g.add(out); G.homeOut = out;
+  const sh = new THREE.Group(), roof = new THREE.Group(), wcol = 0xf3e3c0, tcol = 0x8a5a34;   // 바깥에서 보이는 집 외벽 · 지붕 (안에 들어가면 지붕과 앞벽이 사라짐)
+  B(sh, RW + .44, H2, .2, wcol, RW / 2, H2 / 2, 1.88); for (const x of [-.12, RW + .12]) B(sh, .2, H2, RH - 2 + .24, wcol, x, H2 / 2, 2 + (RH - 2) / 2);
+  B(sh, RW + .5, .22, RH - 2 + .5, 0x9a8a78, RW / 2, .11 - .2, 2 + (RH - 2) / 2, { rs: true });
+  for (const [x0, x1] of [[-.22, 5], [7, RW + .22]]) B(roof, x1 - x0, H2, .2, wcol, (x0 + x1) / 2, H2 / 2, RH + .12);
+  B(roof, 2, H2 - 1.75, .2, wcol, 6, 1.75 + (H2 - 1.75) / 2, RH + .12); B(roof, 2.2, .12, .3, tcol, 6, 1.75, RH + .14);
+  for (const x of [2, 9.5]) { B(roof, 1, .8, .05, 0x5a3a22, x, 1.4, RH + .24); B(roof, .84, .64, .04, 0xa8dcf5, x, 1.4, RH + .27); }
+  const rl = Math.hypot((RH - 2) / 2 + .5, 1.5), ra = Math.atan2(1.5, (RH - 2) / 2 + .5);
+  for (const sgn of [-1, 1]) B(roof, RW + .9, .16, rl, 0xc8553d, RW / 2, H2 + .75, 2 + (RH - 2) / 2 + sgn * ((RH - 2) / 4 + .25), { r: [sgn * ra, 0, 0] });
+  for (const x of [-.12, RW + .12]) { const tri = new THREE.Mesh(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, -(RH - 2) / 2 - .1), new THREE.Vector3(0, 1.5, 0), new THREE.Vector3(0, 0, (RH - 2) / 2 + .1)]), TOON({ color: wcol, side: THREE.DoubleSide, gradientMap: gradTex })); tri.geometry.computeVertexNormals(); tri.position.set(x, H2, 2 + (RH - 2) / 2); roof.add(tri); }
+  B(roof, .4, 1, .4, 0x8a8e9e, RW - 2.5, H2 + 1.4, 3.2);
+  sh.add(roof); sh.traverse(m => { if (m.isMesh) m.castShadow = true; }); g.add(sh); G.homeRoof = roof; sh.visible = true; G.homeShell = sh;
 }
-function drawHome() {
-  const g = groups(); if (!HBUILT) buildHome(); showScene("home"); setEnv("home");
-  const P = player, D = 19 / (Z > 1 ? 1.2 : 1), dk = darkness();
+function drawHomeEnts(act) {
+  const g = G, dk = darkness();
+  if (!act && SEAM()) { const hx = WORLD.hreg.x - ORIGIN[0], hz = WORLD.hreg.y - ORIGIN[1]; if (Math.hypot(hx + 6 - player.x / T, hz + RH - (player.y + 8) / T) < 18) labelT("🏠 내 집", hx + 6, hz + RH + .6, .3); }
   for (const r of S.room) {
     const f = FURN[r.id], e = ent(r, () => ({ g: mkFurn(r.id) }), g.hdyn);
     if (f.wall) e.g.position.set(r.x + .5, 1.9 - r.y * .55, 2 + .05); else e.g.position.set(r.x + .5, 0, r.y + .5);
-    if (r.id === "lamp") light(r.x + .5, r.y + .5, 5, 0xffd9a0, 1.3, .9); else if (r.id === "tv") light(r.x + .5, r.y + 1.2, 3, 0x8fb0ff, .8, 1); else if (r.id === "window" && dk > .2) light(r.x + .5, 2.8, 4, 0x8fa0ff, 1.5, .8);
+    if (act) if (r.id === "lamp") light(r.x + .5, r.y + .5, 5, 0xffd9a0, 1.3, .9); else if (r.id === "tv") light(r.x + .5, r.y + 1.2, 3, 0x8fb0ff, .8, 1); else if (r.id === "window" && dk > .2) light(r.x + .5, 2.8, 4, 0x8fa0ff, 1.5, .8);
   }
+}
+function drawHome() {
+  const g = groups(); if (!HBUILT) buildHome(); showScene("home"); setEnv(SEAM() ? "village" : "home");
+  const P = player, D = 19 / (Z > 1 ? 1.2 : 1), dk = darkness();
+  drawHomeEnts(true); if (SEAM()) { drawWorldTerrain(ORIGIN[0], ORIGIN[1]); drawVillageEnts(false); }
   const pe = refreshLook(ent(PK.h, mkPlayer, g.hdyn)); pe.g.position.set(P.x / T, 0, (P.y + 8) / T); face(pe.g, P.dx, P.dy, 16); animE(pe, P.mv && !modal, 10, .75);
   PL0.x = P.x / T; PL0.z = (P.y + 8) / T; PL0.r = 5; PL0.i = .5 + dk * .5; PL0.h = 2; PL0.c = 0xffe6c0; light(6, RH - .3, 3, 0xffd9a0, 1.2, .8);
   labelT("⬇ 출구", 6, RH + .6, .2);
@@ -2373,7 +2437,7 @@ function drawDun() {
   if (!world && !dun.g3) buildDun();
   showScene("dun"); setEnv(wild ? "wild" : "dun");
   const D = (wild ? 21 : 19) / (Z > 1 ? 1.55 : 1), pz = (P.y + 8) / T, dk = darkness(), fr = vtime;
-  if (world) drawWorldTerrain(); else {
+  if (world) { drawWorldTerrain(); if (SEAM()) { drawVillageEnts(false); drawHomeEnts(false); } } else {
   G.dyn.children.forEach(c => { if (c.name === "dun3") c.visible = c === dun.g3; });
   if (dun.terr.userData.water) dun.terr.userData.water.position.y = Math.sin(vtime * 1.6) * .02;
   if (wild) for (const n of dun.nodes) { const on = dun.map[n.y][n.x] === n.c; n.m.visible = on; if (on) { const w = dun.wob && dun.wob.t > 0 && dun.wob.x === n.x && dun.wob.y === n.y; n.m.position.x = n.x + .5 + (w ? Math.sin(vtime * 50) * .06 : 0); } }
@@ -2399,21 +2463,21 @@ function drawDun() {
   }
   for (const m of dun.mons) {
     if (Math.abs(m.x / T - camT.x) > 20 || Math.abs((m.y + 8) / T - camT.z) > 14) continue;
-    const e = ent(m, () => { const b = m.wild ? (m.boss ? mkTrex() : DINO3[m.idx]()) : MON3[m.e](); b.g.scale.multiplyScalar(m.demon ? 1.45 : m.boss && !m.wild ? 1.8 : 1); return b; }, g.dyn);
+    const e = ent(m, () => { const b = m.wild ? mkWildDino(m.idx, m.boss) : MON3[m.e](); b.g.scale.multiplyScalar(m.demon ? 1.45 : m.boss && !m.wild ? 1.8 : 1); return b; }, g.dyn);
     const chase = !(m.wild && !m.hostile), dx = P.x - m.x, dy = P.y - m.y, mv = chase ? Math.hypot(dx, dy) < 260 && Math.hypot(dx, dy) > 24 : (m.wvx || m.wvy);
-    e.g.position.set(m.x / T, 0, (m.y + 8) / T); if (chase) face(e.g, dx, dy, 10); else if (mv) face(e.g, m.wvx, m.wvy, 6); animE(e, mv, m.boss ? 5 : 8, .55); flash(e, m.flash > 0);
+    e.g.position.set(m.x / T, 0, (m.y + 8) / T); if (chase) face(e.g, dx, dy, 10); else if (mv) face(e.g, m.wvx, m.wvy, 6); if (e.dino && m.cd > (e.lcd || 0) + .5) e.atkT = .7; e.lcd = m.cd; animE(e, mv, m.boss ? 5 : 8, .55); flash(e, m.flash > 0);
     const top = e.h * (m.demon ? 1.45 : m.boss && !m.wild ? 1.8 : 1) + .2;
     if (m.hp < m.mhp || m.boss) labelT("▮".repeat(Math.max(1, Math.round(8 * m.hp / m.mhp))) + "▯".repeat(8 - Math.max(1, Math.round(8 * m.hp / m.mhp))), m.x / T, (m.y + 8) / T, top, m.boss ? "#f5b942" : m.wild && !m.hostile ? "#7be07b" : "#ff6a6a");
     if (m.boss) labelT(m.n, m.x / T, (m.y + 8) / T, top + .4, "#f5b942"); else if (m.tame && Math.hypot(m.x - P.x, m.y - P.y) < 90) labelT(`${m.n} 🐾${Math.min(m.tp, m.tame)}/${m.tame}`, m.x / T, (m.y + 8) / T, top + .35, "#fff3d6");
   }
   const pe = activePet(), pet = dun.pet;
   if (pet && pe) {
-    const e = ent(pet, () => DINO3[pe.idx](), g.dyn), mvp = Math.hypot(P.x - pet.x, P.y - pet.y) > 55 || P.mounted;
+    const e = ent(pet, () => mkWildDino(pe.idx, false), g.dyn), mvp = Math.hypot(P.x - pet.x, P.y - pet.y) > 55 || P.mounted;
     e.g.position.set(pet.x / T, 0, (pet.y + 8) / T); if (P.mounted) { face(e.g, P.dx, P.dy, 12); e.g.position.set(P.x / T, 0, pz); } else face(e.g, P.x - pet.x, P.y - pet.y, 8); animE(e, mvp, 8, .55);
     if (!P.mounted) labelT(`Lv.${pe.lv}`, pet.x / T, (pet.y + 8) / T, e.h + .1, "#9be39b");
   }
   const e = refreshLook(ent(PK.d, mkPlayer, g.dyn));
-  const lift = P.mounted && pet && pe ? [.8, .9, 1.3, .9, 1.4][pe.idx] : 0;
+  const lift = P.mounted && pet && pe ? (DINOM.ready ? [.8, .9, 1.75, 1.45, 1.05] : [.8, .9, 1.3, .9, 1.4])[pe.idx] : 0;
   e.g.position.set(P.x / T, lift, pz); face(e.g, P.dx, P.dy, 18); animE(e, P.mv && !modal && !P.mounted, 10, .75); flash(e, P.flash > 0);
   e.g.visible = !(P.inv > 0 && Math.floor(vtime * 20) % 2);
   e.pose = P.mounted ? "Sit_Chair_Idle" : null;
@@ -2444,7 +2508,7 @@ function drawDun() {
   follow(P.x / T, pz, MW, MH, D); finish(D); overlay(drawMini);
 }
 
-function draw() { if (!R3) return; frameNo++; groups(); G.cursor.visible = false; if (scene === "home") drawHome(); else if (scene === "dun") drawDun(); else drawVillage(); }
+function draw() { if (!R3) return; frameNo++; groups(); if (started && !WORLD) getWorld(); G.cursor.visible = false; if (scene === "home") drawHome(); else if (scene === "dun") drawDun(); else drawVillage(); }
 
 /* ---------- 오픈월드 ---------- */
 const WN = 320, CHK = 16, DN = WN / 4;
@@ -2556,9 +2620,13 @@ function genWorld() {
     while (x !== b.x) { x += Math.sign(b.x - x); st(x, y); st(x, y + 1); } while (y !== b.y) { y += Math.sign(b.y - y); st(x, y); st(x + 1, y); }
   };
   towns.forEach((t, i) => { if (!i) return; let best = null, bd = 1e9; for (let j = 0; j < i; j++) { const d = Math.hypot(towns[j].x - t.x, towns[j].y - t.y); if (d < bd) { bd = d; best = towns[j]; } } road(t, best); });
+  const VOX = sx - 15, VOY = sy + 15, HOX = VOX - 15, HOY = VOY + 1;   // 마을(30x20)과 집을 한 맵에 연결
+  for (let y = VOY - 3; y < VOY + 23; y++) for (let x = HOX - 3; x < VOX + 33; x++) if (x >= 0 && y >= 0 && x < N && y < N) { const i = ix(x, y); bio[i] = BIO.PLAINS; cell[i] = 0; inter.delete(i); }
+  for (let i = pois.length - 1; i >= 0; i--) { const p = pois[i]; if (!p.town && p.type !== "town" && p.x >= HOX - 5 && p.x < VOX + 35 && p.y >= VOY - 5 && p.y < VOY + 25) pois.splice(i, 1); }
+  for (let y = sy + 10; y < VOY; y++) for (const x of [sx - 1, sx]) { const i = ix(x, y); if (bio[i] !== BIO.TOWN) bio[i] = BIO.ROAD; cell[i] = 0; inter.delete(i); }
   for (const p of pois) if (p.type !== "town" && p.type !== "chest" && !p.town) p.dist = Math.hypot(p.x - sx, p.y - sy);
   S.wedits = S.wedits || {};
-  const W = { N, bio, cell, inter, pois, towns, guard, demon: demonPoi, spawn: { x: sx, y: sy }, ed: NET.on ? NET.ed : S.wedits, chunks: new Map(), disc: new Uint8Array(DN * DN), regrow: [], first: true, byId: new Map(pois.map(p => [p.id, p])) };
+  const W = { N, bio, cell, inter, pois, towns, guard, demon: demonPoi, spawn: { x: sx, y: sy }, vreg: { x: VOX, y: VOY }, hreg: { x: HOX, y: HOY }, ed: NET.on ? NET.ed : S.wedits, chunks: new Map(), disc: new Uint8Array(DN * DN), regrow: [], first: true, byId: new Map(pois.map(p => [p.id, p])) };
   for (let i = 0; i < Math.min(S.disc.length, DN * DN); i++) W.disc[i] = S.disc.charCodeAt(i) === 49 ? 1 : 0;
   for (const k in S.wreg) W.regrow.push({ k: +k, t: S.wreg[k] });
   return W;
@@ -2566,7 +2634,7 @@ function genWorld() {
 function getWorld() { return WORLD || (WORLD = genWorld()); }
 function wc(x, y) { if (x < 0 || y < 0 || x >= WN || y >= WN) return 255; const k = y * WN + x, e = WORLD.ed[k]; return e !== undefined ? e : WORLD.cell[k]; }
 function wb(x, y) { return x < 0 || y < 0 || x >= WN || y >= WN ? 0 : WORLD.bio[y * WN + x]; }
-function wsolid(x, y) { return x < 0 || y < 0 || x >= WN || y >= WN || WORLD.bio[y * WN + x] === 0 || SOLIDC[wc(x, y)] === 1; }
+function wsolid(x, y) { const h = WORLD.hreg; if (h && x >= h.x && x < h.x + RW && y >= h.y + 2 && y < h.y + RH) return !(y === h.y + RH - 1 && (x === h.x + 5 || x === h.x + 6)); return x < 0 || y < 0 || x >= WN || y >= WN || WORLD.bio[y * WN + x] === 0 || SOLIDC[wc(x, y)] === 1; }
 function markDirty(x, y) { for (const [dx, dy] of [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]]) { const ch = WORLD.chunks.get(Math.floor((y + dy) / CHK) * 100 + Math.floor((x + dx) / CHK)); if (ch) ch.dirty = true; } }
 function setCell(x, y, code, regrow) {
   const k = y * WN + x; if (WORLD.cell[k] === code) delete WORLD.ed[k]; else WORLD.ed[k] = code;
@@ -2628,8 +2696,9 @@ function buildChunk(cx, cy) {
   const VW = new Map(), vw = (x, y) => { const k = y * 4096 + x; let v = VW.get(k); if (!v) { v = [0, 0, 0, 0, 0, 0]; let n = 0; for (const [dx, dy] of [[-1, -1], [0, -1], [-1, 0], [0, 0]]) { const xx = x + dx, yy = y + dy, bb = wb(xx, yy); if (bb === undefined) continue; const cc = wc(xx, yy), l = cc === CELL.FLOOR || cc === CELL.FARM ? 5 : BIOL[bb]; v[l]++; n++; } if (!n) v[0] = 1; else for (let i = 0; i < 6; i++) v[i] /= n; VW.set(k, v); } return v.slice(); };
   const VC = new Map(), vcol = (x, y) => { const k = y * 4096 + x; let v = VC.get(k); if (!v) { v = new THREE.Color(0, 0, 0); let n = 0; for (const [dx, dy] of [[-1, -1], [0, -1], [-1, 0], [0, 0]]) { const bb = wb(x + dx, y + dy); if (bb === 0 || bb === undefined) continue; v.add(biomeCol(bb, x + dx, y + dy)); n++; } if (n) v.multiplyScalar(1 / n); else v.copy(biomeCol(wb(x, y), x, y)); VC.set(k, v); } return v; };
   const wcol = new THREE.Color(0x4a94d8), dirt = new THREE.Color(0x8a6a44), cliff = new THREE.Color(0x8a7d62);
+  const VR = W.vreg, HR = W.hreg, localCell = (x, y) => VR && ((x >= VR.x && x < VR.x + 30 && y >= VR.y && y < VR.y + 20) || (x >= HR.x && x < HR.x + RW && y >= HR.y + 2 && y < HR.y + RH));
   for (let y = y0; y < y0 + CHK; y++) for (let x = x0; x < x0 + CHK; x++) {
-    if (x >= WN || y >= WN) continue;
+    if (x >= WN || y >= WN || localCell(x, y)) continue;
     const b = wb(x, y), c = wc(x, y), H = hgt(x, y); let col = biomeCol(b, x, y);
     if (c === CELL.FLOOR) col = new THREE.Color(0xc2945e).offsetHSL(0, 0, (rn(x, y, 2) - .5) * .06); else if (c === CELL.FARM) col = new THREE.Color(0x6a4a2a);
     else if (REAL && b !== 0) col = [vcol(x, y), vcol(x, y + 1), vcol(x + 1, y + 1), vcol(x + 1, y)];
@@ -2686,10 +2755,10 @@ function buildChunk(cx, cy) {
 }
 function disposeChunk(ch) { ch.grp.traverse(m => { if (m.geometry && !m.geometry.userData.shared) m.geometry.dispose(); }); }
 const WFOG = REAL ? new THREE.Fog(0xdcecf4, 24, 64) : new THREE.Fog(0x9fdcf5, 36, 70);
-function drawWorldTerrain() {
-  const W = WORLD, P = player, pcx = Math.floor(P.x / T / CHK), pcy = Math.floor(P.y / T / CHK), R = 3, NC = WN / CHK;
+function drawWorldTerrain(ox = 0, oz = 0) {
+  const W = WORLD, P = player, pcx = Math.floor((P.x / T + ox) / CHK), pcy = Math.floor((P.y / T + oz) / CHK), R = 3, NC = WN / CHK;
   if (!G.wgrp) { G.wgrp = new THREE.Group(); S3.add(G.wgrp); const sea = new THREE.Mesh(new THREE.PlaneGeometry(900, 900), TOON({ color: 0x4a94d8, gradientMap: gradTex })); sea.rotation.x = -HALF; G.sea = sea; S3.add(sea); }
-  G.wgrp.visible = true; G.sea.visible = true; G.sea.position.set(camT.x, -.2, camT.z);
+  G.wgrp.visible = true; G.wgrp.position.set(-ox, 0, -oz); G.sea.visible = true; G.sea.position.set(camT.x, -.2, camT.z);
   const need = []; for (let dy = -R; dy <= R; dy++) for (let dx = -R; dx <= R; dx++) { const cx = pcx + dx, cy = pcy + dy; if (cx >= 0 && cy >= 0 && cx < NC && cy < NC) need.push([dx * dx + dy * dy, cx, cy]); }
   need.sort((a, b) => a[0] - b[0]); let budget = W.first ? 30 : 2;
   for (const [d2, cx, cy] of need) {
@@ -2702,7 +2771,7 @@ function drawWorldTerrain() {
     if (Math.abs(ch.cx - pcx) > R + 1 || Math.abs(ch.cy - pcy) > R + 1) { G.wgrp.remove(ch.grp); disposeChunk(ch); W.chunks.delete(key); continue; }
     if (ch.water) ch.water.position.y = Math.sin(vtime * 1.6) * .02;
     ch.flames.forEach((f, i) => f.scale.setScalar(1.6 + Math.sin(vtime * 12 + i * 2) * .25)); ch.spins.forEach(s => s.rotation.y += DT * 1.5);
-    for (const L of ch.lit) if ((!L.night || night) && Math.abs(L.x - camT.x) < 18 && Math.abs(L.z - camT.z) < 14) light(L.x, L.z, L.r, L.c, L.h, L.i);
+    for (const L of ch.lit) if ((!L.night || night) && Math.abs(L.x - ox - camT.x) < 18 && Math.abs(L.z - oz - camT.z) < 14) light(L.x - ox, L.z - oz, L.r, L.c, L.h, L.i);
     if (ch.crops.length && frameNo % 90 === 0) for (const c of ch.crops) if (cropStage(c.k) !== c.st) ch.dirty = true;
   }
   S3.fog = WFOG; WFOG.color.copy(S3.background);
@@ -2776,14 +2845,14 @@ function enterWorld(pos, msg) {
   { const c = W.towns[0], mkv = (nm, model, ox, oy, lines, e) => { const x = (c.x + ox + .5) * T, y = (c.y + oy + .5) * T - 8; dun.vil.push({ name: nm, e, model, fixed: true, lines, x, y, hx: x, hy: y, vx: 0, vy: 0, t: 0, talk: 0, line: 0 }); };
     mkv("국왕 폰드", "king", 0, -8, [], "👑"); mkv("근위병", "guard", -2, -8, GUARD_LINES, "🛡️"); mkv("근위병", "guard", 2, -8, GUARD_LINES, "🛡️"); mkv("성문 경비병", "guard", -7, -3, GUARD_LINES2, "🛡️"); mkv("성문 경비병", "guard", 7, -3, GUARD_LINES2, "🛡️");
     if (!S.wp[c.id + "w"]) S.wp[c.id + "w"] = 1; }
-  dun.pet = activePet() ? { x: P.x - 20, y: P.y, cd: 0 } : null; S.wpos = { x: P.x, y: P.y }; storyCheck(); hud();
+  dun.pet = activePet() ? { x: P.x - 20, y: P.y, cd: 0 } : null; S.wpos = { x: P.x, y: P.y }; WDUN = dun; storyCheck(); hud();
   say(msg || "🌍 오픈월드 — 어디로든 갈 수 있어요. 마을·동굴·이동석을 찾아보세요! (B 건설 · N 지도 · J 의뢰)", 4500);
 }
 function mkMonT(i, depth, x, y) { const b = MONS[i], sc = 1 + .3 * (depth - 1), hp = Math.round(b.hp * sc); return { ...b, x, y, hp, mhp: hp, dmg: Math.round(b.dmg * sc), xp: Math.round(b.xp * sc), cd: 0, flash: 0, kb: 0, kx: 0, ky: 0, boss: false, dpt: depth, tier: Math.floor((depth - 1) / 2), world: true }; }
 function spawnNear() {
   const P = player, a = Math.random() * 6.283, d = 16 + Math.random() * 11, x = Math.floor(P.x / T + Math.cos(a) * d), y = Math.floor((P.y + 8) / T + Math.sin(a) * d);
   if (x < 2 || y < 2 || x >= WN - 2 || y >= WN - 2) return; const b = wb(x, y); if (b < 1 || b === 8 || wsolid(x, y)) return;
-  if (WORLD.towns.some(t => Math.hypot(t.x - x, t.y - y) < 19)) return;
+  if (WORLD.towns.some(t => Math.hypot(t.x - x, t.y - y) < 19)) return; { const v = WORLD.vreg; if (v && x > v.x - 24 && x < v.x + 38 && y > v.y - 8 && y < v.y + 28) return; }
   const tier = wTier(x, y), night = darkness() > .25, tb = BIOSPAWN[b] || BIOSPAWN[2], list = night ? tb.n : tb.d, [kind, idx] = list[ri(list.length)], px = (x + .5) * T, py = (y + .5) * T - 8;
   const m = kind === "d" ? mkDino(idx, tier, px, py, false) : mkMonT(idx, 1 + tier * 2, px, py); m.world = true; m.tier = tier; dun.mons.push(m);
 }
@@ -3349,7 +3418,7 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 player.hp = pstats().maxhp;
-resize(); hud(); loadKay(); loadMan(); $("clock").textContent = clockText(); setMute(muted);
+resize(); hud(); loadKay(); loadMan(); loadDinos(); $("clock").textContent = clockText(); setMute(muted);
 $("snd").onclick = () => { setMute(!muted); sfx("ui"); };
 const STY_N = { toon: "툰", cel: "원신풍 셀", pbr: "PBR", real: "듀랑고풍" };
 $("sty").textContent = "🖌️ " + STY_N[RSTYLE];
@@ -3501,7 +3570,7 @@ for (const id of ["gear", "shop"]) { const el = $(id); let y0 = null;
   const up = e => { if (y0 === null) return; const dy = e.clientY - y0; y0 = null; el.style.transform = ""; if (dy > 70 && !(id === "gear" && gearTab === "perk")) closeShop(); };
   el.addEventListener("pointerup", up); el.addEventListener("pointercancel", up); }
 renderDock();
-window.__game = { equipBag, unequip, homeTileAt, openShop, enterHome: () => enterHome(), get furnSel() { return furnSel; }, ctxHint, renderBar,  get sun() { return sun; }, get GRD() { return GRD; }, get S3() { return S3; }, setYaw: v => { camYaw = v; camManT = vtime + 999; }, get MAN() { return MAN; }, get KAY() { return KAY; }, get curPE() { return curPE; }, pAnim, WX, setWeather: t => { WX.type = t; WX.t = 9999; }, startArena, arenaTick, startWave, gemGain, choosePerk, finishArena, openPerk, autoFight, idleStored, dailyTouch, genArena, mkMonT, get PERKS() { return PERKS; }, get ARES() { return ARES; }, sEvent, storyReady, reportStory, openKing, nearKing, demonAI, finalizeDemon, enterDemon, onDemonDefeat, mkDemon, damageP, addFame, get STORY() { return STORY; }, NET, spawnNear, worldTick, killMon, setBuild: i => { buildSel = i == null ? null : BUILD[i]; }, farmAct, winteract, genOffers, turnIn, warpTo, worldAct, enterWorld, getWorld, get WORLD() { return WORLD; }, get dun() { return dun; }, wc, wb, setClock: v => { clock = v; }, fireball, feed, toggleMount, craft, togglePanel, enterDungeon, get dun() { return dun; }, pstats, genGear, attack, scene: () => scene, furnSelSet: v => { furnSel = v; renderFurn(); }, player, trees, S, keys, act, get fishing() { return fishing; }, bugs, villagers }; // 디버그/테스트용
+window.__game = { get DINOM() { return DINOM; },  equipBag, unequip, homeTileAt, openShop, enterHome: () => enterHome(), get furnSel() { return furnSel; }, ctxHint, renderBar,  get sun() { return sun; }, get GRD() { return GRD; }, get S3() { return S3; }, setYaw: v => { camYaw = v; camManT = vtime + 999; }, get MAN() { return MAN; }, get KAY() { return KAY; }, get curPE() { return curPE; }, pAnim, WX, setWeather: t => { WX.type = t; WX.t = 9999; }, startArena, arenaTick, startWave, gemGain, choosePerk, finishArena, openPerk, autoFight, idleStored, dailyTouch, genArena, mkMonT, get PERKS() { return PERKS; }, get ARES() { return ARES; }, sEvent, storyReady, reportStory, openKing, nearKing, demonAI, finalizeDemon, enterDemon, onDemonDefeat, mkDemon, damageP, addFame, get STORY() { return STORY; }, NET, spawnNear, worldTick, killMon, setBuild: i => { buildSel = i == null ? null : BUILD[i]; }, farmAct, winteract, genOffers, turnIn, warpTo, worldAct, enterWorld, getWorld, get WORLD() { return WORLD; }, get dun() { return dun; }, wc, wb, setClock: v => { clock = v; }, fireball, feed, toggleMount, craft, togglePanel, enterDungeon, get dun() { return dun; }, pstats, genGear, attack, scene: () => scene, furnSelSet: v => { furnSel = v; renderFurn(); }, player, trees, S, keys, act, get fishing() { return fishing; }, bugs, villagers }; // 디버그/테스트용
 </script>
 </body>
 </html>

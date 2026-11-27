@@ -20,3 +20,7 @@
   웹용 변환: 1k 색상/노멀(GL) 맵을 512px webp로 줄임(plaster는 흑백 디테일로 변환).
 
   추가(디테일 질감): clay_roof_tiles_02, weathered_planks, castle_brick_02_red, rough_wood, denim_fabric — Poly Haven, CC0
+
+공룡 — assets/dinos/ (T-Rex, Velociraptor, Triceratops, Parasaurolophus)
+  Ultimate Animated Dinosaur pack — Quaternius (quaternius.com), CC0 (poly.pizza 배포본, github.com/scarbone98/deep-time 경유)
+  웹용 변환: 애니메이션 이름 정리(Attack/Death/Idle/Jump/Run/Walk), 리샘플.
