@@ -13,7 +13,8 @@ const D = open.OUT + '/';
   await p.keyboard.down('ArrowDown'); await p.waitForTimeout(700); await p.keyboard.up('ArrowDown'); await p.keyboard.down('ArrowLeft'); await p.waitForTimeout(700); await p.keyboard.up('ArrowLeft');
   r.villageAlive = await p.evaluate(() => ({ scene: window.__game.scene(), t: document.getElementById('clock').textContent }));
   // 월드 → 동굴 → 복귀
-  await p.evaluate(() => window.__game.enterWorld()); await p.waitForTimeout(600);
+  await p.evaluate(() => window.__game.enterWorld());
+  await p.waitForFunction(() => { const g = window.__game; return g.scene() === 'dun' && g.dun.kind === 'world' && g.dun.vil && g.WORLD && g.WORLD.pois.some(p => p.type === 'cave'); }, null, { timeout: 120000 }).catch(() => {}); await p.waitForTimeout(300);
   r.cave = await p.evaluate(async () => {
     const g = window.__game, W = g.WORLD, sl = ms => new Promise(r => setTimeout(r, ms)); const c = W.pois.find(p => p.type === 'cave');
     g.player.x = (c.x + 1) * 32; g.player.y = (c.y + 1.5) * 32 + 18; g.player.dx = 0; g.player.dy = -1; g.dun.mons.length = 0; await sl(200); g.worldAct(); await sl(300);
