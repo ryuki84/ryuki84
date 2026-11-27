@@ -8,12 +8,16 @@ const sl = ms => new Promise(r => setTimeout(r, ms));
   await p.evaluate(() => { const g = window.__game; g.enterWorld(); g.S.story.stage = 6; g.S.lv = 12; });
   await sl(1200);
   // 마왕성 입장 (인터랙션 경로로)
+  await p.waitForFunction(() => window.__game.WORLD && window.__game.WORLD.demon, null, { timeout: 120000 }).catch(() => {});
   r.enter = await p.evaluate(async () => { const g = window.__game, d = g.WORLD.demon; g.player.x = (d.x + 4.5) * 32; g.player.y = (d.y + 3) * 32 + 18; g.player.dx = 0; g.player.dy = -1; g.dun.mons.length = 0; g.player.hp = 99999; g.worldAct(); await new Promise(r => setTimeout(r, 400)); return { scene: g.scene(), demon: !!g.dun.demon, depth: g.dun.depth, ret: !!g.dun.ret, mons: g.dun.mons.length, hasDemon: g.dun.mons.some(m => m.demon) }; });
   // 층 이동 6→7→8
   for (let f = 0; f < 2; f++) {
-    await p.evaluate(() => { const g = window.__game, s = g.dun.stairs; g.player.x = (s.x + .5) * 32; g.player.y = (s.y + .5) * 32 - 8; g.player.hp = 99999; });
-    await sl(1500);
+    const d0 = await p.evaluate(() => { const g = window.__game, s = g.dun.stairs; g.player.x = (s.x + .5) * 32; g.player.y = (s.y + .5) * 32 - 8; g.player.hp = 99999; return g.dun.depth; });
+    // 저프레임에서도 층 이동이 끝날 때까지 기다려요
+    await p.waitForFunction(d => window.__game.dun.depth > d, d0, { timeout: 120000 }).catch(() => {});
+    await sl(500);
   }
+  await p.waitForFunction(() => window.__game.dun.mons.some(m => m.demon), null, { timeout: 60000 }).catch(() => {});
   r.top = await p.evaluate(() => { const g = window.__game; return { depth: g.dun.depth, demonFlag: !!g.dun.demon, ret: !!g.dun.ret, stairs: g.dun.stairs, boss: g.dun.mons.filter(m => m.demon).map(m => ({ n: m.n, hp: m.hp, dmg: m.dmg })), total: g.dun.mons.length, hud: document.getElementById('rpg').textContent.includes('마왕성 3층') }; });
   // 대마왕 AI: 1단계 → 2단계 → 3단계
   r.ai = await p.evaluate(async () => {

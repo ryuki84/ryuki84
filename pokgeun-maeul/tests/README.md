@@ -22,7 +22,7 @@ npm test -- arena maze   # 이름으로 골라 실행
 |---|---|
 | `tests/run.js` | 실행기: 시나리오 목록, 판정 조건, 서버 자동 실행, 결과 표 |
 | `tests/lib/harness.js` | 공통 도구: 정적 서버, three.js 로컬 공급(CDN 대신 `node_modules/three`), 폰트 요청 차단, 결과 출력 |
-| `tests/scenarios/*.js` | 시나리오 15개(아래 표) |
+| `tests/scenarios/*.js` | 시나리오 17개(아래 표) |
 
 | 시나리오 | 확인 내용 |
 |---|---|
@@ -38,6 +38,8 @@ npm test -- arena maze   # 이름으로 골라 실행
 | maze | 고대 미궁 생성·소탕 |
 | dino_models | 공룡 모델 배치 |
 | pbr_probe | 실사 셰이더 기기 검사 |
+| save_system | 저장 마이그레이션·백업 복구·저장 실패 알림·내보내기/가져오기 |
+| monster_models | 몬스터 7종 모델, 대기·걷기·달리기·공격·피격·죽음 동작, 공격 예비 동작(❗) |
 | multiplayer, multiplayer_look | 서버 접속·채팅·공유 편집·외형 동기화·비정상 값 정리 |
 
 ## 주의

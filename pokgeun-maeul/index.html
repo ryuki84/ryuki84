@@ -400,9 +400,9 @@ const AFFIX = [
   { k: "crit", f: l => 2 + l * .4 }, { k: "as", f: l => 3 + l * .5 }, { k: "ms", f: l => 3 + l * .3 }, { k: "ls", f: l => 1 + l * .15 },
 ];
 const MONS = [
-  { e: "🐀", n: "쥐", hp: 22, dmg: 5, spd: 75, xp: 6 }, { e: "🦇", n: "박쥐", hp: 16, dmg: 6, spd: 115, xp: 7 },
-  { e: "🕷️", n: "거미", hp: 30, dmg: 8, spd: 85, xp: 9 }, { e: "💀", n: "해골", hp: 48, dmg: 10, spd: 62, xp: 12 },
-  { e: "🧟", n: "좀비", hp: 80, dmg: 13, spd: 48, xp: 16 }, { e: "👹", n: "도깨비", hp: 130, dmg: 18, spd: 66, xp: 26 },
+  { e: "🐀", n: "슬라임", hp: 22, dmg: 5, spd: 75, xp: 6 }, { e: "🦇", n: "말벌", hp: 16, dmg: 6, spd: 115, xp: 7 },
+  { e: "🕷️", n: "버섯돌이", hp: 30, dmg: 8, spd: 85, xp: 9 }, { e: "💀", n: "유령", hp: 48, dmg: 10, spd: 62, xp: 12 },
+  { e: "🧟", n: "오크", hp: 80, dmg: 13, spd: 48, xp: 16 }, { e: "👹", n: "도깨비", hp: 130, dmg: 18, spd: 66, xp: 26 },
 ];
 const ri = n => Math.random() * n | 0;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -478,17 +478,57 @@ scatter(28, (x, y) => { if (seedTrees.some(t => t.x === x && t.y === y)) return 
 scatter(6, (x, y) => { if (seedTrees.some(t => t.x === x && t.y === y) || flowers.some(f => f.x === x && f.y === y)) return false; rocks.push({ x, y }); return true; });
 
 /* ---------- 상태 / 저장 ---------- */
-let S = { bells: 200, inv: { sapling: 1 }, trees: seedTrees, fin: { chair: 1, plant: 1 }, room: [] };
-try { const raw = localStorage.getItem("pokgeun-maeul"); if (raw) S = JSON.parse(raw); } catch (e) {}
+/* 저장: 버전 + 마이그레이션 + 자동 백업(최근 3개) + 실패 알림 + 내보내기·가져오기 */
+const SAVE_KEY = "pokgeun-maeul", SAVE_VER = 3, BAK_KEYS = [1, 2, 3].map(i => SAVE_KEY + ".bak" + i), BAK_EVERY = 10 * 60 * 1000;
+const SAVE = { from: "new", error: null, failT: -1e9, lastBak: 0, corrupt: false };
+const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+const parseSave = raw => { if (!raw) return null; try { const o = JSON.parse(raw); return o && typeof o === "object" && !Array.isArray(o) ? o : null; } catch (e) { return null; } };
+let S = parseSave(lsGet(SAVE_KEY));
+if (S) SAVE.from = "main";
+else {
+  if (lsGet(SAVE_KEY)) { SAVE.corrupt = true; try { localStorage.setItem(SAVE_KEY + ".corrupt", lsGet(SAVE_KEY)); } catch (e) {} }   // 깨진 원본은 따로 보관
+  for (const k of BAK_KEYS) { const b = parseSave(lsGet(k)); if (b) { S = b; SAVE.from = k; break; } }
+}
+if (!S) S = { bells: 200, inv: { sapling: 1 }, trees: seedTrees, fin: { chair: 1, plant: 1 }, room: [] };
+function migrateSave(o) {   // 저장 형식 변경 이력 (버전이 없던 저장은 v1로 봐요)
+  const v = o.sv | 0 || 1;
+  if (v < 3) { if (typeof o.disc === "string" && o.disc.length > 2000) delete o.disc; }   // v3: 무한 월드 전환 — 예전 320칸 발견 지도 문자열은 쓰지 않아요
+  o.sv = SAVE_VER; return o;
+}
+migrateSave(S);
 let resetting = false;
-function save() { if (resetting) return; try { if (WORLD) S.disc2 = [...WORLD.disc].join(","); localStorage.setItem("pokgeun-maeul", JSON.stringify(S)); } catch (e) {} }
-S.fin = S.fin || {}; S.room = S.room || [];
+function capDisc() { const d = WORLD && WORLD.disc; if (d && d.size > 40000) { let n = d.size - 30000; for (const k of d) { if (n-- <= 0) break; d.delete(k); } } }   // 발견 지도는 최근 3만 칸까지
+function backupNow(force) {
+  const now = Date.now(); if (!force && now - SAVE.lastBak < BAK_EVERY) return; const cur = lsGet(SAVE_KEY); if (!cur || !parseSave(cur)) return;
+  try { for (let i = BAK_KEYS.length - 1; i > 0; i--) { const prev = lsGet(BAK_KEYS[i - 1]); if (prev) localStorage.setItem(BAK_KEYS[i], prev); } localStorage.setItem(BAK_KEYS[0], cur); SAVE.lastBak = now; } catch (e) {}
+}
+function save() {
+  if (resetting) return false;
+  let json; try { if (WORLD) { capDisc(); S.disc2 = [...WORLD.disc].join(","); } S.sv = SAVE_VER; S.savedAt = Date.now(); json = JSON.stringify(S); } catch (e) { SAVE.error = e; return false; }
+  backupNow(false);
+  for (let tryN = 0; tryN < 2; tryN++) {
+    try { localStorage.setItem(SAVE_KEY, json); SAVE.error = null; return true; }
+    catch (e) { SAVE.error = e; if (tryN === 0) for (const k of [BAK_KEYS[2], BAK_KEYS[1], SAVE_KEY + ".corrupt"]) { try { localStorage.removeItem(k); } catch (_) {} } }   // 공간이 모자라면 오래된 백업부터 비우고 한 번 더
+  }
+  const now = Date.now(); if (now - SAVE.failT > 60000) { SAVE.failT = now; if (typeof say === "function") say("⚠️ 저장에 실패했어요 (브라우저 저장 공간 부족 또는 차단). ⚙️ 설정 → 저장 관리에서 내보내기로 백업해 두세요.", 6000); }
+  return false;
+}
+function exportSave() { save(); return lsGet(SAVE_KEY) || JSON.stringify(S); }
+function importSave(text) {
+  const o = parseSave(text); if (!o || !(o.bells >= 0) || !o.inv) return "저장 파일 형식이 아니에요.";
+  backupNow(true); migrateSave(o);
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify(o)); } catch (e) { return "저장 공간이 부족해서 가져오지 못했어요."; }
+  resetting = true; setTimeout(() => location.reload(), 300); return "";
+}
+function listBackups() { return BAK_KEYS.map(k => { const o = parseSave(lsGet(k)); return o ? { key: k, at: o.savedAt || 0, lv: o.lv || 1, bells: o.bells || 0 } : null; }).filter(Boolean); }
+function restoreBackup(key) { const raw = lsGet(key); if (!parseSave(raw)) return "백업이 비어 있어요."; return importSave(raw); }
+S.fin = S.fin || {}; S.room = Array.isArray(S.room) ? S.room : []; S.inv = S.inv || {}; S.trees = Array.isArray(S.trees) ? S.trees : seedTrees; S.bells = Number.isFinite(S.bells) ? S.bells : 200;   // 필드가 빠진 저장(가져오기·백업)도 시작되게
 S.lv = S.lv || 1; S.xp = S.xp || 0; S.potions = S.potions ?? 2; S.bag = S.bag || []; S.best = S.best || 0;
 S.eq = S.eq || { weapon: { id: 1, slot: "weapon", e: "🗡️", n: "나무 칼", rar: 0, ilvl: 1, st: { dmg: 3 }, price: 10 }, armor: null, ring: null };
 if (!S.st) { S.st = { str: 0, dex: 0, vit: 0 }; S.sk = { whirl: 1, fire: 0, tough: 0, tamer: 0 }; S.pts = (S.lv - 1) * 5; S.sp = S.lv - 1; }
 S.look = S.look || { h: 0, hc: 0, sk: 1, ey: 0, tp: 0 };
 S.mat = S.mat || { wood: 0, stone: 0, fiber: 0, berry: 0, meat: 0, hide: 0, bone: 0 }; S.pets = S.pets || []; S.petA = S.petA ?? -1;
-S.mat.ore = S.mat.ore || 0; S.arena = S.arena || { best: 0, kills: 0, runs: 0, style: "sword", own: ["sword"], up: { atk: 0, hp: 0, xp: 0 }, rank: [], start: 1 }; S.idleT = S.idleT || Date.now(); S.daily = S.daily || null; S.story = S.story || { stage: 0, p: {}, notified: false, demon: 0, known: false }; S.fame = S.fame || 0; S.wedits = S.wedits || {}; S.wreg = S.wreg || {}; S.wp = S.wp || {}; S.wopen = S.wopen || {}; S.wcl = S.wcl || {}; S.quests = S.quests || []; S.qoffer = S.qoffer || null; S.crops = S.crops || {}; S.disc = S.disc || "";
+S.mat.ore = S.mat.ore || 0; S.arena = S.arena || { best: 0, kills: 0, runs: 0, style: "sword", own: ["sword"], up: { atk: 0, hp: 0, xp: 0 }, rank: [], start: 1 }; S.idleT = S.idleT || Date.now(); S.daily = S.daily || null; S.story = S.story || { stage: 0, p: {}, notified: false, demon: 0, known: false }; S.fame = S.fame || 0; S.wedits = S.wedits || {}; S.wreg = S.wreg || {}; S.wp = S.wp || {}; S.wopen = S.wopen || {}; S.wcl = S.wcl || {}; S.quests = S.quests || []; S.qoffer = S.qoffer || null; S.crops = S.crops || {};
 const trees = S.trees;
 let scene = "out", furnSel = null, dun = null, WORLD = null, buildSel = null;
 (() => { const z = (x, y) => (x >= 25 && x <= 28 && y >= 1 && y <= 5) || (x >= 20 && x <= 24 && y >= 0 && y <= 5) || (x <= 3 && y >= 6 && y <= 12);
@@ -986,7 +1026,7 @@ function petHit(m, pe) {
 }
 function killMon(m) {
   const i = dun.mons.indexOf(m); if (i < 0) return;
-  dun.mons.splice(i, 1); gainXp(dun.arena ? Math.ceil(m.xp * .3) : m.xp); dailyTouch().kills++; if (dun.pet) petXp(m.xp); qEvent("kill", m); if (m.poi && !dun.mons.some(o => o.poi === m.poi)) clearPoi(m.poi); if (m.demon && !dun.arena) onDemonDefeat(m);
+  dun.mons.splice(i, 1); { const e = ENT.get(m); if (e && e.mon) (dun.dead ||= []).push({ m, t: 1.6 }); } gainXp(dun.arena ? Math.ceil(m.xp * .3) : m.xp); dailyTouch().kills++; if (dun.pet) petXp(m.xp); qEvent("kill", m); if (m.poi && !dun.mons.some(o => o.poi === m.poi)) clearPoi(m.poi); if (m.demon && !dun.arena) onDemonDefeat(m);
   burst(m.x, m.y, m.boss ? 40 : 14, ["#fff", "#e8505a", "#5c5f6e"], m.boss ? 160 : 110, .6); sfx("kill"); if (m.boss) shake = Math.max(shake, 8);
   if (dun.arena) { arenaKill(m); return; }
   const wild = !!m.wild, sp = () => ({ x: m.x + (Math.random() - .5) * 30, y: m.y + (Math.random() - .5) * 30 });
@@ -1067,6 +1107,7 @@ function toggleMount() {
   P.mounted = !P.mounted; if (P.mounted) { dun.pet.x = P.x; dun.pet.y = P.y; }
   say(P.mounted ? `${DINOS[pe.idx].e} 탑승! 이동속도 ↑ (동료는 공격을 쉬어요)` : "내렸어요.", 1800);
 }
+const MON_WIND = .4;   // 몬스터 공격 예비 동작 시간(초)
 function tryMove(e, vx, vy) { if (!blocked(e.x + vx, e.y + 8, 8, 6)) e.x += vx; if (!blocked(e.x, e.y + 8 + vy, 8, 6)) e.y += vy; }
 function updateDun(dt) {
   const P = player, st = pstats(), wild = dun.kind === "wild", world = dun.kind === "world";
@@ -1078,16 +1119,18 @@ function updateDun(dt) {
   for (const m of dun.mons) {
     m.flash = Math.max(0, m.flash - dt); m.cd = Math.max(0, m.cd - dt); if (m.demon) demonAI(m, dt);
     const dx = P.x - m.x, dy = P.y - m.y, d = Math.hypot(dx, dy);
-    if (m.kb > 0) { m.kb -= dt; tryMove(m, m.kx * dt, m.ky * dt); continue; }
+    if (m.kb > 0) { m.kb -= dt; m.wind = 0; tryMove(m, m.kx * dt, m.ky * dt); continue; }
     if (m.wild && !m.hostile) {
       m.wt -= dt;
       if (m.wt <= 0) { m.wt = 1 + Math.random() * 2.5; const a = Math.random() < .4 ? null : Math.random() * 6.28; m.wvx = a === null ? 0 : Math.cos(a) * 28; m.wvy = a === null ? 0 : Math.sin(a) * 28; }
       tryMove(m, m.wvx * dt, m.wvy * dt); continue;
     }
     if (d < (m.hunt || 260) && d > 24) tryMove(m, dx / d * m.spd * dt, dy / d * m.spd * dt);
-    if (d < 32 && m.cd <= 0) {
-      m.cd = 1;
-      if (P.inv <= 0) { const n = Math.max(1, Math.round(m.dmg * (100 / (100 + st.armor)) * (.9 + Math.random() * .2))); P.hp -= n; P.inv = .35; P.flash = .15; shake = Math.max(shake, 4); burst(P.x, P.y, 6, ["#e8505a", "#a8323c"], 80, .35); sfx("hurt"); fx(P.x, P.y - 20, "-" + n, "#ff6b6b"); }
+    // 공격 예비 동작(❗): 바로 때리지 않고 잠깐 뜸을 들여요. 그 사이 피하거나 밀쳐내면 공격이 취소돼요
+    if (d < 32 && m.cd <= 0 && !(m.wind > 0)) { m.wind = MON_WIND; m.cd = 1 + MON_WIND; }
+    if (m.wind > 0 && (m.wind -= dt) <= 0) {
+      m.wind = 0;
+      if (d < 40 && P.inv <= 0) { const n = Math.max(1, Math.round(m.dmg * (100 / (100 + st.armor)) * (.9 + Math.random() * .2))); P.hp -= n; P.inv = .35; P.flash = .15; shake = Math.max(shake, 4); burst(P.x, P.y, 6, ["#e8505a", "#a8323c"], 80, .35); sfx("hurt"); fx(P.x, P.y - 20, "-" + n, "#ff6b6b"); }
     }
   }
   if (P.hp <= 0) return leaveDungeon(true);
@@ -1190,7 +1233,7 @@ function press(code) {
 }
 function release(code) { keys.delete(code); }
 addEventListener("keydown", e => {
-  if (e.target && e.target.tagName === "INPUT") return;
+  if (e.target && (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA")) return;
   if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space"].includes(e.code)) e.preventDefault();
   if (e.repeat) return;
   press(e.code);
@@ -1207,7 +1250,7 @@ $("tinv").onclick = () => document.body.classList.toggle("showinv");
 let resetArmed = false;
 $("reset").onclick = () => {
   if (!resetArmed) { resetArmed = true; $("reset").textContent = "정말 지울까요? 한 번 더 누르세요"; setTimeout(() => { resetArmed = false; $("reset").textContent = "새로 시작"; }, 4000); return; }
-  resetting = true; try { localStorage.removeItem("pokgeun-maeul"); } catch (e) {} location.reload();
+  save(); backupNow(true); resetting = true; try { localStorage.removeItem(SAVE_KEY); } catch (e) {} location.reload();
 };
 addEventListener("visibilitychange", () => { if (document.hidden) save(); });
 addEventListener("pagehide", save);
@@ -1914,10 +1957,37 @@ function dinoTick(e, mv, fast) {
 }
 const DINO_K = idx => [null, null, "parasaurolophus", "triceratops", "velociraptor"][idx];
 const mkWildDino = (idx, boss) => { const k = boss ? "trex" : DINO_K(idx); return DINOM.ready && k ? mkDinoG(k) : boss ? mkTrex() : DINO3[idx](); };
+/* ----- 몬스터 모델: Quaternius Ultimate Monsters (CC0) — 대기·걷기·달리기·공격·피격·죽음 ----- */
+const MONK = { "🐀": "slime", "🦇": "bee", "🕷️": "mushnub", "💀": "ghost", "🧟": "orc", "👹": "bluedemon", "🐲": "dragon" };
+const MTGT = { slime: .95, bee: 1.15, mushnub: 1.05, ghost: 1.5, orc: 1.95, bluedemon: 2.3, dragon: 2.1 };
+const MONCLIP = { Idle: [/^Idle$/, /Flying_Idle/, /Idle/], Walk: [/^Walk$/, /^Flying$/, /Fast_Flying/, /Walk/], Run: [/^Run$/, /Fast_Flying/, /^Walk$/, /Flying/], Attack: [/Bite_Front/, /Headbutt/, /^Punch$/, /Weapon/, /Bite/, /Punch/, /Attack/], Hit: [/Hit/], Death: [/Death/] };
+const MONM = { ready: false, started: false, src: {}, clips: {}, sc: {}, map: {} };
+function loadMonsters() {
+  if (MONM.started || !R3) return; MONM.started = true; const L = new THREE.GLTFLoader(), ks = Object.keys(MTGT);
+  Promise.all(ks.map(k => L.loadAsync(`assets/monsters/${k}.${KEXT}`))).then(r => { ks.forEach((k, i) => {
+    const sc = r[i].scene, cl = r[i].animations; MONM.src[k] = sc; MONM.clips[k] = cl; const bb = new THREE.Box3().setFromObject(sc); MONM.sc[k] = MTGT[k] / Math.max(.1, bb.max.y - bb.min.y);
+    MONM.map[k] = {}; for (const st in MONCLIP) { let c = null; for (const re of MONCLIP[st]) if ((c = cl.find(a => re.test(a.name)))) break; MONM.map[k][st] = c || cl[0]; }
+  }); MONM.ready = true; }).catch(e => console.warn("몬스터 모델을 불러오지 못해 기본 모델로 표시해요.", e));
+}
+function mkMonG(k) {
+  const root = THREE.SkeletonUtils.clone(MONM.src[k]), g = new THREE.Group(), body = new THREE.Group(); g.add(body); body.add(root); root.scale.setScalar(MONM.sc[k]);
+  root.traverse(o => { if (o.isMesh) { const src = o.material, m = toonPatch(TOON({ color: 0xffffff, map: src.map || null, gradientMap: gradTex, ...(PBRL ? { roughness: .78 } : {}) })); m.userData.own = 1; o.material = m; o.castShadow = true; o.frustumCulled = false; } });
+  const mixer = new THREE.AnimationMixer(root), acts = {}, act = n => acts[n] || (acts[n] = mixer.clipAction(MONM.map[k][n]));
+  return { g, body, legs: [], la: new THREE.Group(), ra: new THREE.Group(), h: MTGT[k] + .15, mon: k, mixer, act, cur: null, seed: Math.random() * 10 };
+}
+// 상태 우선순위: 죽음 > 공격(예비 동작 포함) > 피격 > 이동 > 대기
+function monTick(e, mv, fast) {
+  if (e.atkT > 0) e.atkT -= DT; if (e.hitT > 0) e.hitT -= DT;
+  const want = e.dying ? "Death" : e.atkT > 0 ? "Attack" : e.hitT > 0 ? "Hit" : mv ? (fast ? "Run" : "Walk") : "Idle";
+  if (e.cur !== want) { const a = e.act(want), once = want !== "Idle" && want !== "Walk" && want !== "Run"; a.reset(); a.setLoop(once ? THREE.LoopOnce : THREE.LoopRepeat, once ? 1 : Infinity); a.clampWhenFinished = once; a.fadeIn(.12).play(); if (e.curA && e.curA !== a) e.curA.fadeOut(.12); e.curA = a; e.cur = want; }
+  e.mixer.update(Math.min(DT, .1));
+}
+const mkMonModel = em => MONM.ready && MONK[em] ? mkMonG(MONK[em]) : MON3[em]();
 const MON3 = { "🐀": mkRat, "🦇": mkBat, "🕷️": mkSpider, "💀": mkSkel, "🧟": mkZombie, "👹": mkOgre, "🐲": mkDragon };
 const DINO3 = [mkLizard, mkBoar, mkBrachio, mkCroc, mkRaptor];
 function animE(e, mv, spd = 9, amp = .6) {
   if (e.dino) return dinoTick(e, mv, spd >= 8);
+  if (e.mon) return monTick(e, mv, spd >= 8);
   if (e.kay) return kayTick(e, mv);
   const t = vtime * spd, sd = e.seed || 0;
   if (e.legs) e.legs.forEach((l, i) => { l.rotation.x = mv ? Math.sin(t + (i % 2) * Math.PI + (i > 1 ? 1.2 : 0)) * amp : l.rotation.x * .8; });
@@ -2463,12 +2533,18 @@ function drawDun() {
   }
   for (const m of dun.mons) {
     if (Math.abs(m.x / T - camT.x) > 20 || Math.abs((m.y + 8) / T - camT.z) > 14) continue;
-    const e = ent(m, () => { const b = m.wild ? mkWildDino(m.idx, m.boss) : MON3[m.e](); b.g.scale.multiplyScalar(m.demon ? 1.45 : m.boss && !m.wild ? 1.8 : 1); return b; }, g.dyn);
+    const e = ent(m, () => { const b = m.wild ? mkWildDino(m.idx, m.boss) : mkMonModel(m.e); b.g.scale.multiplyScalar(m.demon ? 1.45 : m.boss && !m.wild ? 1.8 : 1); return b; }, g.dyn);
+    if (e.mon) { e.mv = e.px !== undefined && Math.hypot(m.x - e.px, m.y - e.py) > 6 * DT; e.px = m.x; e.py = m.y; if (m.wind > 0 && !(e.atkT > 0)) e.atkT = (m.wind || 0) + .45; if (m.flash > (e.lfl || 0) + .02 && !(e.atkT > 0)) e.hitT = .35; e.lfl = m.flash; }
     const chase = !(m.wild && !m.hostile), dx = P.x - m.x, dy = P.y - m.y, mv = chase ? Math.hypot(dx, dy) < 260 && Math.hypot(dx, dy) > 24 : (m.wvx || m.wvy);
-    e.g.position.set(m.x / T, 0, (m.y + 8) / T); if (chase) face(e.g, dx, dy, 10); else if (mv) face(e.g, m.wvx, m.wvy, 6); if (e.dino && m.cd > (e.lcd || 0) + .5) e.atkT = .7; e.lcd = m.cd; animE(e, mv, m.boss ? 5 : 8, .55); flash(e, m.flash > 0);
+    e.g.position.set(m.x / T, 0, (m.y + 8) / T); if (chase) face(e.g, dx, dy, 10); else if (mv) face(e.g, m.wvx, m.wvy, 6); if (e.dino && m.cd > (e.lcd || 0) + .5) e.atkT = .7; e.lcd = m.cd; animE(e, e.mon ? e.mv || m.kb > 0 : mv, e.mon ? (m.spd >= 90 ? 9 : 5) : m.boss ? 5 : 8, .55); flash(e, m.flash > 0);
     const top = e.h * (m.demon ? 1.45 : m.boss && !m.wild ? 1.8 : 1) + .2;
     if (m.hp < m.mhp || m.boss) labelT("▮".repeat(Math.max(1, Math.round(8 * m.hp / m.mhp))) + "▯".repeat(8 - Math.max(1, Math.round(8 * m.hp / m.mhp))), m.x / T, (m.y + 8) / T, top, m.boss ? "#f5b942" : m.wild && !m.hostile ? "#7be07b" : "#ff6a6a");
+    if (m.wind > 0) labelT("❗", m.x / T, (m.y + 8) / T, top + .75, "#ff9a3c");
     if (m.boss) labelT(m.n, m.x / T, (m.y + 8) / T, top + .4, "#f5b942"); else if (m.tame && Math.hypot(m.x - P.x, m.y - P.y) < 90) labelT(`${m.n} 🐾${Math.min(m.tp, m.tame)}/${m.tame}`, m.x / T, (m.y + 8) / T, top + .35, "#fff3d6");
+  }
+  if (dun.dead) for (let i = dun.dead.length - 1; i >= 0; i--) {   // 쓰러지는 동작을 끝까지 보여 주고 지워요
+    const c = dun.dead[i], e = ENT.get(c.m); c.t -= DT; if (c.t <= 0 || !e) { dun.dead.splice(i, 1); continue; }
+    ent(c.m, () => e, g.dyn); e.dying = true; flash(e, false); animE(e, false, 8, .55); if (c.t < .35) e.g.position.y = -(.35 - c.t) * 2;
   }
   const pe = activePet(), pet = dun.pet;
   if (pet && pe) {
@@ -3153,7 +3229,7 @@ function worldInfo() { const px = Math.floor(player.x / T), py = Math.floor((pla
 const DEMON_BASE = 6, DEMON_TOP = 8;      // 마왕성 1~3층 = 던전 깊이 6~8
 const RANKS = [{ f: 0, n: "평민 모험가" }, { f: 40, n: "견습 기사" }, { f: 120, n: "기사" }, { f: 300, n: "근위 기사" }, { f: 700, n: "왕국의 용사" }];
 const GUARD_LINES = ["왕국의 평화는 저희가 지킵니다!", "용사님, 대마왕을 부탁드립니다.", "국왕 폐하께서 용사님을 기다리고 계십니다."];
-const GUARD_LINES2 = ["성문 경비 중입니다. 몬스터는 마을 안으로 들어오지 못해요.", "북쪽 끝에 마왕성이 있다는 소문을 들으셨나요?", "밤에는 해골과 좀비가 나오니 조심하세요."];
+const GUARD_LINES2 = ["성문 경비 중입니다. 몬스터는 마을 안으로 들어오지 못해요.", "북쪽 끝에 마왕성이 있다는 소문을 들으셨나요?", "밤에는 유령과 오크가 나오니 조심하세요."];
 const STORY = [
   { t: "왕의 부름", intro: ["용사여, 잘 와 주었네. 나는 포근 왕국의 국왕 폰드일세.", "북쪽 끝 마왕성에서 대마왕 이블리스가 깨어났다네. 그가 군대를 일으키면 이 왕국은 겨울을 넘기지 못할 걸세.", "그대에게 왕명을 내리겠네. 먼저 왕국을 지킬 준비부터 하세나."],
     obj: [{ k: "talk", n: 1, label: "국왕과 대화하기" }], done: ["좋아, 그 눈빛이 마음에 드는군. 왕실의 검을 하사하겠네!"], reward: { bells: 150, gear: { slot: "weapon", rar: 2, pre: "왕실" }, fame: 10 } },
@@ -3490,7 +3566,8 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 player.hp = pstats().maxhp;
-resize(); hud(); loadKay(); loadMan(); loadDinos(); $("clock").textContent = clockText(); setMute(muted);
+resize(); hud(); loadKay(); loadMan(); loadDinos(); loadMonsters();
+if (SAVE.from.startsWith(SAVE_KEY + ".bak")) setTimeout(() => say("⚠️ 저장 파일이 손상돼서 가장 최근 백업으로 불러왔어요. (깨진 원본은 따로 보관했어요)", 7000), 1200); $("clock").textContent = clockText(); setMute(muted);
 $("snd").onclick = () => { setMute(!muted); sfx("ui"); };
 const STY_N = { toon: "툰", cel: "원신풍 셀", pbr: "PBR", real: "듀랑고풍" };
 $("sty").textContent = "🖌️ " + STY_N[RSTYLE];
@@ -3518,11 +3595,11 @@ const tapKey = code => { press(code); setTimeout(() => release(code), 90); };
 /* 설정(⚙️): 소리 · 화질 · 그래픽 스타일 · 시점을 한곳에 */
 function renderCfg() {
   const it = (id, lab) => `<button data-cfg="${id}"><span>${lab}</span><b>${$(id).textContent.replace(/^\S+\s*/, "") || $(id).textContent}</b></button>`;
-  $("cfg").innerHTML = `<h3>⚙️ 설정</h3>${it("snd", "🔊 소리")}${it("gfx", "🎨 화질")}${it("view", "🎥 시점")}<button data-cfg="keys"><span>⌨️ 조작 방법</span><b>H</b></button>`;
+  $("cfg").innerHTML = `<h3>⚙️ 설정</h3>${it("snd", "🔊 소리")}${it("gfx", "🎨 화질")}${it("view", "🎥 시점")}<button data-cfg="keys"><span>⌨️ 조작 방법</span><b>H</b></button><button data-cfg="savebox"><span>💾 저장 관리</span><b>›</b></button>`;
   const sb = $("cfg").querySelector('[data-cfg="snd"] b'); if (sb) sb.textContent = muted ? "꺼짐" : "켜짐";
 }
 $("cfgbtn").onclick = e => { e.stopPropagation(); const c = $("cfg"); c.hidden = !c.hidden; if (!c.hidden) renderCfg(); sfx("ui"); };
-$("cfg").addEventListener("click", e => { const b = e.target.closest("[data-cfg]"); if (!b) return; e.stopPropagation(); const id = b.dataset.cfg; if (id === "keys") { $("cfg").hidden = true; return toggleKeys(); } $(id).click(); setTimeout(renderCfg, 60); });
+$("cfg").addEventListener("click", e => { const b = e.target.closest("[data-cfg]"); if (!b) return; e.stopPropagation(); const id = b.dataset.cfg; if (id === "keys") { $("cfg").hidden = true; return toggleKeys(); } if (id === "savebox") { $("cfg").hidden = true; return openSaveBox(); } $(id).click(); setTimeout(renderCfg, 60); });
 addEventListener("pointerdown", e => { if (!e.target.closest("#cfg, #cfgbtn")) $("cfg").hidden = true; });
 /* 메뉴 독: 단축키를 몰라도 클릭으로 */
 const DOCK = [["equip", "⚔️", "장비", "I"], ["char", "📜", "캐릭터", "K"], ["craft", "🔨", "제작", "C"], ["build", "🏗️", "건설", "B"], ["quest", "📋", "의뢰", "J"], ["map", "🗺️", "지도", "N"], ["king", "👑", "왕국", "L"], ["arena", "🏟️", "아레나", "Y"], ["look", "🧑", "외형", "O"], ["keys", "❓", "도움말", "H"]];
@@ -3534,6 +3611,24 @@ function renderDock() {
 $("menubtn").onclick = e => { e.stopPropagation(); document.body.classList.toggle("showdock"); sfx("ui"); };
 $("dock").addEventListener("click", e => { const b = e.target.closest("[data-dock]"); document.body.classList.remove("showdock"); if (!b || !started) return; const k = b.dataset.dock; if (k === "keys") return toggleKeys(); if (k === "build") { if (!(scene === "dun" && dun && dun.kind === "world")) { say("🏗️ 건설은 오픈월드에서 할 수 있어요.", 1600); return; } } sfx("ui"); togglePanel(k); renderDock(); });
 /* 조작 도움말 (H) */
+function openSaveBox(msg = "") {   // 저장 관리: 내보내기·가져오기·백업 복원
+  const k = $("keys"); k.hidden = false; const bk = listBackups(), tm = t => t ? new Date(t).toLocaleString() : "시간 정보 없음";
+  k.innerHTML = `<div class="kc"><button class="x" data-close>✕</button><h2>💾 저장 관리</h2><div style="padding:6px 22px 18px">
+    <p style="margin:4px 0 10px;font-size:13px">게임은 이 브라우저에 자동 저장돼요(10분마다 이전 저장을 백업 3개까지 보관). 다른 기기로 옮기거나 따로 보관하려면 내보내기를 쓰세요.</p>
+    ${SAVE.error ? `<p style="color:#c0392b;font-weight:700">⚠️ 마지막 저장 실패: ${String(SAVE.error.name || SAVE.error).slice(0, 60)}</p>` : ""}${msg ? `<p style="font-weight:700">${msg}</p>` : ""}
+    <h3>내보내기</h3><button data-sv="copy">📋 저장 데이터 복사</button><button data-sv="dl">⬇️ 파일로 받기</button>
+    <h3>가져오기</h3><textarea id="svtext" rows="4" style="width:100%;font:12px monospace;border-radius:10px;padding:6px" placeholder="내보낸 저장 데이터를 붙여 넣거나 아래에서 파일을 고르세요"></textarea>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><input type="file" id="svfile" accept=".json,application/json,text/plain"><button data-sv="imp">📂 가져와서 적용</button></div>
+    <h3>백업에서 복원</h3>${bk.length ? bk.map(b => `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin:4px 0"><span>${tm(b.at)} · Lv.${b.lv} · ${b.bells.toLocaleString()} 벨</span><button data-sv="rst" data-k="${b.key}">복원</button></div>`).join("") : "<div><small>아직 백업이 없어요(10분 이상 플레이하면 생겨요).</small></div>"}
+  </div></div>`;
+}
+$("keys").addEventListener("click", e => {
+  const b = e.target.closest("[data-sv]"); if (!b) return; e.stopPropagation(); const a = b.dataset.sv;
+  if (a === "copy") { const t = exportSave(); $("svtext").value = t; try { navigator.clipboard.writeText(t).then(() => say("📋 저장 데이터를 복사했어요.", 1800), () => say("아래 칸의 내용을 직접 복사해 주세요.", 2500)); } catch (_) { say("아래 칸의 내용을 직접 복사해 주세요.", 2500); } }
+  else if (a === "dl") { const t = exportSave(), u = URL.createObjectURL(new Blob([t], { type: "application/json" })), l = document.createElement("a"); l.href = u; l.download = `pokgeun-save-${new Date().toISOString().slice(0, 10)}.json`; document.body.appendChild(l); l.click(); l.remove(); setTimeout(() => URL.revokeObjectURL(u), 2000); $("svtext").value = t; }
+  else if (a === "imp") { const f = $("svfile").files && $("svfile").files[0]; const go = t => { const m = importSave(t); if (m) openSaveBox("⚠️ " + m); else say("📂 저장을 가져왔어요. 다시 불러오는 중…", 2000); }; if (f) f.text().then(go); else go($("svtext").value); }
+  else if (a === "rst") { const m = restoreBackup(b.dataset.k); if (m) openSaveBox("⚠️ " + m); else say("↩️ 백업에서 복원했어요. 다시 불러오는 중…", 2000); }
+}, true);
 function toggleKeys() {
   const k = $("keys"); k.hidden = !k.hidden; sfx("ui"); if (k.hidden) return;
   const row = (a, b) => `<div><kbd>${a}</kbd><span>${b}</span></div>`;
@@ -3642,7 +3737,7 @@ for (const id of ["gear", "shop"]) { const el = $(id); let y0 = null;
   const up = e => { if (y0 === null) return; const dy = e.clientY - y0; y0 = null; el.style.transform = ""; if (dy > 70 && !(id === "gear" && gearTab === "perk")) closeShop(); };
   el.addEventListener("pointerup", up); el.addEventListener("pointercancel", up); }
 renderDock();
-window.__game = { get DINOM() { return DINOM; }, wsolid, bioBase,  equipBag, unequip, homeTileAt, openShop, enterHome: () => enterHome(), get furnSel() { return furnSel; }, ctxHint, renderBar,  get sun() { return sun; }, get GRD() { return GRD; }, get S3() { return S3; }, setYaw: v => { camYaw = v; camManT = vtime + 999; }, get MAN() { return MAN; }, get KAY() { return KAY; }, get curPE() { return curPE; }, pAnim, WX, setWeather: t => { WX.type = t; WX.t = 9999; }, startArena, arenaTick, startWave, gemGain, choosePerk, finishArena, openPerk, autoFight, idleStored, dailyTouch, genArena, mkMonT, get PERKS() { return PERKS; }, get ARES() { return ARES; }, sEvent, storyReady, reportStory, openKing, nearKing, demonAI, finalizeDemon, enterDemon, onDemonDefeat, mkDemon, damageP, addFame, get STORY() { return STORY; }, NET, spawnNear, worldTick, killMon, setBuild: i => { buildSel = i == null ? null : BUILD[i]; }, farmAct, winteract, genOffers, turnIn, warpTo, worldAct, enterWorld, getWorld, get WORLD() { return WORLD; }, get dun() { return dun; }, wc, wb, setClock: v => { clock = v; }, fireball, feed, toggleMount, craft, togglePanel, enterDungeon, get dun() { return dun; }, pstats, genGear, attack, scene: () => scene, furnSelSet: v => { furnSel = v; renderFurn(); }, player, trees, S, keys, act, get fishing() { return fishing; }, bugs, villagers }; // 디버그/테스트용
+window.__game = { get MONM() { return MONM; }, ENT, MON_WIND, saveApi: { save, exportSave, importSave, listBackups, restoreBackup, backupNow, SAVE, SAVE_VER },  get DINOM() { return DINOM; }, wsolid, bioBase,  equipBag, unequip, homeTileAt, openShop, enterHome: () => enterHome(), get furnSel() { return furnSel; }, ctxHint, renderBar,  get sun() { return sun; }, get GRD() { return GRD; }, get S3() { return S3; }, setYaw: v => { camYaw = v; camManT = vtime + 999; }, get MAN() { return MAN; }, get KAY() { return KAY; }, get curPE() { return curPE; }, pAnim, WX, setWeather: t => { WX.type = t; WX.t = 9999; }, startArena, arenaTick, startWave, gemGain, choosePerk, finishArena, openPerk, autoFight, idleStored, dailyTouch, genArena, mkMonT, get PERKS() { return PERKS; }, get ARES() { return ARES; }, sEvent, storyReady, reportStory, openKing, nearKing, demonAI, finalizeDemon, enterDemon, onDemonDefeat, mkDemon, damageP, addFame, get STORY() { return STORY; }, NET, spawnNear, worldTick, killMon, setBuild: i => { buildSel = i == null ? null : BUILD[i]; }, farmAct, winteract, genOffers, turnIn, warpTo, worldAct, enterWorld, getWorld, get WORLD() { return WORLD; }, get dun() { return dun; }, wc, wb, setClock: v => { clock = v; }, fireball, feed, toggleMount, craft, togglePanel, enterDungeon, get dun() { return dun; }, pstats, genGear, attack, scene: () => scene, furnSelSet: v => { furnSel = v; renderFurn(); }, player, trees, S, keys, act, get fishing() { return fishing; }, bugs, villagers }; // 디버그/테스트용
 </script>
 </body>
 </html>

@@ -24,3 +24,10 @@
 공룡 — assets/dinos/ (T-Rex, Velociraptor, Triceratops, Parasaurolophus)
   Ultimate Animated Dinosaur pack — Quaternius (quaternius.com), CC0 (poly.pizza 배포본, github.com/scarbone98/deep-time 경유)
   웹용 변환: 애니메이션 이름 정리(Attack/Death/Idle/Jump/Run/Walk), 리샘플.
+
+몬스터 — assets/monsters/ (slime, bee, mushnub, ghost, orc, bluedemon, dragon)
+  Ultimate Monsters pack — Quaternius (quaternius.com), CC0 (github.com/mlflabs/brain 경유)
+  원본 이름: GreenBlob, Armabee, Mushnub, Ghost, Orc, BlueDemon, Dragon_Evolved
+  웹용 변환: glTF → glb(텍스처 내장), 리샘플·중복 제거(@gltf-transform).
+
+3D 엔진 — three.js r187 (mrdoob, MIT) / 글꼴 — Noto Sans KR (Google Fonts, SIL OFL 1.1)
