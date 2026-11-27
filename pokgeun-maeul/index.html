@@ -2592,6 +2592,22 @@ function regionPlan(W, rx, ry) {
   else if (h < .97 && dist > 80) { disc(7); const p = P({ id, type: "lair", name: "용의 소굴", x: cx, y: cy, w: 1, h: 1, tier: 4, guard: true }); const c = P({ id: id + "c", type: "chest", name: "용의 보물", x: cx, y: cy, w: 1, h: 1, tier: 4, par: p }); struct(cx, cy, 1, 1, c, CELL.CHEST); }
   return pl;
 }
+/* 마을 사이 길: 각 마을은 반경 2구역 안의 가장 가까운 마을(또는 왕도)과 ㄱ자 길로 연결 (바다는 둑길) */
+function planRoads(W, rx, ry) {
+  const pl = regionPlan(W, rx, ry); if (pl.roads) return pl.roads; pl.roads = [];
+  const t = pl.pois.find(p => p.isTown); if (!t) return pl.roads; let best = null, bd = 1e9;
+  for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) { if (!dx && !dy) continue; const o = regionPlan(W, rx + dx, ry + dy).pois.find(p => p.isTown); if (o) { const d = Math.hypot(o.x - t.x, o.y - t.y); if (d < bd) { bd = d; best = o; } } }
+  const cap = W.fixed[0], dc = Math.hypot(cap.x - t.x, cap.y - t.y); if (dc < bd && dc < 3.6 * REG) best = { x: cap.x, y: cap.y + 12 };
+  if (best) pl.roads.push({ a: t, b: best }); return pl.roads;
+}
+function capRoads(W) { if (W.capR) return W.capR; W.capR = []; const c = W.fixed[0], crx = Math.floor(c.x / REG), cry = Math.floor(c.y / REG); let best = null, bd = 1e9;
+  for (let dy = -4; dy <= 4; dy++) for (let dx = -4; dx <= 4; dx++) { const o = regionPlan(W, crx + dx, cry + dy).pois.find(p => p.isTown); if (o) { const d = Math.hypot(o.x - c.x, o.y - c.y); if (d < bd) { bd = d; best = o; } } }
+  if (best) W.capR.push({ a: { x: c.x, y: c.y - 12 }, b: best }); return W.capR; }
+function applyRoad(R, rd, x0, y0) {
+  const { a, b } = rd, ry = a.y + 2, put = (x, y) => { if (x < x0 || y < y0 || x >= x0 + REG || y >= y0 + REG) return; const i = (y - y0) * REG + (x - x0); if (R.bio[i] === BIO.TOWN || R.inter.has(i)) return; R.bio[i] = BIO.ROAD; R.cell[i] = 0; };
+  for (let x = Math.min(a.x, b.x); x <= Math.max(a.x, b.x); x++) { put(x, ry); put(x, ry + 1); }
+  for (let y = Math.min(ry, b.y + 2); y <= Math.max(ry, b.y + 2); y++) { put(b.x, y); put(b.x + 1, y); }
+}
 function registerPlan(W, pl) { if (pl.reg) return; pl.reg = true; for (const p of pl.pois) { W.pois.push(p); W.byId.set(p.id, p); if (p.isTown) { W.towns.push(p); if (typeof dun !== "undefined" && dun && dun.kind === "world" && dun.vil) townVil(p, W.towns.length - 1); } if (p.guard) W.guard.push(p); if (p.type !== "town" && p.type !== "chest" && !p.town) p.dist = Math.hypot(p.x - W.spawn.x, p.y - W.spawn.y); } }
 function applyOps(R, ops, x0, y0) {
   const inR = (x, y) => x >= x0 && y >= y0 && x < x0 + REG && y < y0 + REG, ix = (x, y) => (y - y0) * REG + (x - x0);
@@ -2609,6 +2625,9 @@ function genRegion(W, rx, ry) {
   for (const pl of near) applyOps(R, pl.ops.filter(o => o.k === "disc"), x0, y0);
   applyOps(R, W.spec.filter(o => o.k !== "struct" && o.k !== "trees" && o.x - (o.r || 0) < x0 + REG && (o.x + (o.w || 0) + (o.r || 0)) >= x0 && o.y - (o.r || 0) < y0 + REG && (o.y + (o.h || 0) + (o.r || 0)) >= y0), x0, y0);
   applyOps(R, W.spec.filter(o => o.k === "trees"), x0, y0);
+  const bbox = rd => Math.min(rd.a.x, rd.b.x) - 2 < x0 + REG && Math.max(rd.a.x, rd.b.x) + 2 >= x0 && Math.min(rd.a.y, rd.b.y) - 2 < y0 + REG && Math.max(rd.a.y, rd.b.y) + 4 >= y0;
+  for (let dy = -4; dy <= 4; dy++) for (let dx = -4; dx <= 4; dx++) for (const rd of planRoads(W, rx + dx, ry + dy)) if (bbox(rd)) applyRoad(R, rd, x0, y0);
+  for (const rd of capRoads(W)) if (bbox(rd)) applyRoad(R, rd, x0, y0);
   for (const pl of near) applyOps(R, pl.ops.filter(o => o.k === "struct"), x0, y0);
   applyOps(R, W.spec.filter(o => o.k === "struct"), x0, y0);
   return R;
@@ -2626,7 +2645,7 @@ function genWorld() {
   if (S.wver !== 2) { S.wver = 2; S.wedits = {}; S.crops = {}; S.wpos = null; S.wspawn = null; S.disc = ""; S.disc2 = ""; S.wp = {}; S.wcl = {}; S.wopen = {}; S.wreg = {}; }
   S.wedits = S.wedits || {};
   let sx = WC0, sy = WC0;
-  for (let r = 0, found = false; r < 600 && !found; r += 4) for (let a = 0; a < 16 && !found; a++) { const px = Math.round(WC0 + Math.cos(a * .3927) * r), py = Math.round(WC0 + Math.sin(a * .3927) * r); if (okAreaB(px, py, 14) && okAreaB(px, py - 12, 8) && okAreaB(px, py + 25, 14)) { sx = px; sy = py; found = true; } }
+  for (let r = 0, found = false; r < 3000 && !found; r += 6) for (let a = 0; a < 16 && !found; a++) { const px = Math.round(WC0 + Math.cos(a * .3927) * r), py = Math.round(WC0 + Math.sin(a * .3927) * r); if ([2, 3].includes(bioBase(px, py)) && [2, 3].includes(bioBase(px, py + 25)) && [2, 3].includes(bioBase(px - 40, py + 20)) && [2, 3].includes(bioBase(px + 40, py)) && okAreaB(px, py, 14) && okAreaB(px, py - 12, 8) && okAreaB(px, py + 25, 14)) { sx = px; sy = py; found = true; } }
   const W = { N: WN, pois: [], towns: [], guard: [], byId: new Map(), plans: new Map(), regs: new Map(), spec: [], spawn: { x: sx, y: sy }, ed: NET.on ? NET.ed : S.wedits, chunks: new Map(), disc: new Set(), regrow: [], first: true };
   const spec = W.spec, add = p => { W.pois.push(p); W.byId.set(p.id, p); return p; }, struct = (x, y, w, h, poi, code = CELL.STRUCT) => spec.push({ k: "struct", x, y, w, h, poi, code });
   const VOX = sx - 15, VOY = sy + 15, HOX = VOX - 15, HOY = VOY + 1; W.vreg = { x: VOX, y: VOY }; W.hreg = { x: HOX, y: HOY };
