@@ -267,6 +267,11 @@
     body[data-scene="out"] #hint { bottom:calc(62px + env(safe-area-inset-bottom)) !important; }
     #rpg { width:26% !important; }
   }
+
+  #gear .lrow { display:flex; align-items:center; gap:10px; margin:4px 0 6px; } #gear .lrow small { opacity:.7; font-size:12px; }
+  #gear .lsec h3 { margin:10px 0 2px; font-size:14px; }
+  #gear .lsec button:not([style*="border-radius:50%"]) { font-size:13px; }
+  @media (max-width:760px), (pointer:coarse) { #gear.lookt { max-height:50vh !important; } }
 </style>
 </head>
 <body>
@@ -787,13 +792,14 @@ function bodyCraft() {
 }
 function renderGear() {
   const tabs = [["equip", "⚔️ 장비 (I)"], ["char", "📜 캐릭터 (K)"], ["craft", "🔨 제작 (C)"], ["build", "🏗️ 건설 (B)"], ["quest", "📜 의뢰 (J)"], ["map", "🗺️ 지도 (N)"], ["king", "👑 왕국 (L)"], ["arena", "⚔️ 아레나 (Y)"], ["look", "🧑 외형 (O)"]].map(([k, l]) => `<button data-tab="${k}" style="margin:0 6px 8px 0;padding:3px 10px;${gearTab === k ? "background:#fff" : ""}">${l}</button>`).join("");
-  $("gear").classList.toggle("side", gearTab === "look" && innerWidth >= 700);
+  $("gear").classList.toggle("side", gearTab === "look" && innerWidth >= 700); $("gear").classList.toggle("lookt", gearTab === "look");
   $("gear").innerHTML = `<div class="grip"></div>` + (gearTab === "perk" ? "" : `<button id="closeX" class="x" title="닫기 (Esc)">✕</button>`) + `<div class="gtabs">` + (["ending", "perk", "arenaend"].includes(gearTab) ? "" : tabs) + `</div>` + (gearTab === "char" ? bodyChar() : gearTab === "craft" ? bodyCraft() : gearTab === "build" ? bodyBuild() : gearTab === "quest" ? bodyQuest() : gearTab === "map" ? bodyMap() : gearTab === "king" ? bodyKing() : gearTab === "ending" ? bodyEnding() : gearTab === "arena" ? bodyArena() : gearTab === "look" ? bodyLook() : gearTab === "perk" ? bodyPerk() : gearTab === "arenaend" ? bodyArenaEnd() : bodyEquip()) + (gearTab === "perk" ? "" : `<button id="closeGear">닫기</button>`);
   if (gearTab === "map") drawWorldMap();
 }
 $("gear").addEventListener("click", e => {
   const t = e.target, d = t.dataset || {};
   if (t.id === "closeGear" || t.id === "closeX") return closeShop();
+  if (t.closest("[data-lookrand]")) { const R = n => Math.floor(Math.random() * n); S.look = { h: R(6), hc: R(7), sk: R(5), ey: R(5), tp: R(8), pc: R(6), bc: R(4), ot: R(4), bd: R(4), br: Math.random() < .7 ? 0 : 1 + R(2), hat: Math.random() < .6 ? 0 : R(5), cc: Math.random() < .5 ? 0 : 1 + R(8), c: 0 }; sfx("ui"); save(); netLook(); return renderGear(); }
   if (d.look) { const [k, v] = d.look.split(":"); S.look = { ...lookOf(S.look), [k]: +v }; save(); netLook(); return renderGear(); }
   if (d.tab) { gearTab = d.tab; return renderGear(); }
   if (d.craft !== undefined) return craft(+d.craft);
@@ -1536,13 +1542,14 @@ function terrainGroup(w, h, at, kind) {
 /* ----- 모델: 사람 / 동물 / 몬스터 / 공룡 ----- */
 const leg = (par, x, y, z, w, h, col, d = w) => { const p = new THREE.Group(); p.position.set(x, y, z); B(p, w, h, d, col, 0, -h / 2, 0); par.add(p); return p; };
 /* ----- 모던 캐릭터: 부드러운 체형 · 표정 있는 얼굴 · 헤어 4종 · 장비 외형 ----- */
-const LOOK = { hair: [0x3a2a22, 0x1c1c28, 0xe8c070, 0xc8503a, 0x6a4ac8, 0x4a9ad8, 0xf0f0f4], skin: [0xffe0c8, 0xf2c79a, 0xd9a273, 0x9a6a46, 0x6a4430], eye: [0x4a7ad8, 0x3a9a5a, 0x8a5a34, 0xd8503a, 0x8a5ad0], out: [0x3d6ed0, 0xd9534f, 0x4a9a4a, 0x8a5ad0, 0x2fb0b0, 0x2e2e3e], hs: ["단발", "긴 머리", "포니테일", "삐죽머리"] };
-const lookOf = l => ({ h: ((l && l.h) | 0) % 4, hc: ((l && l.hc) | 0) % 7, sk: ((l && l.sk) | 0) % 5, ey: ((l && l.ey) | 0) % 5, tp: ((l && l.tp) | 0) % 6, c: ((l && l.c) | 0) % 5, hat: ((l && l.hat) | 0) % 2, cc: ((l && l.cc) | 0) % 7 });
+const LOOK = { hair: [0x3a2a22, 0x1c1c28, 0xe8c070, 0xc8503a, 0x6a4ac8, 0x4a9ad8, 0xf0f0f4], skin: [0xffe0c8, 0xf2c79a, 0xd9a273, 0x9a6a46, 0x6a4430], eye: [0x4a7ad8, 0x3a9a5a, 0x8a5a34, 0xd8503a, 0x8a5ad0], out: [0x3d6ed0, 0xd9534f, 0x4a9a4a, 0x8a5ad0, 0x2fb0b0, 0x2e2e3e, 0xe8a23c, 0xf2ede0], hs: ["단발", "긴 머리", "포니테일", "삐죽머리", "올림머리", "민머리"], pants: [0x3a3a48, 0x4a3a2a, 0x2c3e78, 0x6a6a5a, 0x8a7a5a, 0xe8e4d8], boots: [0x3a2a20, 0x1c1c22, 0x7a5a3a, 0x8a2a2a], ot: ["셔츠", "조끼", "긴 코트", "로브"], hats: ["없음", "투구", "밀짚모자", "두건", "왕관"], bd: ["보통", "큰 키", "작은 키", "다부진"], br: ["없음", "콧수염", "턱수염"] };
+const lookOf = l => { const g = (k, n) => (((l && l[k]) | 0) % n + n) % n; return { h: g("h", 6), hc: g("hc", 7), sk: g("sk", 5), ey: g("ey", 5), tp: g("tp", 8), c: g("c", 5), hat: g("hat", 5), cc: g("cc", 9), pc: g("pc", 6), bc: g("bc", 4), ot: g("ot", 4), bd: g("bd", 4), br: g("br", 3) }; };
 const shade = (hex, f) => new THREE.Color(hex).multiplyScalar(f).getHex();
 const RTINT = [0xb8bcc8, 0x6fa8ff, 0xffd34d, 0xff8a2b, 0x5be37d];
 const Sq = (p, r, c, x, y, z, o, sg = 20) => addM(p, geo(`q${r},${sg}`, () => new THREE.SphereGeometry(r, sg, Math.round(sg * .7))), c, x, y, z, o);
 const noOl = m => { m.userData.ol = 1; return m; };
 function addHair(head, st, col, lite) {
+  if (st === 5 && !lite) return null;   // 민머리
   const hl = new THREE.Color(col).lerp(new THREE.Color(0xffffff), .28).getHex();
   addM(head, geo("hcap", () => new THREE.SphereGeometry(.325, 22, 14, 0, Math.PI * 2, 0, Math.PI * .56)), col, 0, .035, -.045, { r: [-.32, 0, 0] });
   if (lite) return null;
@@ -1552,6 +1559,7 @@ function addHair(head, st, col, lite) {
   let tail = null;
   if (st === 1) { C(head, .22, .12, .62, col, 0, -.3, -.2, 10); K(head, .12, .25, col, 0, -.66, -.2, 8, { r: [Math.PI, 0, 0] }); }
   else if (st === 2) { tail = new THREE.Group(); tail.position.set(0, .13, -.3); head.add(tail); Sq(tail, .08, col, 0, 0, 0, undefined, 10); K(tail, .09, .5, col, 0, -.28, -.04, 8, { r: [Math.PI, 0, 0] }); }
+  else if (st === 4) { Sq(head, .15, col, 0, .3, -.18, undefined, 12); TR(head, .09, .03, shade(col, .8), 0, .26, -.13, { r: [HALF * .6, 0, 0] }); }
   else if (st === 3) for (let i = 0; i < 7; i++) { const a = i / 7 * 6.283; K(head, .07, .3, col, Math.cos(a) * .18, .3 + (i % 2) * .04, Math.sin(a) * .18 - .03, 5, { r: [Math.sin(a) * .6, 0, -Math.cos(a) * .6] }); }
   return tail;
 }
@@ -1681,7 +1689,7 @@ function loadMan() {
     const hb = new THREE.Box3(); let n = 0; gl.scene.updateMatrixWorld(true);
     gl.scene.traverse(o => { if (!o.isSkinnedMesh) return; const bn = o.skeleton.bones.map(b => b.name), si = o.geometry.attributes.skinIndex, sw = o.geometry.attributes.skinWeight, p = o.geometry.attributes.position, v = new THREE.Vector3(), reg = new Uint8Array(p.count);
       for (let i = 0; i < p.count; i++) { let bi = 0, bw = -1; for (let k = 0; k < 4; k++) { const w = sw.getComponent(i, k); if (w > bw) { bw = w; bi = si.getComponent(i, k); } } const name = bn[bi] || "", y = p.getY(i);
-        reg[i] = /head|neck/.test(name) ? 0 : /hand|f_|thumb/.test(name) ? 5 : /foot|toe/.test(name) || (/shin/.test(name) && y < .42) ? 3 : /thigh|shin/.test(name) ? 2 : /hips/.test(name) ? (y > .93 ? 4 : 2) : /forearm/.test(name) ? 6 : 1;
+        reg[i] = /head|neck/.test(name) ? 0 : /hand|f_|thumb/.test(name) ? 5 : /foot|toe/.test(name) || (/shin/.test(name) && y < .42) ? 3 : /thigh|shin/.test(name) ? 2 : /hips/.test(name) ? (y > .93 ? 4 : 2) : /forearm/.test(name) ? 6 : /upper_arm|shoulder/.test(name) ? 7 : 1;
         if (/head/.test(name)) { v.fromBufferAttribute(p, i).applyMatrix4(o.matrixWorld); hb.expandByPoint(v); n++; } }
       o.geometry.userData.reg = reg; });
     MAN.head = n ? { c: hb.getCenter(new THREE.Vector3()), r: hb.getSize(new THREE.Vector3()).y / 2 } : { c: new THREE.Vector3(0, 1.66, .02), r: .13 };
@@ -1691,8 +1699,10 @@ function loadMan() {
 function attachAt(root, bone, obj) { root.updateMatrixWorld(true); obj.updateMatrix(); const m = new THREE.Matrix4().copy(bone.matrixWorld).invert().multiply(obj.matrix); m.decompose(obj.position, obj.quaternion, obj.scale); bone.add(obj); return obj; }
 function mkMan(look, eq, armed) {
   const L = lookOf(look), root = THREE.SkeletonUtils.clone(MAN.src), g = new THREE.Group(), body = new THREE.Group(); g.add(body); body.add(root);
-  const shirt = new THREE.Color(eq && eq.armor && eq.armor.e === "🥋" ? RTINT[eq.armor.rar] ?? RTINT[0] : LOOK.out[L.tp]), pants = new THREE.Color(shade(LOOK.out[L.tp], .38)).lerp(new THREE.Color(0x4a3a2a), .5), skin = new THREE.Color(LOOK.skin[L.sk]);
-  const RC = [skin, shirt, pants, new THREE.Color(0x3a2a20), new THREE.Color(0x5a3a22), eq && eq.armor ? new THREE.Color(0x5a4a3a) : skin, shirt.clone().multiplyScalar(.82)];
+  const armorC = eq && eq.armor && eq.armor.e === "🥋", shirt = new THREE.Color(armorC ? RTINT[eq.armor.rar] ?? RTINT[0] : LOOK.out[L.tp]), skin = new THREE.Color(LOOK.skin[L.sk]), linen = new THREE.Color(0xe8e0cc);
+  const pants = L.ot === 3 && !armorC ? shirt.clone().multiplyScalar(.85) : new THREE.Color(LOOK.pants[L.pc]), boots = new THREE.Color(LOOK.boots[L.bc]), belt = new THREE.Color(L.ot === 3 ? 0xc8a860 : 0x5a3a22);
+  const sleeve = L.ot === 1 && !armorC ? linen : shirt.clone().multiplyScalar(.9);
+  const RC = [skin, shirt, pants, boots, belt, eq && eq.armor ? new THREE.Color(0x5a4a3a) : skin, L.ot === 1 && !armorC ? linen.clone().multiplyScalar(.95) : shirt.clone().multiplyScalar(.82), sleeve];
   const bones = {}; root.traverse(o => { if (o.isBone) bones[o.name] = o; });
   root.traverse(o => { if (!o.isSkinnedMesh) return; const reg = o.geometry.userData.reg, geo2 = o.geometry.clone(), col = new Float32Array(reg.length * 3);
     for (let i = 0; i < reg.length; i++) { const c = RC[reg[i]]; col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b; }
@@ -1701,13 +1711,22 @@ function mkMan(look, eq, armed) {
   const hd = bones["DEF-head"], H = MAN.head;
   if (hd) {
     const hg = new THREE.Group(); hg.position.copy(H.c); hg.scale.setScalar(H.r / .3 * 1.02);
-    if (L.hat) { Sq(hg, .345, 0xa8acb8, 0, .05, -.01, { s: [1, .9, 1.04] }); K(hg, .05, .26, 0xd8383a, 0, .4, 0, 5); B(hg, .26, .06, .05, 0x2a2a34, 0, .02, .32); }
-    else addHair(hg, L.h, LOOK.hair[L.hc], false);
-    for (const s of [-1, 1]) { noOl(Sq(hg, .038, 0x2a1e18, s * .11, .0, .27, { s: [1, 1.2, .5], cs: false }, 8)); noOl(B(hg, .09, .016, .02, LOOK.hair[L.hc], s * .11, .085, .28, { r: [0, 0, -s * .12], cs: false })); }
+    const hc = LOOK.hair[L.hc], tc = LOOK.out[L.tp];
+    if (L.hat === 1) { Sq(hg, .345, 0xa8acb8, 0, .05, -.01, { s: [1, .9, 1.04] }); K(hg, .05, .26, 0xd8383a, 0, .4, 0, 5); B(hg, .26, .06, .05, 0x2a2a34, 0, .02, .32); }
+    else if (L.hat === 3) { addM(hg, geo("hcap", () => new THREE.SphereGeometry(.325, 22, 14, 0, Math.PI * 2, 0, Math.PI * .56)), shade(tc, .85), 0, .05, -.06, { r: [-.32, 0, 0], s: [1.16, 1.16, 1.16] }); C(hg, .26, .32, .42, shade(tc, .85), 0, -.22, -.2, 12); }
+    else { addHair(hg, L.h, hc, false);
+      if (L.hat === 2) { C(hg, .62, .62, .03, 0xe8c878, 0, .2, -.02, 20); C(hg, .25, .31, .22, 0xe8c878, 0, .3, -.02, 14); C(hg, .312, .312, .05, 0xc8383a, 0, .22, -.02, 14); }
+      else if (L.hat === 4) { C(hg, .23, .27, .14, 0xf5d142, 0, .34, -.02, 12); for (let i = 0; i < 5; i++) { const a = i * 1.2566; K(hg, .045, .14, 0xf5d142, Math.cos(a) * .23, .47, Math.sin(a) * .23 - .02, 4); } const gm = Sq(hg, .04, 0xffffff, 0, .34, .25, undefined, 8); gm.material = HDR(0xe8505a, 1.8); gm.userData.ol = 1; } }
+    for (const s of [-1, 1]) { noOl(Sq(hg, .048, 0xfaf6ee, s * .11, .0, .262, { s: [1, 1.1, .45], cs: false }, 10)); noOl(Sq(hg, .03, LOOK.eye[L.ey], s * .11, -.005, .28, { s: [1, 1.15, .4], cs: false }, 8)); noOl(Sq(hg, .016, 0x14101c, s * .11, -.005, .292, { s: [1, 1.1, .4], cs: false }, 6)); noOl(B(hg, .09, .016, .02, hc, s * .11, .085, .28, { r: [0, 0, -s * .12], cs: false })); }
+    if (L.br >= 1) { B(hg, .17, .035, .04, hc, 0, -.105, .275, { r: [-.2, 0, 0] }); }
+    if (L.br === 2) { Sq(hg, .14, hc, 0, -.21, .17, { s: [1.15, .85, .7] }, 12); }
     attachAt(root, hd, hg);
   }
+  const hips = bones["DEF-hips"];
+  if (hips && (L.ot === 2 || L.ot === 3) && !armorC) { const k = new THREE.Group(), ln = L.ot === 3 ? .78 : .5; k.position.set(0, .98 - ln / 2, -.005); const m = C(k, .2, L.ot === 3 ? .34 : .29, ln, L.ot === 3 ? shirt.getHex() : shade(LOOK.out[L.tp], .78), 0, 0, 0, 16); m.material = TOON({ color: L.ot === 3 ? shirt.getHex() : shade(LOOK.out[L.tp], .78), side: THREE.DoubleSide, gradientMap: gradTex }); m.geometry = geo("skirt" + ln, () => new THREE.CylinderGeometry(.2, L.ot === 3 ? .34 : .29, ln, 16, 1, true)); attachAt(root, hips, k); }
+  if (L.bd) root.scale.set(...[[1, 1, 1], [1, 1.07, 1], [.95, .9, .95], [1.12, 1, 1.1]][L.bd]);
   const chest = bones["DEF-spine003"];
-  if (L.cc && chest) { const cp = new THREE.Group(); cp.position.set(0, 1.4, -.13); const m = B(cp, .42, .95, .03, LOOK.out[L.cc - 1], 0, -.45, 0, { r: [.12, 0, 0] }); m.material = TOON({ color: LOOK.out[L.cc - 1], side: THREE.DoubleSide, gradientMap: gradTex }); attachAt(root, chest, cp); }
+  if (L.cc && chest) { const cp = new THREE.Group(); cp.position.set(0, 1.4, -.13); const m = B(cp, .42, .95, .03, LOOK.out[(L.cc - 1) % LOOK.out.length], 0, -.45, 0, { r: [.12, 0, 0] }); m.material = TOON({ color: LOOK.out[(L.cc - 1) % LOOK.out.length], side: THREE.DoubleSide, gradientMap: gradTex }); attachAt(root, chest, cp); }
   const hr = bones["DEF-handR"], hl = bones["DEF-handL"], wp = armed && eq && eq.weapon ? eq.weapon.e : null, P = new THREE.Vector3();
   if (wp && hr && KAY.ready) {
     const w = new THREE.Group(); hr.getWorldPosition(P); w.position.copy(P).add(new THREE.Vector3(.02, -.03, .02)); w.rotation.set(HALF, 0, 0);
@@ -1722,9 +1741,9 @@ function mkMan(look, eq, armed) {
   return { g, body, root, la: new THREE.Group(), ra: new THREE.Group(), legs: [], h: 2.1, kay: true, man: true, armed: !!armed, mixer, act, base: null, baseA: null, one: null, seed: Math.random() * 10 };
 }
 /* ----- 3인칭 카메라 ----- */
-let camYaw = 0, camManT = -99, TPV_ON = true, camZoom = 1; try { camZoom = clamp(+localStorage.getItem("pokgeun-zoom") || 1, .55, 1.7); } catch (e) {} try { TPV_ON = localStorage.getItem("pokgeun-tpv") !== "0"; } catch (e) {}
+let lookYaw = .3, lookManT = -99, camYaw = 0, camManT = -99, TPV_ON = true, camZoom = 1; try { camZoom = clamp(+localStorage.getItem("pokgeun-zoom") || 1, .55, 1.7); } catch (e) {} try { TPV_ON = localStorage.getItem("pokgeun-tpv") !== "0"; } catch (e) {}
 const TPV = () => TPV_ON && started && !lookMode() && (scene === "out" || (scene === "dun" && dun && (dun.kind === "world" || dun.kind === "wild") && !dun.arena));
-const lookSig = () => { const L = lookOf(S.look), q = S.eq; return [KAY.ready, MAN.ready, L.h, L.hc, L.sk, L.ey, L.tp, L.c, L.hat, L.cc, q.armor ? q.armor.id : 0, q.ring ? q.ring.id : 0, q.weapon ? q.weapon.e : 0, q.armor ? q.armor.e + q.armor.rar : 0].join(","); };
+const lookSig = () => { const L = lookOf(S.look), q = S.eq; return [KAY.ready, MAN.ready, JSON.stringify(L), q.armor ? q.armor.id : 0, q.ring ? q.ring.id : 0, q.weapon ? q.weapon.e : 0, q.armor ? q.armor.e + q.armor.rar : 0].join(","); };
 const mkPlayer = o => { const armed = o === PK.d, e = MAN.ready ? mkMan(S.look, S.eq, armed) : KAY.ready ? mkKay(S.look, S.eq, armed) : mkHeroFromLook(S.look, 0, S.eq); e.sig = lookSig() + (armed ? "A" : ""); return e; };
 let curPE = null;
 function refreshLook(e) {
@@ -1742,9 +1761,14 @@ const netLook = () => { if (NET.on) NET.send({ t: "look", look: lookOf(S.look) }
 const lookMode = () => modal && gearTab === "look" && !$("gear").hidden;
 function bodyLook() {
   const L = lookOf(S.look), hex = v => "#" + v.toString(16).padStart(6, "0");
-  const sw = (k, arr, hexes) => `<div style="display:flex;gap:7px;flex-wrap:wrap;margin:4px 0 8px">${arr.map((v, i) => `<button style="margin:0;${hexes ? "width:36px;height:36px;padding:0;border-radius:50%;background:" + (hexes[i] < 0 ? "linear-gradient(135deg,#fff,#ccc)" : hex(hexes[i])) : "padding:4px 10px"};outline:${L[k] === i ? "3px solid #ff8f5e" : "1px solid rgba(0,0,0,.18)"};outline-offset:2px" data-look="${k}:${i}">${hexes ? (hexes[i] < 0 ? "<small style=\"font-size:10px\">기본</small>" : "") : v}</button>`).join("")}</div>`;
+  const sw = (k, arr, hexes) => `<div style="display:flex;gap:7px;flex-wrap:wrap;margin:4px 0 8px">${arr.map((v, i) => `<button style="margin:0;${hexes ? "width:36px;height:36px;padding:0;border-radius:50%;background:" + (hexes[i] < 0 ? "linear-gradient(135deg,#fff,#ccc)" : hex(hexes[i])) : "padding:4px 10px"};outline:${L[k] === i ? "3px solid #ff8f5e" : "1px solid rgba(0,0,0,.18)"};outline-offset:2px" data-look="${k}:${i}">${hexes ? (hexes[i] < 0 ? "<small style=\"font-size:10px\">없음</small>" : "") : v}</button>`).join("")}</div>`;
   const head = `<h2>🧑 외형</h2><div><small>바로 적용돼요. 멀티플레이에서도 다른 사람에게 보여요.</small></div>`, gear = `<div><small>⚔️ 무기(검·도끼·망치)와 🛡️ 방패는 던전·오픈월드에서 손에 들려요. 💍 반지는 손에서 빛나요.</small></div>`;
-  if (MAN.ready) return head + `<h3>머리 모양 · ${LOOK.hs[L.h]}</h3>${sw("h", LOOK.hs)}<h3>머리 색</h3>${sw("hc", LOOK.hair, LOOK.hair)}<h3>피부색</h3>${sw("sk", LOOK.skin, LOOK.skin)}<h3>옷 색</h3>${sw("tp", LOOK.out, LOOK.out)}<h3>투구</h3>${sw("hat", ["없음", "쓰기"])}<h3>망토</h3>${sw("cc", [0, ...LOOK.out], [-1, ...LOOK.out])}<div><small>🥋 갑옷을 입으면 옷이 금속색으로, 🛡️ 방패는 왼손에 들려요.</small></div>${gear}`;
+  if (MAN.ready) { const chips = (k, arr) => sw(k, arr), sec = (t, body) => `<div class="lsec"><h3>${t}</h3>${body}</div>`;
+    return head + `<div class="lrow"><button data-lookrand>🎲 무작위</button><small>${TOUCHY ? "위쪽 캐릭터를 끌어서 돌려 보세요" : "왼쪽 캐릭터를 드래그해서 돌려 보세요"}</small></div>` +
+      sec(`🧍 체형 · ${LOOK.bd[L.bd]}`, chips("bd", LOOK.bd)) + sec("🎨 피부색", sw("sk", LOOK.skin, LOOK.skin)) +
+      sec(`💇 머리 모양 · ${LOOK.hs[L.h]}`, chips("h", LOOK.hs)) + sec("머리 색", sw("hc", LOOK.hair, LOOK.hair)) + sec("👁️ 눈 색", sw("ey", LOOK.eye, LOOK.eye)) + sec(`🧔 수염 · ${LOOK.br[L.br]}`, chips("br", LOOK.br)) +
+      sec(`👕 상의 · ${LOOK.ot[L.ot]}`, chips("ot", LOOK.ot) + sw("tp", LOOK.out, LOOK.out)) + sec("👖 하의 색", sw("pc", LOOK.pants, LOOK.pants)) + sec("🥾 신발 색", sw("bc", LOOK.boots, LOOK.boots)) +
+      sec(`🎩 모자 · ${LOOK.hats[L.hat]}`, chips("hat", LOOK.hats)) + sec("🧣 망토", sw("cc", [0, ...LOOK.out], [-1, ...LOOK.out])) + `<div><small>🥋 갑옷을 입으면 상의가 금속색으로, 🛡️ 방패는 왼손에 들려요.</small></div>${gear}`; }
   if (KAY.ready) return head + `<h3>캐릭터 · ${KCLS[L.c][1]}</h3>${sw("c", KCLS.map(c => c[1]))}<h3>모자 · 투구</h3>${sw("hat", ["쓰기", "벗기"])}<h3>망토 색</h3>${sw("cc", [0, ...LOOK.out], [-1, ...LOOK.out])}${gear}`;
   return head + (KAY.failed ? "" : `<div><small>⏳ 3D 캐릭터를 불러오는 중이에요…</small></div>`) + `<h3>머리 모양 · ${LOOK.hs[L.h]}</h3>${sw("h", LOOK.hs.map((n, i) => i + 1))}<h3>머리 색</h3>${sw("hc", LOOK.hair, LOOK.hair)}<h3>피부색</h3>${sw("sk", LOOK.skin, LOOK.skin)}<h3>눈 색</h3>${sw("ey", LOOK.eye, LOOK.eye)}<h3>옷 색</h3>${sw("tp", LOOK.out, LOOK.out)}${gear}`;
 }
@@ -2168,7 +2192,7 @@ function finish(D, dim) {
     const px = P.x / T, pz = (P.y + 8) / T, R = 9.6 * camZoom, pt = .36 + (camZoom - 1) * .12, sy = Math.sin(camYaw), cy = Math.cos(camYaw);
     cam.position.set(px + sy * R * Math.cos(pt) + sh, 1.4 + R * Math.sin(pt) + sv, pz + cy * R * Math.cos(pt)); cam.lookAt(px - sy * 3, 1.15, pz - cy * 3);
   } else { D *= camZoom * 1.12; cam.position.set(camT.x + sh, D * (REAL ? .58 : .82) + sv, camT.z + D * (REAL ? .86 : .574)); cam.lookAt(camT.x + sh, 0, camT.z); }
-  if (lookMode() && curPE && innerWidth >= 700) { const hp = curPE.g.position, ox = .95; cam.position.set(hp.x + ox, 1.5, hp.z + 6.2); cam.lookAt(hp.x + ox, .95, hp.z); curPE.g.rotation.y = Math.sin(vtime * .8) * .9 + .25; }
+  if (lookMode() && curPE) { const hp = curPE.g.position; if (innerWidth >= 700) { const ox = .95; cam.position.set(hp.x + ox, 1.5, hp.z + 6.2); cam.lookAt(hp.x + ox, .95, hp.z); } else { const fv = 2 * Math.atan(Math.tan(15 * Math.PI / 180) * 1.5 / Math.max(.4, cam.aspect)) * 180 / Math.PI; if (Math.abs(cam.fov - fv) > .01) { cam.fov = fv; cam.updateProjectionMatrix(); } cam.position.set(hp.x, 1.0, hp.z + 4.3); cam.lookAt(hp.x, -.5, hp.z); } if (vtime - lookManT > 2.5) lookYaw += DT * .5; curPE.g.rotation.y = lookYaw; }
   PPOS.value.set(GKIND === "village" || GKIND === "wild" ? player.x / T : 1e4, 0, (player.y + 8) / T); if (TPV()) CPOS.value.copy(cam.position); else CPOS.value.set(PPOS.value.x, 0, PPOS.value.z + 1.8);
   if (G && G.physSky) skyTick(); else if (G && G.sky) { const out = GKIND === "village" || GKIND === "wild", nd = clamp(darkness() / .55, 0, 1); G.sky.visible = out; if (out) { G.sky.position.copy(cam.position); const u = G.sky.material.uniforms; u.top.value.setHex(0x5d9fe0).lerp(new THREE.Color(0x070b20), nd); u.hor.value.copy(S3.background); } }
   if (G && G.physSky) sun.position.set(camT.x + SUND.x * 30, SUND.y * 30, camT.z + SUND.z * 30); else sun.position.set(camT.x - 9, 17, camT.z + 7); sun.target.position.set(camT.x, 0, camT.z); sun.target.updateMatrixWorld();
@@ -3303,7 +3327,7 @@ $("view").textContent = TPV_ON ? "🎥 3인칭" : "🎥 탑뷰"; $("view").oncli
   const setZoom = z => { camZoom = clamp(z, .55, 1.7); try { localStorage.setItem("pokgeun-zoom", camZoom.toFixed(2)); } catch (e) {} };
   const pd = () => { const [a, b] = [...pts.values()]; return Math.hypot(a.x - b.x, a.y - b.y); };
   cv0.addEventListener("pointerdown", e => { pts.set(e.pointerId, { x: e.clientX, y: e.clientY }); if (pts.size === 2) { pinch0 = pd(); zoom0 = camZoom; drag = null; } else drag = { x: e.clientX, id: e.pointerId }; });
-  addEventListener("pointermove", e => { if (pts.has(e.pointerId)) pts.set(e.pointerId, { x: e.clientX, y: e.clientY }); if (pts.size === 2 && pinch0) { setZoom(zoom0 * pinch0 / Math.max(20, pd())); return; } if (!drag || e.pointerId !== drag.id) return; const dx = e.clientX - drag.x; drag.x = e.clientX; if (TPV()) { camYaw -= dx * .008; camManT = vtime; } });
+  addEventListener("pointermove", e => { if (pts.has(e.pointerId)) pts.set(e.pointerId, { x: e.clientX, y: e.clientY }); if (pts.size === 2 && pinch0) { setZoom(zoom0 * pinch0 / Math.max(20, pd())); return; } if (!drag || e.pointerId !== drag.id) return; const dx = e.clientX - drag.x; drag.x = e.clientX; if (lookMode()) { lookYaw += dx * .012; lookManT = vtime; } else if (TPV()) { camYaw -= dx * .008; camManT = vtime; } });
   const up = e => { pts.delete(e.pointerId); if (pts.size < 2) pinch0 = 0; if (drag && e.pointerId === drag.id) drag = null; };
   addEventListener("pointerup", up); addEventListener("pointercancel", up);
   cv0.addEventListener("wheel", e => { e.preventDefault(); setZoom(camZoom * (e.deltaY > 0 ? 1.08 : 1 / 1.08)); }, { passive: false });

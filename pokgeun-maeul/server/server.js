@@ -36,7 +36,7 @@ const wss = new WebSocketServer({ server, maxPayload: 4096 });
 
 function send(p, m) { if (p.ws.readyState === 1) p.ws.send(JSON.stringify(m)); }
 function broadcast(m, except) { const s = JSON.stringify(m); for (const p of players.values()) if (p !== except && p.ws.readyState === 1) p.ws.send(s); }
-const cleanLook = l => { const o = {}; for (const k of ["h", "hc", "sk", "ey", "tp", "c", "hat", "cc"]) o[k] = Math.max(0, Math.min(9, (l && +l[k]) | 0)); return o; };
+const cleanLook = l => { const o = {}; for (const k of ["h", "hc", "sk", "ey", "tp", "c", "hat", "cc", "pc", "bc", "ot", "bd", "br"]) o[k] = Math.max(0, Math.min(9, (l && +l[k]) | 0)); return o; };
 const pub = p => ({ id: p.id, name: p.name, col: p.col, look: p.look, x: p.x, y: p.y, dx: p.dx, dy: p.dy, mv: p.mv });
 const clean = (s, n) => String(s ?? "").replace(/[\u0000-\u001f<>]/g, "").trim().slice(0, n);
 const num = (v, lo, hi, d = 0) => Number.isFinite(+v) ? Math.min(hi, Math.max(lo, +v)) : d;
