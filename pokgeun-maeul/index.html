@@ -340,7 +340,7 @@ const THREE = { ...T3, EffectComposer, RenderPass, ShaderPass, UnrealBloomPass, 
 /* r128 → r187: 기존 색감 유지 — 색 관리 끄기 + 옛 방식 점광원 감쇠 */
 THREE.ColorManagement.enabled = false;
 /* 렌더링 스타일 비교용: ?style=cel (애니메 셀) / ?style=pbr (스타일라이즈드 PBR) / 기본 = 툰 */
-const RSTYLE = (() => { try { const h = (location.hash.match(/style=(\w+)/) || [])[1]; let v = new URLSearchParams(location.search).get("style") || h; if (!v) try { v = localStorage.getItem("pokgeun-style"); } catch (e) {} return ["toon", "cel", "pbr", "real"].includes(v) ? v : "real"; } catch (e) { return "toon"; } })();
+const RSTYLE = (() => { try { const h = (location.hash.match(/style=(\w+)/) || [])[1]; let v = new URLSearchParams(location.search).get("style") || h; if (!v) try { v = localStorage.getItem("pokgeun-safe"); } catch (e) {} return ["toon", "cel", "pbr", "real"].includes(v) ? v : "real"; } catch (e) { return "toon"; } })();
 const REAL = RSTYLE === "real", PBRL = RSTYLE === "pbr" || REAL;
 THREE.ColorManagement.enabled = REAL;   // 듀랑고풍: 정확한 색 관리 + ACES 톤매핑
 const RX = REAL ? await Promise.all([import("three/addons/objects/Sky.js"), import("three/addons/postprocessing/OutputPass.js")]).catch(() => null) : null;
@@ -1277,7 +1277,7 @@ const INK = 0x1c1420, lights = [], labels = [];
 const camT = { x: 15, z: 10 }; let camInit = false;
 
 /* ----- 그래픽 품질 ----- */
-const QLEVELS = { high: { n: "높음", bloom: true, shadow: 2048, dpr: 2, motes: 90 }, mid: { n: "보통", bloom: false, shadow: 1024, dpr: 1.5, motes: 40 }, low: { n: "낮음", bloom: false, shadow: 0, dpr: 1, motes: 0 } };
+const QLEVELS = { high: { n: "높음", bloom: true, shadow: 4096, dpr: 2.5, motes: 90 }, mid: { n: "보통", bloom: true, shadow: 2048, dpr: 2, motes: 50 }, low: { n: "낮음", bloom: false, shadow: 1024, dpr: 1.25, motes: 0 } };
 let gfxLv = "high"; try { gfxLv = localStorage.getItem("pokgeun-gfx") || ""; } catch (e) {}
 if (!QLEVELS[gfxLv]) gfxLv = (window.matchMedia && matchMedia("(pointer:coarse)").matches) || innerWidth < 700 ? "mid" : "high";
 const QUAL = { ...QLEVELS[gfxLv] };
@@ -1288,7 +1288,7 @@ if (HAS3D) try {
   S3 = new THREE.Scene(); if (PBRX) { const pm = new THREE.PMREMGenerator(R3); const c = document.createElement("canvas"); c.width = 64; c.height = 32; const x = c.getContext("2d"), gr = x.createLinearGradient(0, 0, 0, 32); gr.addColorStop(0, "#9fd0ff"); gr.addColorStop(.48, "#e8f4ff"); gr.addColorStop(.52, "#a8c890"); gr.addColorStop(1, "#5a7a40"); x.fillStyle = gr; x.fillRect(0, 0, 64, 32); const et = new THREE.CanvasTexture(c); et.mapping = THREE.EquirectangularReflectionMapping; S3.environment = pm.fromEquirectangular(et).texture; S3.environmentIntensity = .35; } cam = new THREE.PerspectiveCamera(30, VW / VH, .5, 150);
   amb = new THREE.AmbientLight(0xffffff, .6); hemi = new THREE.HemisphereLight(0xcfe8ff, 0x6a5a3a, .35);
   sun = new THREE.DirectionalLight(0xfff2d6, .85); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
-  Object.assign(sun.shadow.camera, REAL ? { left: -26, right: 26, top: 26, bottom: -20, near: 1, far: 90 } : { left: -17, right: 17, top: 15, bottom: -15, near: 1, far: 80 }); sun.shadow.bias = -.0006; sun.shadow.camera.updateProjectionMatrix();
+  Object.assign(sun.shadow.camera, REAL ? { left: -26, right: 26, top: 26, bottom: -20, near: 1, far: 90 } : { left: -17, right: 17, top: 15, bottom: -15, near: 1, far: 80 }); sun.shadow.bias = -.0004; sun.shadow.normalBias = .025; sun.shadow.camera.updateProjectionMatrix();
   S3.add(amb, hemi, sun, sun.target);
   for (let i = 0; i < 6; i++) { const l = new THREE.PointLight(0xffc870, 0, 8, 2); S3.add(l); PLs.push(l); }
   const d = RSTYLE === "cel" ? new Uint8Array([96, 96, 96, 96, 160, 255, 255, 255]) : new Uint8Array([80, 140, 205, 255]); gradTex = new THREE.DataTexture(d, d.length, 1, THREE.RedFormat); gradTex.minFilter = gradTex.magFilter = RSTYLE === "cel" ? THREE.LinearFilter : THREE.NearestFilter; gradTex.generateMipmaps = false; gradTex.needsUpdate = true;
@@ -1339,8 +1339,8 @@ function toonPatch(m, key = "rim") {
   m.customProgramCacheKey = () => key + (m.userData.pk || "");
   return m;
 }
-const Mu = c => { const m = toonPatch(TOON({ color: c, gradientMap: gradTex })); if (GRD) addDetail(m); m.userData.own = 1; return m; };
-const M = c => { let m = MCACHE.get(c); if (!m) { m = toonPatch(TOON({ color: c, gradientMap: gradTex })); if (GRD) addDetail(m); MCACHE.set(c, m); } return m; };
+const Mu = c => { const m = toonPatch(TOON({ color: c, gradientMap: gradTex })); if (GRD) addDetail(m, DKIND(c)); m.userData.own = 1; return m; };
+const M = c => { let m = MCACHE.get(c); if (!m) { m = toonPatch(TOON({ color: c, gradientMap: gradTex })); if (GRD) addDetail(m, DKIND(c)); MCACHE.set(c, m); } return m; };
 const uq = f => { UNIQ = true; try { return f(); } finally { UNIQ = false; } };
 const geo = (k, f) => GC[k] || (GC[k] = f());
 function addM(par, geom, col, x = 0, y = 0, z = 0, o = {}) {
@@ -1371,13 +1371,14 @@ const GRD = REAL ? await (async () => {
   try {
     const L = ["grass", "forest", "sand", "snow", "rock", "dirt"], IL = new THREE.ImageLoader(), base = "assets/ground/";
     const load = n => IL.loadAsync(base + n + ".webp");
-    const [D, N, PL, RK, RKN] = await Promise.all([Promise.all(L.map(load)), Promise.all(L.map(n => load(n + "_n"))), load("plaster"), load("rock"), load("rock_n")]);
-    const atlas = (imgs, srgb) => { const c = document.createElement("canvas"); c.width = 1728; c.height = 1152; const x = c.getContext("2d");
-      imgs.forEach((im, i) => { const cx = (i % 3) * 576, cy = Math.floor(i / 3) * 576; x.save(); x.beginPath(); x.rect(cx, cy, 576, 576); x.clip(); for (const ox of [-512, 0, 512]) for (const oy of [-512, 0, 512]) x.drawImage(im, cx + 32 + ox, cy + 32 + oy, 512, 512); x.restore(); });
-      const t = new THREE.CanvasTexture(c); t.colorSpace = srgb ? THREE.SRGBColorSpace : THREE.NoColorSpace; t.anisotropy = 8; return t; };
+    const DK = ["plaster", "roof", "wood", "brick", "timber", "fabric"], [D, N, PL, RK, RKN, DT, DN] = await Promise.all([Promise.all(L.map(load)), Promise.all(L.map(n => load(n + "_n"))), load("plaster"), load("rock"), load("rock_n"), Promise.all(DK.map(load)), Promise.all(DK.map(n => load(n + "_n")))]);
+    const atlas = (imgs, srgb) => { const T = imgs[0].width, P = T / 16, CS = T + P * 2, c = document.createElement("canvas"); c.width = CS * 3; c.height = CS * 2; const x = c.getContext("2d");
+      imgs.forEach((im, i) => { const cx = (i % 3) * CS, cy = Math.floor(i / 3) * CS; x.save(); x.beginPath(); x.rect(cx, cy, CS, CS); x.clip(); for (const ox of [-T, 0, T]) for (const oy of [-T, 0, T]) x.drawImage(im, cx + P + ox, cy + P + oy, T, T); x.restore(); });
+      const t = new THREE.CanvasTexture(c); t.colorSpace = srgb ? THREE.SRGBColorSpace : THREE.NoColorSpace; t.anisotropy = 8; t.userData.ts = T; return t; };
     const lum = im => { const c = document.createElement("canvas"); c.width = c.height = 16; const x = c.getContext("2d"); x.drawImage(im, 0, 0, 16, 16); const d = x.getImageData(0, 0, 16, 16).data; let s = 0; for (let i = 0; i < d.length; i += 4) { const f = v => Math.pow(v / 255, 2.2); s += f(d[i]) * .3 + f(d[i + 1]) * .59 + f(d[i + 2]) * .11; } return s / 256; };
     const tex = (im, srgb) => { const t = new THREE.Texture(im); t.needsUpdate = true; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = srgb ? THREE.SRGBColorSpace : THREE.NoColorSpace; t.anisotropy = 8; return t; };
-    return { A: atlas(D, true), NA: atlas(N, false), LM: D.map(lum), PL: tex(PL, false), RK: tex(RK, true), RKN: tex(RKN, false) };
+    const DTX = {}; DK.forEach((k, i) => { DTX[k] = { d: tex(DT[i], false), n: tex(DN[i], false) }; });
+    return { A: atlas(D, true), NA: atlas(N, false), LM: D.map(lum), PL: tex(PL, false), RK: tex(RK, true), RKN: tex(RKN, false), DTX };
   } catch (e) { console.warn("지형 텍스처를 불러오지 못했어요.", e); return null; }
 })() : null;
 const BIOL = [2, 2, 0, 1, 2, 3, 5, 4, 0, 5, 4];   // 바이옴 → 지형 레이어 (0풀 1숲 2모래 3눈 4바위 5흙)
@@ -1385,13 +1386,15 @@ const GLAY = { g: 0, s: 2, p: 5, w: 2 };
 function groundMat() {
   const m = TOON({ vertexColors: true, color: 0xffffff, roughness: .95 });
   m.onBeforeCompile = sh => {
-    sh.uniforms.tGA = { value: GRD.A }; sh.uniforms.tGN = { value: GRD.NA }; sh.uniforms.uLM = { value: GRD.LM };
+    sh.uniforms.tGA = { value: GRD.A }; sh.uniforms.tGN = { value: GRD.NA }; sh.uniforms.uLM = { value: GRD.LM }; sh.uniforms.uTS = { value: new THREE.Vector2(GRD.A.userData.ts, GRD.NA.userData.ts) };
     sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nattribute vec3 sw0, sw1; varying vec3 vS0, vS1, vGW;").replace("#include <fog_vertex>", "#include <fog_vertex>\n vGW = (modelMatrix * vec4(transformed, 1.0)).xyz; vS0 = sw0; vS1 = sw1;");
-    sh.fragmentShader = sh.fragmentShader.replace("#include <common>", "#include <common>\nuniform sampler2D tGA, tGN; uniform float uLM[6]; varying vec3 vS0, vS1, vGW; vec3 gNrm = vec3(0.0, 0.0, 1.0);")
+    sh.fragmentShader = sh.fragmentShader.replace("#include <common>", "#include <common>\nuniform sampler2D tGA, tGN; uniform float uLM[6]; uniform vec2 uTS; varying vec3 vS0, vS1, vGW; vec3 gNrm = vec3(0.0, 0.0, 1.0); vec2 auvOf(int i, vec2 f, float T) { float P = T / 16.0, CS = T + P * 2.0; vec2 cell = vec2(float(i - (i / 3) * 3), float(i / 3)); return (cell * CS + P + f * T) / vec2(CS * 3.0, CS * 2.0); }")
       .replace("#include <map_fragment>", `{ vec2 wuv = vGW.xz * .3; float w[6]; w[0] = vS0.x; w[1] = vS0.y; w[2] = vS0.z; w[3] = vS1.x; w[4] = vS1.y; w[5] = vS1.z;
-  vec2 AS = vec2(1728.0, 1152.0), gx = dFdx(wuv) * 512.0 / AS, gy = dFdy(wuv) * 512.0 / AS; vec3 tx = vec3(0.0), nn = vec3(0.0); float ws = 0.0, lm = 0.0;
-  for (int i = 0; i < 6; i++) { if (w[i] < .01) continue; vec2 cell = vec2(float(i - (i / 3) * 3), float(i / 3)); vec2 auv = (cell * 576.0 + 32.0 + fract(wuv) * 512.0) / AS;
-    tx += textureGrad(tGA, auv, gx, gy).rgb * w[i]; nn += (textureGrad(tGN, auv, gx, gy).rgb * 2.0 - 1.0) * w[i]; ws += w[i]; lm += uLM[i] * w[i]; }
+  vec2 AD = vec2(uTS.x * 1.125 * 3.0, uTS.x * 1.125 * 2.0), AN = vec2(uTS.y * 1.125 * 3.0, uTS.y * 1.125 * 2.0), gx = dFdx(wuv), gy = dFdy(wuv); vec3 tx = vec3(0.0), nn = vec3(0.0); float ws = 0.0, lm = 0.0;
+  vec2 wuv2 = vGW.xz * .071 + vec2(.37, .61); vec2 gx2 = dFdx(wuv2), gy2 = dFdy(wuv2);
+  for (int i = 0; i < 6; i++) { if (w[i] < .01) continue;
+    vec3 a1 = textureGrad(tGA, auvOf(i, fract(wuv), uTS.x), gx * uTS.x / AD, gy * uTS.x / AD).rgb, a2 = textureGrad(tGA, auvOf(i, fract(wuv2), uTS.x), gx2 * uTS.x / AD, gy2 * uTS.x / AD).rgb;
+    tx += mix(a1, a2, .35) * w[i]; nn += (textureGrad(tGN, auvOf(i, fract(wuv), uTS.y), gx * uTS.y / AN, gy * uTS.y / AN).rgb * 2.0 - 1.0) * w[i]; ws += w[i]; lm += uLM[i] * w[i]; }
   tx /= max(ws, 1e-3); lm /= max(ws, 1e-3); gNrm = normalize(vec3(nn.xy * 1.3, max(nn.z, .2)));
   float L = dot(tx, vec3(.3, .59, .11)), k = pow(L / max(lm, .03), 1.15); vec3 chroma = tx / max(L, .02); diffuseColor.rgb = vColor.rgb * k * mix(vec3(1.0), chroma, .22); }`)
       .replace("#include <dithering_fragment>", "#include <dithering_fragment>\n if (any(isnan(gl_FragColor.rgb)) || any(isinf(gl_FragColor.rgb))) gl_FragColor.rgb = diffuseColor.rgb * .35;")
@@ -1400,12 +1403,17 @@ function groundMat() {
   };
   m.customProgramCacheKey = () => "ground"; return m;
 }
-function addDetail(m) {   // 건물·소품: 회벽 질감을 3방향(트라이플래너)으로 은은하게
-  const prev = m.onBeforeCompile; m.userData.pk = (m.userData.pk || "") + "dtl";
+const DCOL = { roof: [0xc8553d, 0xb04a34, 0x7a2e22, 0xc8383a, 0xd8383a, 0xa8202a], wood: [0x7d5433, 0xa87645, 0x9a7048, 0x8a5a34, 0x5a3a22, 0x6a5238, 0x7a5a3a, 0x8a7050, 0x9a6a3e, 0x6a4a2a], brick: [0xe4dfd6, 0xd2cdc2, 0xd8d3c8, 0xc8c3b8, 0x8a8e9e, 0xb8bcc8, 0x6c7080, 0x5c4a5a, 0x3d3248] };
+const DKIND = c => { for (const k in DCOL) if (DCOL[k].includes(c)) return k; return "plaster"; };
+const DSCALE = { plaster: .45, roof: .9, wood: .75, brick: .55, timber: .6, fabric: 2.2 };
+function addDetail(m, kind = "plaster", obj = false) {   // 3방향 투영(트라이플래너) 질감 + 노멀: 지붕 기와 · 나무 판자 · 돌벽 · 회벽 · 천
+  const prev = m.onBeforeCompile, T = GRD.DTX[kind] || GRD.DTX.plaster, sc = DSCALE[kind] || .5, str = kind === "plaster" ? .55 : kind === "fabric" ? .5 : .85; m.userData.pk = (m.userData.pk || "") + "dtl" + kind + (obj ? "o" : "");
   m.onBeforeCompile = sh => {
-    if (prev) prev.call(m, sh); sh.uniforms.tPL = { value: GRD.PL };
-    sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nvarying vec3 vDW, vDN;").replace("#include <fog_vertex>", "#include <fog_vertex>\n{ vec4 p4 = vec4(transformed, 1.0); vec3 n3 = objectNormal;\n#ifdef USE_INSTANCING\n p4 = instanceMatrix * p4; n3 = mat3(instanceMatrix) * n3;\n#endif\n vDW = (modelMatrix * p4).xyz; vDN = normalize(mat3(modelMatrix) * n3); }");
-    sh.fragmentShader = sh.fragmentShader.replace("#include <common>", "#include <common>\nuniform sampler2D tPL; varying vec3 vDW, vDN;").replace("#include <color_fragment>", "#include <color_fragment>\n{ vec3 bw = abs(vDN); bw /= (bw.x + bw.y + bw.z + 1e-4); float dl = texture2D(tPL, vDW.zy * .45).r * bw.x + texture2D(tPL, vDW.xz * .45).r * bw.y + texture2D(tPL, vDW.xy * .45).r * bw.z; diffuseColor.rgb *= .62 + dl * .76; }");
+    if (prev) prev.call(m, sh); sh.uniforms.tDD = { value: T.d }; sh.uniforms.tDN = { value: T.n };
+    sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nvarying vec3 vDW, vDN;").replace("#include <fog_vertex>", obj ? "#include <fog_vertex>\n vDW = position; vDN = normalize(normal);" : "#include <fog_vertex>\n{ vec4 p4 = vec4(transformed, 1.0); vec3 n3 = objectNormal;\n#ifdef USE_INSTANCING\n p4 = instanceMatrix * p4; n3 = mat3(instanceMatrix) * n3;\n#endif\n vDW = (modelMatrix * p4).xyz; vDN = normalize(mat3(modelMatrix) * n3); }");
+    sh.fragmentShader = sh.fragmentShader.replace("#include <common>", `#include <common>\nuniform sampler2D tDD, tDN; varying vec3 vDW, vDN; vec3 dBW;`)
+      .replace("#include <color_fragment>", `#include <color_fragment>\n{ dBW = pow(abs(vDN), vec3(4.0)); dBW /= (dBW.x + dBW.y + dBW.z + 1e-4); vec3 p = vDW * ${sc.toFixed(3)}; float dl = texture2D(tDD, p.zy).r * dBW.x + texture2D(tDD, p.xz).r * dBW.y + texture2D(tDD, p.xy).r * dBW.z; diffuseColor.rgb *= 1.0 + (dl - .5) * ${(str * 1.6).toFixed(3)}; }`)
+      .replace("#include <normal_fragment_maps>", obj ? "#include <normal_fragment_maps>" : `#include <normal_fragment_maps>\n{ vec3 p = vDW * ${sc.toFixed(3)}; vec3 tX = texture2D(tDN, p.zy).xyz * 2.0 - 1.0, tY = texture2D(tDN, p.xz).xyz * 2.0 - 1.0, tZ = texture2D(tDN, p.xy).xyz * 2.0 - 1.0; vec3 nW = normalize(vDN + (vec3(0.0, tX.y, tX.x) * dBW.x + vec3(tY.x, 0.0, tY.y) * dBW.y + vec3(tZ.x, tZ.y, 0.0) * dBW.z) * ${(str * .9).toFixed(3)}); normal = normalize((viewMatrix * vec4(nW, 0.0)).xyz); }`);
   };
   return m;
 }
@@ -1436,9 +1444,9 @@ function natModel(n, sc = 1, desert) { const g = new THREE.Group(); for (const p
 const NATV = { oak: ["NormalTree_1", "NormalTree_2", "NormalTree_3"], pine: ["PineTree_1", "PineTree_2", "PineTree_3"], spine: ["PineTree_1", "PineTree_3"], dead: ["DeadTree_1", "DeadTree_2"], willow: ["BirchTree_1", "BirchTree_2"], rock: ["Rock_1", "Rock_2", "Rock_3", "Rock_4"], bush: ["Bush", "Bush_Large", "Bush", "Bush_Large"], tuft: ["Grass_Large", "Grass_Small", "Grass_Large", "Grass_Small", "Grass_Large", "Grass_Small", "Grass_Large"] };
 const NATS = { oak: .52, pine: .55, spine: .5, dead: .5, willow: .5, rock: .75, bush: .8, tuft: 1.1 };
 const WATERMAT = new THREE.ShaderMaterial({
-  transparent: true, depthWrite: false, vertexColors: true, uniforms: { uT: { value: 0 }, uDay: { value: 1 } },
+  transparent: true, depthWrite: false, vertexColors: true, uniforms: { uT: { value: 0 }, uDay: { value: 1 }, uSky: { value: new THREE.Color(0xbcd2e2) }, uSun: { value: new THREE.Vector3(-.4, .8, .4) } },
   vertexShader: "varying vec3 vW; varying float vF; void main(){ vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; vF = color.r; gl_Position = projectionMatrix * viewMatrix * w; }",
-  fragmentShader: "uniform float uT, uDay; varying vec3 vW; varying float vF; float h(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); } float n(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); return mix(mix(h(i), h(i + vec2(1.0, 0.0)), f.x), mix(h(i + vec2(0.0, 1.0)), h(i + vec2(1.0, 1.0)), f.x), f.y); } void main(){ vec2 p = vW.xz; float a = n(p * 1.6 + vec2(uT * .35, uT * .2)), b = n(p * 3.1 - vec2(uT * .3, uT * .25)); float w = a * .6 + b * .4; vec3 col = mix(vec3(.2, .5, .84), vec3(.42, .76, .96), w); col += vec3(.5, .62, .7) * pow(w, 5.0) * .8; col += vec3(1.0) * smoothstep(.8, .88, w) * .45; float edge = vF * (.55 + .45 * sin(uT * 2.2 + p.x * 2.0 + p.y * 1.7)); col = mix(col, vec3(.92, .98, 1.0), edge * smoothstep(.25, .6, n(p * 4.0 + uT * .4) + vF * .35) * .75); col *= uDay; gl_FragColor = vec4(" + (REAL ? "pow(col, vec3(2.2))" : "col") + ", mix(.84, .95, vF)); }",
+  fragmentShader: "uniform float uT, uDay; uniform vec3 uSky, uSun; varying vec3 vW; varying float vF; float h(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); } float n(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); return mix(mix(h(i), h(i + vec2(1.0, 0.0)), f.x), mix(h(i + vec2(0.0, 1.0)), h(i + vec2(1.0, 1.0)), f.x), f.y); } void main(){ vec2 p = vW.xz; float a = n(p * 1.6 + vec2(uT * .35, uT * .2)), b = n(p * 3.1 - vec2(uT * .3, uT * .25)); float w = a * .6 + b * .4; vec3 col = mix(vec3(.2, .5, .84), vec3(.42, .76, .96), w); col += vec3(.5, .62, .7) * pow(w, 5.0) * .8; col += vec3(1.0) * smoothstep(.8, .88, w) * .45; float edge = vF * (.55 + .45 * sin(uT * 2.2 + p.x * 2.0 + p.y * 1.7)); col = mix(col, vec3(.92, .98, 1.0), edge * smoothstep(.25, .6, n(p * 4.0 + uT * .4) + vF * .35) * .75); " + (REAL ? "{ vec3 N = normalize(vec3((a - .5) * .55 + (b - .5) * .35, 1.0, (b - .5) * .55 - (a - .5) * .25)); vec3 V = normalize(cameraPosition - vW); float fr = .06 + .94 * pow(1.0 - max(dot(N, V), 0.0), 4.0); col = mix(col, uSky, clamp(fr, 0.0, .75)); float sp = pow(max(dot(reflect(-normalize(uSun), N), V), 0.0), 120.0); col += vec3(1.0, .95, .85) * sp * 1.6 * uDay; }" : "") + " col *= uDay; gl_FragColor = vec4(" + (REAL ? "pow(col, vec3(2.2))" : "col") + ", mix(.84, .95, vF)); }",
 });
 const mkCanvasTex = (n, fn, rep = true) => { const c = document.createElement("canvas"); c.width = c.height = n; fn(c.getContext("2d"), n); const t = new THREE.CanvasTexture(c); if (REAL) t.colorSpace = THREE.SRGBColorSpace; if (rep) t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 4; return t; };
 let _soft = null, _detail = null, _cloud = null;
@@ -1708,7 +1716,7 @@ function mkMan(look, eq, armed) {
   const bones = {}; root.traverse(o => { if (o.isBone) bones[o.name] = o; });
   root.traverse(o => { if (!o.isSkinnedMesh) return; const reg = o.geometry.userData.reg, geo2 = o.geometry.clone(), col = new Float32Array(reg.length * 3);
     for (let i = 0; i < reg.length; i++) { const c = RC[reg[i]]; col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b; }
-    geo2.setAttribute("color", new THREE.BufferAttribute(col, 3)); o.geometry = geo2; o.material = toonPatch(TOON({ vertexColors: true, color: 0xffffff, gradientMap: gradTex })); o.material.userData.own = 1; o.castShadow = true; o.frustumCulled = false; });
+    geo2.setAttribute("color", new THREE.BufferAttribute(col, 3)); o.geometry = geo2; o.material = toonPatch(TOON({ vertexColors: true, color: 0xffffff, gradientMap: gradTex, ...(PBRL ? { roughness: .92 } : {}) })); if (GRD) addDetail(o.material, "fabric", true); o.material.userData.own = 1; o.castShadow = true; o.frustumCulled = false; });
   root.updateMatrixWorld(true);
   const hd = bones["DEF-head"], H = MAN.head;
   if (hd) {
@@ -2206,7 +2214,7 @@ function skyTick() {
     const top = new THREE.Color(0x6aa8e0).lerp(new THREE.Color(0x182850), nd), hz = new THREE.Color(0xd8e4ec).lerp(new THREE.Color(0xf0a878), clamp(1 - Math.abs(el) * 4, 0, 1) * .5 * (1 - nd)).lerp(new THREE.Color(0x2a3a60), nd), gd = new THREE.Color(0x7a8a5a).lerp(new THREE.Color(0x182018), nd);
     gr.addColorStop(0, hx(top)); gr.addColorStop(.47, hx(hz)); gr.addColorStop(.53, hx(gd)); gr.addColorStop(1, hx(gd.clone().multiplyScalar(.7))); x.fillStyle = gr; x.fillRect(0, 0, 64, 32);
     const et = new THREE.CanvasTexture(c); et.mapping = THREE.EquirectangularReflectionMapping; et.colorSpace = THREE.SRGBColorSpace; const rt = E.pm.fromEquirectangular(et); et.dispose(); if (E.rt) E.rt.dispose(); E.rt = rt; S3.environment = E.noEnv ? null : rt.texture;
-    if (!probed) { probed = true; if (!pbrProbe(rt.texture)) { if (pbrProbe(null)) { E.noEnv = true; S3.environment = null; console.warn("환경광이 이 기기에서 깨져서 끕니다."); } else { try { localStorage.setItem("pokgeun-style", "toon"); } catch (e) {} say("⚠️ 이 기기에서 실사 그래픽이 제대로 안 나와 툰 스타일로 바꿀게요.", 3000); setTimeout(() => { location.hash = "style=toon"; location.reload(); }, 1500); } } } }
+    if (!probed) { probed = true; if (!pbrProbe(rt.texture)) { if (pbrProbe(null)) { E.noEnv = true; S3.environment = null; console.warn("환경광이 이 기기에서 깨져서 끕니다."); } else { try { localStorage.setItem("pokgeun-safe", "toon"); } catch (e) {} say("⚠️ 이 기기에서 실사 그래픽이 제대로 안 나와 툰 스타일로 바꿀게요.", 3000); setTimeout(() => { location.hash = "style=toon"; location.reload(); }, 1500); } } } }
   S3.environmentIntensity = (.38 - nd * .1) * (1 - wx * .3);
 }
 function legacyLights(on) {
@@ -2231,7 +2239,7 @@ function finish(D, dim) {
   for (let i = 1; i < PLs.length; i++) { const L = lights[i - 1], l = PLs[i]; if (L) { l.position.set(L.x, L.h, L.z); l.color.setHex(L.c); l.intensity = L.i; l.distance = L.r; } else l.intensity = 0; }
   lights.length = 0; PL0.i = 0;
   drawParts(); updateMotes(); sweep();
-  const dk = darkness(); weatherTick(); const keep = wxApply(dk); RIM.value = (.16 + dk * .24) * (RSTYLE === "cel" ? 2.2 : PBRL ? .5 : 1); RIMC.value.setHex(0xbfe0ff).lerp(new THREE.Color(0x7f93ff), clamp(dk * 1.6, 0, 1)); WIND.value = vtime; WATERMAT.uniforms.uT.value = vtime; WATERMAT.uniforms.uDay.value = GKIND === "home" ? 1 : 1 - clamp(dk / .55, 0, 1) * .72;
+  const dk = darkness(); weatherTick(); const keep = wxApply(dk); RIM.value = (.16 + dk * .24) * (RSTYLE === "cel" ? 2.2 : PBRL ? .5 : 1); RIMC.value.setHex(0xbfe0ff).lerp(new THREE.Color(0x7f93ff), clamp(dk * 1.6, 0, 1)); WIND.value = vtime; WATERMAT.uniforms.uT.value = vtime; if (REAL) { WATERMAT.uniforms.uSky.value.copy(S3.background).convertLinearToSRGB(); WATERMAT.uniforms.uSun.value.copy(SUND); } WATERMAT.uniforms.uDay.value = GKIND === "home" ? 1 : 1 - clamp(dk / .55, 0, 1) * .72;
   if (G.cloud) { const on = !REAL && (GKIND === "village" || GKIND === "wild") && dk < .3, cm = G.cloud; cm.visible = on; if (on) { cm.position.set(camT.x, .1, camT.z); const t = cm.material.map; t.offset.set(camT.x / 90 + vtime * .004, -camT.z / 90 + vtime * .002); cm.material.opacity = clamp(1 - dk * 3, 0, 1) * .9; } }
   if (composer && gradePass) { bloomPass.enabled = QUAL.bloom; bloomPass.strength = REAL ? .3 + dk * .3 : .55 + dk * .5 + (RSTYLE === "cel" ? .15 : 0); const u = gradePass.uniforms; u.vig.value = GR.vig; u.sat.value = GR.sat * (RSTYLE === "cel" ? 1.12 : REAL ? 1.12 : 1); u.con.value = GR.con * (REAL ? 1.06 : 1); legacyLights(true); try { composer.render(DT); legacyLights(false); wxRestore(keep); return; } catch (e) { legacyLights(false); composer = null; } }
   legacyLights(true); R3.render(S3, cam); legacyLights(false); wxRestore(keep);
@@ -3369,7 +3377,7 @@ const tapKey = code => { press(code); setTimeout(() => release(code), 90); };
 /* 설정(⚙️): 소리 · 화질 · 그래픽 스타일 · 시점을 한곳에 */
 function renderCfg() {
   const it = (id, lab) => `<button data-cfg="${id}"><span>${lab}</span><b>${$(id).textContent.replace(/^\S+\s*/, "") || $(id).textContent}</b></button>`;
-  $("cfg").innerHTML = `<h3>⚙️ 설정</h3>${it("snd", "🔊 소리")}${it("gfx", "🎨 화질")}${it("sty", "🖌️ 그래픽 스타일")}${it("view", "🎥 시점")}<button data-cfg="keys"><span>⌨️ 조작 방법</span><b>H</b></button>`;
+  $("cfg").innerHTML = `<h3>⚙️ 설정</h3>${it("snd", "🔊 소리")}${it("gfx", "🎨 화질")}${it("view", "🎥 시점")}<button data-cfg="keys"><span>⌨️ 조작 방법</span><b>H</b></button>`;
   const sb = $("cfg").querySelector('[data-cfg="snd"] b'); if (sb) sb.textContent = muted ? "꺼짐" : "켜짐";
 }
 $("cfgbtn").onclick = e => { e.stopPropagation(); const c = $("cfg"); c.hidden = !c.hidden; if (!c.hidden) renderCfg(); sfx("ui"); };

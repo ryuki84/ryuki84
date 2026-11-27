@@ -18,3 +18,5 @@
 지형 텍스처 — assets/ground/
   Poly Haven (polyhaven.com), CC0: leafy_grass, forest_leaves_02, coast_sand_01, snow_02, rocky_terrain_02, brown_mud_dry, grey_plaster_02
   웹용 변환: 1k 색상/노멀(GL) 맵을 512px webp로 줄임(plaster는 흑백 디테일로 변환).
+
+  추가(디테일 질감): clay_roof_tiles_02, weathered_planks, castle_brick_02_red, rough_wood, denim_fabric — Poly Haven, CC0
