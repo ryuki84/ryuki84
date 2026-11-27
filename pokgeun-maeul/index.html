@@ -2009,7 +2009,13 @@ function groups() {
   G = { village: mk(), vdyn: new THREE.Group(), home: mk(), hdyn: new THREE.Group(), dyn: mk(), cur: null };
   G.village.add(G.vdyn); G.home.add(G.hdyn);
   if (REAL && RX) { const sk = new RX[0].Sky(); sk.scale.setScalar(400); Object.assign(sk.material.uniforms, {}); sk.material.uniforms.turbidity.value = 4.5; sk.material.uniforms.rayleigh.value = 1.6; sk.material.uniforms.mieCoefficient.value = .004; sk.material.uniforms.mieDirectionalG.value = .82; sk.frustumCulled = false; G.sky = sk; G.physSky = true; S3.add(sk);
-    const es = new THREE.Scene(), sk2 = new RX[0].Sky(); sk2.scale.setScalar(50); es.add(sk2); G.envSky = { scene: es, sky: sk2, pm: new THREE.PMREMGenerator(R3), t: -99, rt: null }; }
+    const es = new THREE.Scene(), sk2 = new RX[0].Sky(); sk2.scale.setScalar(50); es.add(sk2); G.envSky = { scene: es, sky: sk2, pm: new THREE.PMREMGenerator(R3), t: -99, rt: null };
+    const ns = new THREE.Mesh(new THREE.SphereGeometry(140, 24, 12), new THREE.ShaderMaterial({ side: THREE.BackSide, depthWrite: false, fog: false, toneMapped: false, uniforms: { top: { value: new THREE.Color() }, hor: { value: new THREE.Color() }, glow: { value: new THREE.Color() }, sd: { value: new THREE.Vector3() } },
+      vertexShader: "varying vec3 vD; void main(){ vD = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); gl_Position.z = gl_Position.w; }",
+      fragmentShader: "uniform vec3 top, hor, glow, sd; varying vec3 vD; void main(){ float h = clamp(vD.y, 0.0, 1.0); vec3 c = mix(hor, top, pow(h, .5)); float g = pow(max(dot(normalize(vec3(vD.x, 0.0, vD.z)), normalize(vec3(sd.x, 0.0, sd.z))), 0.0), 3.0) * (1.0 - h); c += glow * g; gl_FragColor = vec4(c, 1.0); }" }));
+    ns.renderOrder = -11; ns.frustumCulled = false; ns.visible = false; G.nightSky = ns; S3.add(ns);
+    const sp = new Float32Array(900), rr = mulberry32(5); for (let i = 0; i < 300; i++) { const a = rr() * 6.283, y = .08 + rr() * .92, r = Math.sqrt(1 - y * y); sp[i * 3] = Math.cos(a) * r * 130; sp[i * 3 + 1] = y * 130; sp[i * 3 + 2] = Math.sin(a) * r * 130; }
+    const sg = new THREE.BufferGeometry(); sg.setAttribute("position", new THREE.BufferAttribute(sp, 3)); G.stars = new THREE.Points(sg, new THREE.PointsMaterial({ color: 0xffffff, size: 1.3, sizeAttenuation: false, transparent: true, depthWrite: false, fog: false, toneMapped: false })); G.stars.frustumCulled = false; G.stars.renderOrder = -10; S3.add(G.stars); }
   else if (REAL) { const sk = new THREE.Mesh(new THREE.SphereGeometry(120, 24, 12), new THREE.ShaderMaterial({ side: THREE.BackSide, depthWrite: false, fog: false, uniforms: { top: { value: new THREE.Color(0x5d9fe0) }, hor: { value: new THREE.Color(0xdcecf4) }, sun: { value: new THREE.Vector3(-.5, .6, .4).normalize() } },
     vertexShader: "varying vec3 vD; void main(){ vD = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }",
     fragmentShader: "uniform vec3 top, hor, sun; varying vec3 vD; void main(){ float h = clamp(vD.y, 0.0, 1.0); vec3 c = mix(hor, top, pow(h, .55)); c += vec3(1.0, .86, .6) * pow(max(dot(vD, sun), 0.0), 24.0) * .5; c = mix(c, hor * .92, smoothstep(0.02, -0.25, vD.y)); gl_FragColor = vec4(c, 1.0); }" }));
@@ -2172,9 +2178,15 @@ function skyTick() {
   const out = GKIND === "village" || GKIND === "wild", h = clock, pa = (h - 6) / 12 * Math.PI, el = Math.sin(pa);
   SUNP.set(-Math.cos(pa), Math.max(el, -.3) * .95, .42).normalize();                         // 하늘에 그릴 실제 해 위치 (6시 동쪽 → 12시 높이 → 18시 서쪽)
   if (el > .06) SUND.copy(SUNP).setY(Math.max(SUNP.y, .18)).normalize(); else SUND.set(.35, .85, .4).normalize();   // 그림자 방향 (밤에는 달빛)
-  G.sky.visible = out; if (!out) return; G.sky.position.copy(cam.position); G.sky.material.uniforms.sunPosition.value.copy(SUNP);
-  const nd = clamp(darkness() / .55, 0, 1), wx = WX.cloud || 0;
-  const hor = new THREE.Color(0xbcd2e2).lerp(new THREE.Color(0xf0b080), clamp(1 - Math.abs(el) * 4, 0, 1) * .6 * (1 - nd)).lerp(new THREE.Color(0x0c1226), nd).lerp(new THREE.Color(0x8a96a4).multiplyScalar(1 - nd * .8), wx * .7);
+  const nd = clamp(darkness() / .55, 0, 1), wx = WX.cloud || 0, low = el < .1;   // 해가 낮거나 지면 물리 하늘 대신 노을·밤 하늘
+  G.sky.visible = out && !low; G.nightSky.visible = out && low; G.stars.visible = out && nd > .25;
+  if (G.stars.visible) { G.stars.position.copy(cam.position); G.stars.material.opacity = clamp((nd - .25) * 1.6, 0, 1) * (1 - wx); }
+  R3.toneMappingExposure = .72 + nd * .55; if (!out) return;
+  amb.intensity += nd * .22; sun.intensity += nd * .16; hemi.intensity += nd * .06;   // 달빛·밤 주변광 보강
+  if (low) { const u = G.nightSky.material.uniforms, dusk = clamp(1 - nd * 1.4, 0, 1); G.nightSky.position.copy(cam.position);
+    u.top.value.setHex(0x101a3e).lerp(new THREE.Color(0x3a5a9a), dusk * .8); u.hor.value.setHex(0x26345a).lerp(new THREE.Color(0xe8946a), dusk * .9); u.glow.value.setHex(0xff9a5a).multiplyScalar(dusk * .6); u.sd.value.copy(SUNP); }
+  else { G.sky.position.copy(cam.position); G.sky.material.uniforms.sunPosition.value.copy(SUNP); }
+  const hor = new THREE.Color(0xbcd2e2).lerp(new THREE.Color(0xf0b080), clamp(1 - Math.abs(el) * 4, 0, 1) * .6 * (1 - nd)).lerp(new THREE.Color(0x1e2a4a), nd).lerp(new THREE.Color(0x8a96a4).multiplyScalar(1 - nd * .7), wx * .7);
   S3.background = hor; if (S3.fog) S3.fog.color.copy(hor);
   const E = G.envSky; if (Math.abs(h - E.t) > .2 || !E.rt) { E.t = h; E.sky.material.uniforms.sunPosition.value.copy(SUNP); for (const k of ["turbidity", "rayleigh", "mieCoefficient", "mieDirectionalG"]) E.sky.material.uniforms[k].value = G.sky.material.uniforms[k].value; const rt = E.pm.fromScene(E.scene, 0, .1, 100); if (E.rt) E.rt.dispose(); E.rt = rt; S3.environment = rt.texture; }
   S3.environmentIntensity = (.045 - nd * .035) * (1 - wx * .3);
