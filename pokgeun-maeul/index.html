@@ -481,7 +481,7 @@ scatter(6, (x, y) => { if (seedTrees.some(t => t.x === x && t.y === y) || flower
 let S = { bells: 200, inv: { sapling: 1 }, trees: seedTrees, fin: { chair: 1, plant: 1 }, room: [] };
 try { const raw = localStorage.getItem("pokgeun-maeul"); if (raw) S = JSON.parse(raw); } catch (e) {}
 let resetting = false;
-function save() { if (resetting) return; try { if (WORLD) { let q = ""; const d = WORLD.disc; for (let i = 0; i < d.length; i++) q += d[i] ? "1" : "0"; S.disc = q; } localStorage.setItem("pokgeun-maeul", JSON.stringify(S)); } catch (e) {} }
+function save() { if (resetting) return; try { if (WORLD) S.disc2 = [...WORLD.disc].join(","); localStorage.setItem("pokgeun-maeul", JSON.stringify(S)); } catch (e) {} }
 S.fin = S.fin || {}; S.room = S.room || [];
 S.lv = S.lv || 1; S.xp = S.xp || 0; S.potions = S.potions ?? 2; S.bag = S.bag || []; S.best = S.best || 0;
 S.eq = S.eq || { weapon: { id: 1, slot: "weapon", e: "🗡️", n: "나무 칼", rar: 0, ilvl: 1, st: { dmg: 3 }, price: 10 }, armor: null, ring: null };
@@ -2164,7 +2164,7 @@ const noiseBuf = () => NBUF || (NBUF = (() => { const n = AC.sampleRate * 2, b =
 function wxEff() {
   if (GKIND !== "village" && GKIND !== "wild") return "clear";
   let t = WX.type, b = -1;
-  if (scene === "dun" && dun && dun.kind === "world" && typeof WORLD !== "undefined" && WORLD) b = WORLD.bio[Math.floor((player.y + 8) / T) * WN + Math.floor(player.x / T)];
+  if (scene === "dun" && dun && dun.kind === "world" && typeof WORLD !== "undefined" && WORLD) b = wb(Math.floor(player.x / T), Math.floor((player.y + 8) / T));
   if (b === BIO.SNOW && (t === "rain" || t === "storm")) t = "snow";
   else if (b === BIO.DESERT && t !== "clear") t = "clear";
   else if (b === BIO.DEMON) t = t === "snow" ? "clear" : t;
@@ -2511,7 +2511,7 @@ function drawDun() {
 function draw() { if (!R3) return; frameNo++; groups(); if (started && !WORLD) getWorld(); G.cursor.visible = false; if (scene === "home") drawHome(); else if (scene === "dun") drawDun(); else drawVillage(); }
 
 /* ---------- 오픈월드 ---------- */
-const WN = 320, CHK = 16, DN = WN / 4;
+const WN = 1048576, CHK = 16;   // 사실상 무한 (가운데에서 시작)
 const BIO = { OCEAN: 0, BEACH: 1, PLAINS: 2, FOREST: 3, DESERT: 4, SNOW: 5, SWAMP: 6, HIGH: 7, TOWN: 8, ROAD: 9, DEMON: 10 };
 const BIO_N = ["바다", "해변", "초원", "숲", "사막", "설원", "늪", "고원", "마을", "길", "마왕령"];
 const BIO_E = ["🌊", "🏖️", "🌾", "🌲", "🏜️", "❄️", "🪷", "⛰️", "🏘️", "🛤️", "😈"];
@@ -2547,99 +2547,125 @@ function vnoise(x, y, s) {
 function fbm(x, y, s, o = 4) { let a = .5, f = 1, t = 0, n = 0; for (let i = 0; i < o; i++) { t += a * vnoise(x * f, y * f, s + i * 31); n += a; a *= .5; f *= 2; } return t / n; }
 
 /* ----- 월드 생성 (시드 고정: 항상 같은 대륙) ----- */
+/* ===== 무한(사실상) 월드: 1,048,576칸 정사각형, 64칸 구역을 다가갈 때 좌표로 생성 ===== */
+const WSEED = 4242, REG = 64, WC0 = WN / 2;
+function bioBase(x, y) {
+  const s = WSEED, e = fbm(x / 70, y / 70, s) * .58 + fbm(x / 460, y / 460, s + 3) * .8 - .2, m = fbm(x / 55 + 100, y / 55 + 100, s + 7);
+  const t = clamp(fbm(x / 340, y / 340, s + 13) * 1.5 - .25 + (fbm(x / 80, y / 80, s + 17) - .5) * .35, 0, 1);
+  if (e < .3) return 0; if (e < .335) return 1; if (e > .74) return e > .85 ? 17 : 7;   // 17 = 고원 절벽
+  if (t < .27) return 5; if (t > .68 && m < .5) return 4; if (m > .66 && e < .52) return 6; if (m > .5) return 3; return 2;
+}
+function cellBase(x, y, b) {
+  if (b === 17) return CELL.CLIFF; if (b < 1 || b > 7) return 0;
+  const r = hash2(x, y, WSEED + 5), cl = .35 + 1.3 * vnoise(x / 7, y / 7, WSEED + 21);
+  switch (b) {
+    case 3: return r < .28 * cl ? 1 : r < .3 ? 2 : r < .34 ? 3 : 0;
+    case 2: return r < .035 * cl ? 1 : r < .045 ? 2 : r < .08 ? 3 : 0;
+    case 4: return r < .03 * cl ? 5 : r < .04 ? 2 : r < .046 ? 1 : 0;
+    case 5: return r < .13 * cl ? 1 : r < .15 ? 2 : r < .16 ? 3 : 0;
+    case 6: return r < .15 * cl ? 1 : r < .2 ? 3 : r < .21 ? 2 : 0;
+    case 7: return r < .07 ? 2 : r < .095 ? 4 : r < .105 ? 1 : 0;
+    case 1: return r < .004 ? 2 : r < .02 ? 3 : 0;
+  }
+  return 0;
+}
+const isLandB = (x, y) => { const b = bioBase(x, y); return b >= 2 && b !== 7 && b !== 17; };
+const okAreaB = (cx, cy, r) => { for (let a = 0; a < 8; a++) if (!isLandB(Math.round(cx + Math.cos(a * .785) * r), Math.round(cy + Math.sin(a * .785) * r))) return false; return isLandB(cx, cy); };
+/* 한 구역(64칸)의 장소 후보: 좌표 해시로만 정해져서 어느 구역에서 계산해도 같은 결과 */
+function regionPlan(W, rx, ry) {
+  const key = ry * 100000 + rx; if (W.plans.has(key)) return W.plans.get(key);
+  const pl = { pois: [], ops: [] }; W.plans.set(key, pl);
+  const s = WSEED, h = hash2(rx, ry, s + 99), cx = rx * REG + 10 + Math.floor(hash2(rx, ry, s + 1) * (REG - 20)), cy = ry * REG + 10 + Math.floor(hash2(rx, ry, s + 2) * (REG - 20));
+  const dist = Math.hypot(cx - W.spawn.x, cy - W.spawn.y); if (dist < 46 || W.noPlan(cx, cy)) return pl;
+  const tier = Math.min(4, Math.floor(dist / 55)), id = "p" + rx + "_" + ry, P = p => { pl.pois.push(p); return p; };
+  const disc = (r, b) => pl.ops.push({ k: "disc", x: cx, y: cy, r, b }), struct = (x, y, w, hh, poi, code = CELL.STRUCT) => pl.ops.push({ k: "struct", x, y, w, h: hh, poi, code });
+  if (h < .2 && (rx + ry) % 2 === 0 && okAreaB(cx, cy, 11)) {
+    const nm = TOWN_NAMES[1 + Math.floor(hash2(rx, ry, s + 4) * (TOWN_NAMES.length - 1))], t = P({ id: "t" + rx + "_" + ry, type: "town", name: nm, x: cx, y: cy, r: 12, tier: 0, w: 1, h: 1 }); t.isTown = true;
+    disc(11, BIO.TOWN); const sub = (k, type, n2, ox, oy, w, hh, code) => { const p = P({ id: t.id + k, type, name: n2, x: cx + ox, y: cy + oy, w, h: hh, town: t, tier: 0 }); struct(p.x, p.y, w, hh, p, code); return p; };
+    sub("s", "shop", "상점", -5, -4, 3, 2); sub("i", "inn", "여관", 2, -4, 3, 2); sub("b", "board", "의뢰 게시판", -1, 3, 1, 1, CELL.BOARD); const sh = sub("w", "shrine", nm + " 이동석", 0, -1, 1, 1, CELL.PILLAR); sh.wp = true; return pl;
+  }
+  if (!okAreaB(cx, cy, 5)) return pl;
+  if (h < .44) { disc(3); const p = P({ id, type: "cave", name: "동굴", x: cx, y: cy, w: 2, h: 2, tier }); struct(cx, cy, 2, 2, p); }
+  else if (h < .64) { disc(5); const p = P({ id, type: "camp", name: "몬스터 야영지", x: cx, y: cy, w: 1, h: 1, tier, guard: true }); const c = P({ id: id + "c", type: "chest", name: "보물상자", x: cx, y: cy, w: 1, h: 1, tier, par: p }); struct(cx, cy, 1, 1, c, CELL.CHEST); }
+  else if (h < .76) { disc(5); const p = P({ id, type: "ruin", name: "고대 유적", x: cx, y: cy, w: 1, h: 1, tier, guard: true }); const c = P({ id: id + "c", type: "chest", name: "유적 상자", x: cx, y: cy, w: 1, h: 1, tier, par: p }); struct(cx, cy, 1, 1, c, CELL.CHEST); }
+  else if (h < .9) { disc(2); const p = P({ id, type: "shrine", name: `이동석 (${cx - WC0}, ${cy - WC0})`, x: cx, y: cy, w: 1, h: 1, tier, wp: true }); struct(cx, cy, 1, 1, p, CELL.PILLAR); }
+  else if (h < .97 && dist > 80) { disc(7); const p = P({ id, type: "lair", name: "용의 소굴", x: cx, y: cy, w: 1, h: 1, tier: 4, guard: true }); const c = P({ id: id + "c", type: "chest", name: "용의 보물", x: cx, y: cy, w: 1, h: 1, tier: 4, par: p }); struct(cx, cy, 1, 1, c, CELL.CHEST); }
+  return pl;
+}
+function registerPlan(W, pl) { if (pl.reg) return; pl.reg = true; for (const p of pl.pois) { W.pois.push(p); W.byId.set(p.id, p); if (p.isTown) { W.towns.push(p); if (typeof dun !== "undefined" && dun && dun.kind === "world" && dun.vil) townVil(p, W.towns.length - 1); } if (p.guard) W.guard.push(p); if (p.type !== "town" && p.type !== "chest" && !p.town) p.dist = Math.hypot(p.x - W.spawn.x, p.y - W.spawn.y); } }
+function applyOps(R, ops, x0, y0) {
+  const inR = (x, y) => x >= x0 && y >= y0 && x < x0 + REG && y < y0 + REG, ix = (x, y) => (y - y0) * REG + (x - x0);
+  for (const o of ops) {
+    if (o.k === "disc") { for (let y = Math.max(y0, o.y - o.r); y <= Math.min(y0 + REG - 1, o.y + o.r); y++) for (let x = Math.max(x0, o.x - o.r); x <= Math.min(x0 + REG - 1, o.x + o.r); x++) { if ((x - o.x) ** 2 + (y - o.y) ** 2 > o.r * o.r) continue; const i = ix(x, y); if (o.force) { R.bio[i] = o.b; R.cell[i] = 0; continue; } if (R.bio[i] === 0) continue; if (o.b != null) R.bio[i] = o.b; if (R.cell[i] !== CELL.CLIFF) R.cell[i] = 0; } }
+    else if (o.k === "rect") { for (let y = Math.max(y0, o.y); y < Math.min(y0 + REG, o.y + o.h); y++) for (let x = Math.max(x0, o.x); x < Math.min(x0 + REG, o.x + o.w); x++) { const i = ix(x, y); if (o.b != null) R.bio[i] = o.b; R.cell[i] = 0; R.inter.delete(i); } }
+    else if (o.k === "struct") { for (let j = 0; j < o.h; j++) for (let i = 0; i < o.w; i++) { const x = o.x + i, y = o.y + j; if (!inR(x, y)) continue; R.cell[ix(x, y)] = o.code; R.inter.set(ix(x, y), o.poi); } }
+    else if (o.k === "trees") { for (let y = Math.max(y0, o.y - o.r); y <= Math.min(y0 + REG - 1, o.y + o.r); y++) for (let x = Math.max(x0, o.x - o.r); x <= Math.min(x0 + REG - 1, o.x + o.r); x++) { const i = ix(x, y); if (R.bio[i] === BIO.DEMON && !R.cell[i] && hash2(x, y, WSEED + 77) < .045) R.cell[i] = CELL.TREE; } }
+  }
+}
+function genRegion(W, rx, ry) {
+  const x0 = rx * REG, y0 = ry * REG, R = { bio: new Uint8Array(REG * REG), cell: new Uint8Array(REG * REG), inter: new Map() };
+  for (let j = 0; j < REG; j++) for (let i = 0; i < REG; i++) { let b = bioBase(x0 + i, y0 + j); const c = cellBase(x0 + i, y0 + j, b); if (b === 17) b = 7; R.bio[j * REG + i] = b; R.cell[j * REG + i] = c; }
+  const near = []; for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const pl = regionPlan(W, rx + dx, ry + dy); registerPlan(W, pl); near.push(pl); }
+  for (const pl of near) applyOps(R, pl.ops.filter(o => o.k === "disc"), x0, y0);
+  applyOps(R, W.spec.filter(o => o.k !== "struct" && o.k !== "trees" && o.x - (o.r || 0) < x0 + REG && (o.x + (o.w || 0) + (o.r || 0)) >= x0 && o.y - (o.r || 0) < y0 + REG && (o.y + (o.h || 0) + (o.r || 0)) >= y0), x0, y0);
+  applyOps(R, W.spec.filter(o => o.k === "trees"), x0, y0);
+  for (const pl of near) applyOps(R, pl.ops.filter(o => o.k === "struct"), x0, y0);
+  applyOps(R, W.spec.filter(o => o.k === "struct"), x0, y0);
+  return R;
+}
+let lastReg = null, lastRegK = -1;
+function regAt(x, y) {
+  const rx = Math.floor(x / REG), ry = Math.floor(y / REG), k = ry * 100000 + rx; if (k === lastRegK) return lastReg;
+  const W = WORLD; let R = W.regs.get(k);
+  if (!R) { R = genRegion(W, rx, ry); W.regs.set(k, R); if (W.regs.size > 700) { const px = player.x / T, py = player.y / T; for (const [kk] of W.regs) { const ax = kk % 100000, ay = Math.floor(kk / 100000); if (Math.abs(ax * REG - px) > 900 || Math.abs(ay * REG - py) > 900) W.regs.delete(kk); if (W.regs.size < 500) break; } } }
+  lastReg = R; lastRegK = k; return R;
+}
+const baseCell = (x, y) => { const R = regAt(x, y); return R.cell[(y - Math.floor(y / REG) * REG) * REG + (x - Math.floor(x / REG) * REG)]; };
+const interAt = (x, y) => { const R = regAt(x, y); return R.inter.get((y - Math.floor(y / REG) * REG) * REG + (x - Math.floor(x / REG) * REG)); };
 function genWorld() {
-  const N = WN, seed = 4242, bio = new Uint8Array(N * N), cell = new Uint8Array(N * N), inter = new Map(), pois = [], ix = (x, y) => y * N + x;
-  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
-    const nx = x / N * 2 - 1, ny = y / N * 2 - 1, d = Math.hypot(nx, ny);
-    const e = fbm(x / 70, y / 70, seed) + .14 - Math.pow(d, 3) * .5, m = fbm(x / 55 + 100, y / 55 + 100, seed + 7);
-    const t = clamp(y / N + (fbm(x / 80, y / 80, seed + 13) - .5) * .45, 0, 1);
-    let b;
-    if (e < .3) b = 0; else if (e < .335) b = 1; else if (e > .74) b = 7;
-    else if (t < .27) b = 5; else if (t > .68 && m < .5) b = 4; else if (m > .66 && e < .52) b = 6; else if (m > .5) b = 3; else b = 2;
-    bio[ix(x, y)] = b; if (b === 7 && e > .85) cell[ix(x, y)] = CELL.CLIFF;
-  }
-  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
-    const i = ix(x, y), b = bio[i]; if (b < 1 || b > 7 || cell[i]) continue;
-    const r = hash2(x, y, seed + 5), cl = .35 + 1.3 * vnoise(x / 7, y / 7, seed + 21); let c = 0;
-    switch (b) {
-      case 3: c = r < .28 * cl ? 1 : r < .3 ? 2 : r < .34 ? 3 : 0; break;
-      case 2: c = r < .035 * cl ? 1 : r < .045 ? 2 : r < .08 ? 3 : 0; break;
-      case 4: c = r < .03 * cl ? 5 : r < .04 ? 2 : r < .046 ? 1 : 0; break;
-      case 5: c = r < .13 * cl ? 1 : r < .15 ? 2 : r < .16 ? 3 : 0; break;
-      case 6: c = r < .15 * cl ? 1 : r < .2 ? 3 : r < .21 ? 2 : 0; break;
-      case 7: c = r < .07 ? 2 : r < .095 ? 4 : r < .105 ? 1 : 0; break;
-      case 1: c = r < .004 ? 2 : r < .02 ? 3 : 0; break;
-    }
-    cell[i] = c;
-  }
-  const isLand = (x, y) => x > 3 && y > 3 && x < N - 4 && y < N - 4 && bio[ix(x, y)] >= 2 && bio[ix(x, y)] !== 7;
-  const okArea = (cx, cy, r) => { for (let a = 0; a < 8; a++) if (!isLand(Math.round(cx + Math.cos(a * .785) * r), Math.round(cy + Math.sin(a * .785) * r))) return false; return isLand(cx, cy); };
-  const disc = (cx, cy, r, b) => { for (let y = cy - r; y <= cy + r; y++) for (let x = cx - r; x <= cx + r; x++) if (x >= 0 && y >= 0 && x < N && y < N && (x - cx) ** 2 + (y - cy) ** 2 <= r * r && bio[ix(x, y)] > 0) { if (b != null) bio[ix(x, y)] = b; if (cell[ix(x, y)] !== CELL.CLIFF) cell[ix(x, y)] = 0; } };
-  const struct = (x, y, w, h, poi, code = CELL.STRUCT) => { for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) { cell[ix(x + i, y + j)] = code; inter.set(ix(x + i, y + j), poi); } };
-  const add = p => { pois.push(p); return p; };
-  const towns = [];
-  const mkTown = (cx, cy, name) => {
-    const t = add({ id: "t" + towns.length, type: "town", name, x: cx, y: cy, r: 12, tier: 0, w: 1, h: 1 }); towns.push(t); disc(cx, cy, 11, BIO.TOWN);
-    const sub = (k, type, nm, ox, oy, w, h, code) => { const p = add({ id: t.id + k, type, name: nm, x: cx + ox, y: cy + oy, w, h, town: t, tier: 0 }); struct(p.x, p.y, w, h, p, code); return p; };
-    sub("s", "shop", "상점", -5, -4, 3, 2); sub("i", "inn", "여관", 2, -4, 3, 2); sub("b", "board", "의뢰 게시판", -1, 3, 1, 1, CELL.BOARD);
-    const sh = sub("w", "shrine", name + " 이동석", 0, -1, 1, 1, CELL.PILLAR); sh.wp = true;
-    return t;
-  };
-  let sx = N / 2, sy = N / 2, found = false;
-  for (let r = 0; r < 90 && !found; r += 3) for (let a = 0; a < 12 && !found; a++) { const px = Math.round(N / 2 + Math.cos(a * .5236) * r), py = Math.round(N / 2 + Math.sin(a * .5236) * r); if (okArea(px, py, 11) && okArea(px, py - 10, 8)) { sx = px; sy = py; found = true; } }
-  const spawnT = mkTown(sx, sy, TOWN_NAMES[0]); spawnT.capital = true; spawnT.r = 17;
-  { disc(sx, sy - 10, 9, BIO.TOWN); const keep = add({ id: "castle", type: "castle", name: "포근성", x: sx - 5, y: sy - 15, w: 10, h: 5, town: spawnT, tier: 0 }); struct(keep.x, keep.y, 10, 5, keep);
-    for (const ox of [-10, 8]) { const tw = add({ id: "tower" + ox, type: "castle", name: "포근성", x: sx + ox, y: sy - 14, w: 3, h: 3, town: spawnT, tier: 0, deco: true }); struct(tw.x, tw.y, 3, 3, tw); } }
-  { const p = add({ id: "portal", type: "portal", name: "포근 마을 포털", x: sx + 6, y: sy + 3, w: 1, h: 1, town: spawnT, tier: 0 }); struct(p.x, p.y, 1, 1, p, CELL.PILLAR); }
-  const guard = [];
-  for (let ry = 0; ry < 8; ry++) for (let rx = 0; rx < 8; rx++) {
-    const h = hash2(rx, ry, seed + 99), cx = rx * 40 + 6 + Math.floor(hash2(rx, ry, seed + 1) * 28), cy = ry * 40 + 6 + Math.floor(hash2(rx, ry, seed + 2) * 28), dist = Math.hypot(cx - sx, cy - sy);
-    if (dist < 28) continue;
-    const tier = Math.min(4, Math.floor(dist / 55)), id = "p" + rx + "_" + ry;
-    if (h < .26 && okArea(cx, cy, 11) && towns.every(t => Math.hypot(t.x - cx, t.y - cy) > 48)) { mkTown(cx, cy, TOWN_NAMES[towns.length % TOWN_NAMES.length]); continue; }
-    if (!okArea(cx, cy, 5)) continue;
-    if (h < .46) { disc(cx, cy, 3); const p = add({ id, type: "cave", name: "동굴", x: cx, y: cy, w: 2, h: 2, tier }); struct(cx, cy, 2, 2, p); }
-    else if (h < .66) { disc(cx, cy, 5); const p = add({ id, type: "camp", name: "몬스터 야영지", x: cx, y: cy, w: 1, h: 1, tier }); const c = add({ id: id + "c", type: "chest", name: "보물상자", x: cx, y: cy, w: 1, h: 1, tier, par: p }); struct(cx, cy, 1, 1, c, CELL.CHEST); guard.push(p); }
-    else if (h < .78) { disc(cx, cy, 5); const p = add({ id, type: "ruin", name: "고대 유적", x: cx, y: cy, w: 1, h: 1, tier }); const c = add({ id: id + "c", type: "chest", name: "유적 상자", x: cx, y: cy, w: 1, h: 1, tier, par: p }); struct(cx, cy, 1, 1, c, CELL.CHEST); guard.push(p); }
-    else if (h < .9) { disc(cx, cy, 2); const p = add({ id, type: "shrine", name: "이동석", x: cx, y: cy, w: 1, h: 1, tier, wp: true }); struct(cx, cy, 1, 1, p, CELL.PILLAR); }
-    else if (h < .97 && dist > 80) { disc(cx, cy, 7); const p = add({ id, type: "lair", name: "용의 소굴", x: cx, y: cy, w: 1, h: 1, tier: 4 }); const c = add({ id: id + "c", type: "chest", name: "용의 보물", x: cx, y: cy, w: 1, h: 1, tier: 4, par: p }); struct(cx, cy, 1, 1, c, CELL.CHEST); guard.push(p); }
-  }
-  let demonPoi = null;
-  { let dx = -1, dy = -1;
-    for (let y = 14; y < N / 2 - 20 && dx < 0; y += 2) { let best = null; for (let x = 30; x < N - 30; x += 3) if (okArea(x, y, 10) && Math.hypot(x - sx, y - sy) > 90 && (best === null || Math.abs(x - N / 2) < Math.abs(best - N / 2))) best = x; if (best !== null) { dx = best; dy = y; } }
-    if (dx < 0) { let bd = 0; for (let y = 20; y < N - 20; y += 6) for (let x = 20; x < N - 20; x += 6) { const d = Math.hypot(x - sx, y - sy); if (d > bd && okArea(x, y, 10)) { bd = d; dx = x; dy = y; } } }
-    if (dx >= 0) {
-      disc(dx, dy, 24, BIO.DEMON);
-      for (let y = dy - 24; y <= dy + 24; y++) for (let x = dx - 24; x <= dx + 24; x++) if (x >= 0 && y >= 0 && x < N && y < N && bio[ix(x, y)] === BIO.DEMON && !cell[ix(x, y)] && hash2(x, y, seed + 77) < .045) cell[ix(x, y)] = CELL.TREE;
-      demonPoi = add({ id: "demon", type: "demon", name: "마왕성", x: dx - 4, y: dy - 6, w: 9, h: 4, tier: 4 }); struct(demonPoi.x, demonPoi.y, 9, 4, demonPoi); guard.push(demonPoi);
-      const wp = add({ id: "demonwp", type: "shrine", name: "마왕성 입구 이동석", x: dx, y: dy + 5, w: 1, h: 1, tier: 4, wp: true, keepName: true }); struct(wp.x, wp.y, 1, 1, wp, CELL.PILLAR);
-    } }
-  let sn = 0; pois.forEach(p => { if (p.type === "shrine" && !p.town && !p.keepName) p.name = "이동석 #" + (++sn); });
-  const road = (a, b) => {
-    let x = a.x, y = a.y; const st = (nx, ny) => { if (nx >= 0 && ny >= 0 && nx < N && ny < N) { const i = ix(nx, ny), bb = bio[i]; if (bb >= 1 && bb !== 7 && bb !== 8 && !inter.has(i)) { bio[i] = BIO.ROAD; cell[i] = 0; } } };
-    while (x !== b.x) { x += Math.sign(b.x - x); st(x, y); st(x, y + 1); } while (y !== b.y) { y += Math.sign(b.y - y); st(x, y); st(x + 1, y); }
-  };
-  towns.forEach((t, i) => { if (!i) return; let best = null, bd = 1e9; for (let j = 0; j < i; j++) { const d = Math.hypot(towns[j].x - t.x, towns[j].y - t.y); if (d < bd) { bd = d; best = towns[j]; } } road(t, best); });
-  const VOX = sx - 15, VOY = sy + 15, HOX = VOX - 15, HOY = VOY + 1;   // 마을(30x20)과 집을 한 맵에 연결
-  for (let y = VOY - 3; y < VOY + 23; y++) for (let x = HOX - 3; x < VOX + 33; x++) if (x >= 0 && y >= 0 && x < N && y < N) { const i = ix(x, y); bio[i] = BIO.PLAINS; cell[i] = 0; inter.delete(i); }
-  for (let i = pois.length - 1; i >= 0; i--) { const p = pois[i]; if (!p.town && p.type !== "town" && p.x >= HOX - 5 && p.x < VOX + 35 && p.y >= VOY - 5 && p.y < VOY + 25) pois.splice(i, 1); }
-  for (let y = sy + 10; y < VOY; y++) for (const x of [sx - 1, sx]) { const i = ix(x, y); if (bio[i] !== BIO.TOWN) bio[i] = BIO.ROAD; cell[i] = 0; inter.delete(i); }
-  for (const p of pois) if (p.type !== "town" && p.type !== "chest" && !p.town) p.dist = Math.hypot(p.x - sx, p.y - sy);
+  if (S.wver !== 2) { S.wver = 2; S.wedits = {}; S.crops = {}; S.wpos = null; S.wspawn = null; S.disc = ""; S.disc2 = ""; S.wp = {}; S.wcl = {}; S.wopen = {}; S.wreg = {}; }
   S.wedits = S.wedits || {};
-  const W = { N, bio, cell, inter, pois, towns, guard, demon: demonPoi, spawn: { x: sx, y: sy }, vreg: { x: VOX, y: VOY }, hreg: { x: HOX, y: HOY }, ed: NET.on ? NET.ed : S.wedits, chunks: new Map(), disc: new Uint8Array(DN * DN), regrow: [], first: true, byId: new Map(pois.map(p => [p.id, p])) };
-  for (let i = 0; i < Math.min(S.disc.length, DN * DN); i++) W.disc[i] = S.disc.charCodeAt(i) === 49 ? 1 : 0;
+  let sx = WC0, sy = WC0;
+  for (let r = 0, found = false; r < 600 && !found; r += 4) for (let a = 0; a < 16 && !found; a++) { const px = Math.round(WC0 + Math.cos(a * .3927) * r), py = Math.round(WC0 + Math.sin(a * .3927) * r); if (okAreaB(px, py, 14) && okAreaB(px, py - 12, 8) && okAreaB(px, py + 25, 14)) { sx = px; sy = py; found = true; } }
+  const W = { N: WN, pois: [], towns: [], guard: [], byId: new Map(), plans: new Map(), regs: new Map(), spec: [], spawn: { x: sx, y: sy }, ed: NET.on ? NET.ed : S.wedits, chunks: new Map(), disc: new Set(), regrow: [], first: true };
+  const spec = W.spec, add = p => { W.pois.push(p); W.byId.set(p.id, p); return p; }, struct = (x, y, w, h, poi, code = CELL.STRUCT) => spec.push({ k: "struct", x, y, w, h, poi, code });
+  const VOX = sx - 15, VOY = sy + 15, HOX = VOX - 15, HOY = VOY + 1; W.vreg = { x: VOX, y: VOY }; W.hreg = { x: HOX, y: HOY };
+  W.noPlan = (x, y) => (x > HOX - 30 && x < VOX + 50 && y > sy - 40 && y < VOY + 40);
+  spec.push({ k: "disc", x: sx, y: sy, r: 11, b: BIO.TOWN, force: true }, { k: "disc", x: sx, y: sy - 10, r: 9, b: BIO.TOWN, force: true });
+  const cap = add({ id: "t0", type: "town", name: TOWN_NAMES[0], x: sx, y: sy, r: 17, tier: 0, w: 1, h: 1, capital: true }); W.towns.push(cap);
+  const sub = (k, type, nm, ox, oy, w, h, code) => { const p = add({ id: "t0" + k, type, name: nm, x: sx + ox, y: sy + oy, w, h, town: cap, tier: 0 }); struct(p.x, p.y, w, h, p, code); return p; };
+  sub("s", "shop", "상점", -5, -4, 3, 2); sub("i", "inn", "여관", 2, -4, 3, 2); sub("b", "board", "의뢰 게시판", -1, 3, 1, 1, CELL.BOARD); sub("w", "shrine", TOWN_NAMES[0] + " 이동석", 0, -1, 1, 1, CELL.PILLAR).wp = true;
+  const keep = add({ id: "castle", type: "castle", name: "포근성", x: sx - 5, y: sy - 15, w: 10, h: 5, town: cap, tier: 0 }); struct(keep.x, keep.y, 10, 5, keep);
+  for (const ox of [-10, 8]) { const tw = add({ id: "tower" + ox, type: "castle", name: "포근성", x: sx + ox, y: sy - 14, w: 3, h: 3, town: cap, tier: 0, deco: true }); struct(tw.x, tw.y, 3, 3, tw); }
+  { const p = add({ id: "portal", type: "portal", name: "포근 마을 포털", x: sx + 6, y: sy + 3, w: 1, h: 1, town: cap, tier: 0 }); struct(p.x, p.y, 1, 1, p, CELL.PILLAR); }
+  spec.push({ k: "rect", x: HOX - 3, y: VOY - 3, w: VOX + 33 - (HOX - 3), h: 26, b: BIO.PLAINS }, { k: "rect", x: sx - 1, y: sy + 10, w: 2, h: VOY - sy - 10, b: BIO.ROAD });
+  // 마왕성: 왕도에서 북쪽으로 멀리
+  { const dx = sx + 30, dy = sy - 175; spec.push({ k: "disc", x: dx, y: dy, r: 26, b: BIO.DEMON, force: true }, { k: "trees", x: dx, y: dy, r: 24 });
+    const d = add({ id: "demon", type: "demon", name: "마왕성", x: dx - 4, y: dy - 6, w: 9, h: 4, tier: 4 }); struct(d.x, d.y, 9, 4, d); W.guard.push(d); W.demon = d; d.dist = Math.hypot(d.x - sx, d.y - sy);
+    const wp = add({ id: "demonwp", type: "shrine", name: "마왕성 입구 이동석", x: dx, y: dy + 5, w: 1, h: 1, tier: 4, wp: true, keepName: true }); struct(wp.x, wp.y, 1, 1, wp, CELL.PILLAR);
+    for (let k = 0; k < 14; k++) { const y = sy - 12 - k * 12; spec.push({ k: "disc", x: sx + Math.round(k * 30 / 14), y, r: 3, b: null }); } }   // 마왕성으로 가는 길목은 막히지 않게
+  W.fixed = W.pois.slice();
+  for (const k of (S.disc2 || "").split(",")) if (k) W.disc.add(+k);
   for (const k in S.wreg) W.regrow.push({ k: +k, t: S.wreg[k] });
   return W;
 }
+function wc(x, y) { if (x < 0 || y < 0 || x >= WN || y >= WN) return 255; const k = y * WN + x, e = WORLD.ed[k]; return e !== undefined ? e : baseCell(x, y); }
+function wb(x, y) { if (x < 0 || y < 0 || x >= WN || y >= WN) return 0; const R = regAt(x, y); return R.bio[(y - Math.floor(y / REG) * REG) * REG + (x - Math.floor(x / REG) * REG)]; }
+const DKEY = (bx, by) => by * (WN / 4) + bx;
 function getWorld() { return WORLD || (WORLD = genWorld()); }
-function wc(x, y) { if (x < 0 || y < 0 || x >= WN || y >= WN) return 255; const k = y * WN + x, e = WORLD.ed[k]; return e !== undefined ? e : WORLD.cell[k]; }
-function wb(x, y) { return x < 0 || y < 0 || x >= WN || y >= WN ? 0 : WORLD.bio[y * WN + x]; }
-function wsolid(x, y) { const h = WORLD.hreg; if (h && x >= h.x && x < h.x + RW && y >= h.y + 2 && y < h.y + RH) return !(y === h.y + RH - 1 && (x === h.x + 5 || x === h.x + 6)); return x < 0 || y < 0 || x >= WN || y >= WN || WORLD.bio[y * WN + x] === 0 || SOLIDC[wc(x, y)] === 1; }
-function markDirty(x, y) { for (const [dx, dy] of [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]]) { const ch = WORLD.chunks.get(Math.floor((y + dy) / CHK) * 100 + Math.floor((x + dx) / CHK)); if (ch) ch.dirty = true; } }
+function poisNear(x0, y0, x1, y1) {   // 주변 구역의 장소만 (월드 전체를 훑지 않게)
+  const W = WORLD, m = 12, out = W.fixed.filter(p => p.x >= x0 - m && p.x < x1 + m && p.y >= y0 - m && p.y < y1 + m);
+  for (let ry = Math.floor((y0 - m) / REG); ry <= Math.floor((y1 + m) / REG); ry++) for (let rx = Math.floor((x0 - m) / REG); rx <= Math.floor((x1 + m) / REG); rx++) { const pl = regionPlan(W, rx, ry); registerPlan(W, pl); for (const p of pl.pois) out.push(p); }
+  return out;
+}
+function resolvePoi(id) { const W = getWorld(); let p = W.byId.get(id); if (p) return p; const m = /^[tp](\d+)_(\d+)/.exec(id); if (!m) return null; registerPlan(W, regionPlan(W, +m[1], +m[2])); return W.byId.get(id) || null; }
+
+function wsolid(x, y) { const h = WORLD.hreg; if (h && x >= h.x && x < h.x + RW && y >= h.y + 2 && y < h.y + RH) return !(y === h.y + RH - 1 && (x === h.x + 5 || x === h.x + 6)); return x < 0 || y < 0 || x >= WN || y >= WN || wb(x, y) === 0 || SOLIDC[wc(x, y)] === 1; }
+function markDirty(x, y) { for (const [dx, dy] of [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]]) { const ch = WORLD.chunks.get(Math.floor((y + dy) / CHK) * 100000 + Math.floor((x + dx) / CHK)); if (ch) ch.dirty = true; } }
 function setCell(x, y, code, regrow) {
-  const k = y * WN + x; if (WORLD.cell[k] === code) delete WORLD.ed[k]; else WORLD.ed[k] = code;
+  const k = y * WN + x, bc = baseCell(x, y); if (bc === code) delete WORLD.ed[k]; else WORLD.ed[k] = code;
   if (regrow && !NET.on) { const t = Date.now() + 420000 + Math.random() * 120000; S.wreg[k] = t; WORLD.regrow.push({ k, t }); }
-  if (NET.on) NET.send({ t: "edit", k, c: WORLD.cell[k] === code ? null : code, rg: regrow ? 1 : 0 });
+  if (NET.on) NET.send({ t: "edit", k, c: bc === code ? null : code, rg: regrow ? 1 : 0 });
   markDirty(x, y);
 }
 const wTier = (x, y) => Math.min(4, Math.floor(Math.hypot(x - WORLD.spawn.x, y - WORLD.spawn.y) / 55));
@@ -2736,7 +2762,7 @@ function buildChunk(cx, cy) {
     list.forEach(([x, y, h, sc], i) => { eu.set(0, rn(Math.floor(x), Math.floor(y), 8) * 6.283, 0); q.setFromEuler(eu); sv.set(sc, sc, sc); pv.set(x + .5, h, y + .5); if (nm === "tuft") pv.set(x + .5, h, y + .5); mm.compose(pv, q, sv); im.setMatrixAt(i, mm); });
     im.castShadow = nm !== "tuft"; im.frustumCulled = false; grp.add(im);
   }
-  for (const p of W.pois) {
+  for (const p of poisNear(x0, y0, x0 + CHK, y0 + CHK)) {
     if (p.x < x0 || p.x >= x0 + CHK || p.y < y0 || p.y >= y0 + CHK) continue;
     const put = (m, ox, oz, ry = 0) => { m.position.set(p.x + ox, 0, p.y + oz); m.rotation.y = ry; grp.add(m); return m; }, night = true;
     if (p.type === "shop") { put(mkShop(), 1.5, 1.1); ch.lit.push({ x: p.x + 1.5, z: p.y + 2.3, c: 0xffd870, r: 5, h: 1, i: 1.3, night }); }
@@ -2762,7 +2788,7 @@ function drawWorldTerrain(ox = 0, oz = 0) {
   const need = []; for (let dy = -R; dy <= R; dy++) for (let dx = -R; dx <= R; dx++) { const cx = pcx + dx, cy = pcy + dy; if (cx >= 0 && cy >= 0 && cx < NC && cy < NC) need.push([dx * dx + dy * dy, cx, cy]); }
   need.sort((a, b) => a[0] - b[0]); let budget = W.first ? 30 : 2;
   for (const [d2, cx, cy] of need) {
-    const key = cy * 100 + cx; let ch = W.chunks.get(key);
+    const key = cy * 100000 + cx; let ch = W.chunks.get(key);
     if (!ch) { if (budget <= 0) continue; budget--; ch = buildChunk(cx, cy); W.chunks.set(key, ch); G.wgrp.add(ch.grp); }
     else if (ch.dirty) { if (d2 > 4 && budget <= 0) continue; budget--; G.wgrp.remove(ch.grp); disposeChunk(ch); ch = buildChunk(cx, cy); W.chunks.set(key, ch); G.wgrp.add(ch.grp); }
   }
@@ -2835,13 +2861,14 @@ $("chatin").addEventListener("keydown", e => {
 $("tchat").onclick = openChat;
 if (NET.url) { $("nickrow").hidden = false; try { $("nick").value = localStorage.getItem("pokgeun-nick") || ""; } catch (e) {} }
 function newWorldDun() { return newDun({ kind: "world", exit: null, stairs: null, vil: [], pet: null, areaB: -1, tick: 0, spawnT: 0, discT: 0, saveT: 0, regT: 0, healT: 0, guardT: 0 }); }
+function townVil(t, i) { for (let k = 0; k < 2; k++) { const v = VILLAGERS[(i * 2 + k) % 4], x = (t.x + (k ? 4 : -4) + .5) * T, y = (t.y + 2.5) * T; dun.vil.push({ ...v, x, y, hx: x, hy: y, vx: 0, vy: 0, t: 0, talk: 0, line: 0 }); } }
 function enterWorld(pos, msg) {
   const W = getWorld(); cancelFish(); scene = "dun"; dun = newWorldDun(); W.first = true; camInit = false; sfx("portal");
   if (!S.wspawn) S.wspawn = { x: (W.spawn.x + .5) * T, y: (W.spawn.y + 4.5) * T };
   const P = player, p = pos || S.wpos || { x: (W.spawn.x + .5) * T, y: (W.spawn.y + 4.5) * T };
   P.x = p.x; P.y = p.y; P.dx = 0; P.dy = 1; P.mounted = false; P.atkCd = P.qCd = P.eCd = P.fCd = P.rCd = P.dash = P.inv = 0; P.hp = Math.max(P.hp, 1);
   if (wsolid(Math.floor(P.x / T), Math.floor((P.y + 8) / T))) { for (let r = 1; r < 8; r++) { let ok = false; for (let a = 0; a < 8 && !ok; a++) { const x = Math.floor(P.x / T + Math.cos(a * .785) * r), y = Math.floor((P.y + 8) / T + Math.sin(a * .785) * r); if (!wsolid(x, y)) { P.x = (x + .5) * T; P.y = (y + .5) * T - 8; ok = true; } } if (ok) break; } }
-  W.towns.forEach((t, i) => { for (let k = 0; k < 2; k++) { const v = VILLAGERS[(i * 2 + k) % 4], x = (t.x + (k ? 4 : -4) + .5) * T, y = (t.y + 2.5) * T; dun.vil.push({ ...v, x, y, hx: x, hy: y, vx: 0, vy: 0, t: 0, talk: 0, line: 0 }); } });
+  W.towns.forEach((t, i) => townVil(t, i));
   { const c = W.towns[0], mkv = (nm, model, ox, oy, lines, e) => { const x = (c.x + ox + .5) * T, y = (c.y + oy + .5) * T - 8; dun.vil.push({ name: nm, e, model, fixed: true, lines, x, y, hx: x, hy: y, vx: 0, vy: 0, t: 0, talk: 0, line: 0 }); };
     mkv("국왕 폰드", "king", 0, -8, [], "👑"); mkv("근위병", "guard", -2, -8, GUARD_LINES, "🛡️"); mkv("근위병", "guard", 2, -8, GUARD_LINES, "🛡️"); mkv("성문 경비병", "guard", -7, -3, GUARD_LINES2, "🛡️"); mkv("성문 경비병", "guard", 7, -3, GUARD_LINES2, "🛡️");
     if (!S.wp[c.id + "w"]) S.wp[c.id + "w"] = 1; }
@@ -2881,12 +2908,13 @@ function worldTick(dt) {
   dun.mons = dun.mons.filter(m => !m.world || m.poi || Math.hypot(m.x - P.x, m.y - P.y) < 46 * T);
   dun.guardT += dt; if (dun.guardT > .5) {
     dun.guardT = 0;
-    for (const p of W.guard) { if (S.wcl[p.id]) continue; const d = Math.hypot((p.x + .5) * T - P.x, (p.y + .5) * T - P.y) / T; if (d < 30 && !p.spawned) { p.spawned = true; spawnGuards(p); say(`⚠️ ${p.name}이(가) 가까워요!`, 2200); } else if (d > 75 && p.spawned) { p.spawned = false; dun.mons = dun.mons.filter(m => m.poi !== p.id); } }
-    for (const p of W.pois) if (p.wp && !S.wp[p.id] && Math.hypot(p.x - px, p.y - py) < 4) discoverWp(p);
+    const NP = poisNear(px - 100, py - 100, px + 100, py + 100);
+    for (const p of NP) { if (!p.guard && p.type !== "demon") continue; if (S.wcl[p.id]) continue; const d = Math.hypot((p.x + .5) * T - P.x, (p.y + .5) * T - P.y) / T; if (d < 30 && !p.spawned) { p.spawned = true; spawnGuards(p); say(`⚠️ ${p.name}이(가) 가까워요!`, 2200); } else if (d > 75 && p.spawned) { p.spawned = false; dun.mons = dun.mons.filter(m => m.poi !== p.id); } }
+    for (const p of NP) if (p.wp && !S.wp[p.id] && Math.hypot(p.x - px, p.y - py) < 4) discoverWp(p);
     const tw = inTown(px, py); if (tw && dun.inTown !== tw.id) say(`🏘️ ${tw.name} — 안전지대예요`, 2500); dun.inTown = tw ? tw.id : null;
     const b = wb(px, py); if (b !== dun.areaB && !tw) { dun.areaB = b; if (b > 0) say(`${BIO_E[b]} ${BIO_N[b]} · 위험도 ${"★".repeat(wTier(px, py) + 1)}`, 2200); }
   }
-  dun.discT += dt; if (dun.discT > .5) { dun.discT = 0; const cx = px >> 2, cy = py >> 2; for (let j = -3; j <= 3; j++) for (let i = -3; i <= 3; i++) { const x = cx + i, y = cy + j; if (x >= 0 && y >= 0 && x < DN && y < DN && i * i + j * j <= 10) W.disc[y * DN + x] = 1; } }
+  dun.discT += dt; if (dun.discT > .5) { dun.discT = 0; const cx = px >> 2, cy = py >> 2; for (let j = -3; j <= 3; j++) for (let i = -3; i <= 3; i++) if (i * i + j * j <= 10) W.disc.add(DKEY(cx + i, cy + j)); }
   dun.regT += dt; if (dun.regT > 2) { dun.regT = 0; const now = Date.now(); for (let i = W.regrow.length - 1; i >= 0; i--) { const r = W.regrow[i]; if (now > r.t) { if (W.ed[r.k] === 0) { delete W.ed[r.k]; markDirty(r.k % WN, Math.floor(r.k / WN)); } delete S.wreg[r.k]; W.regrow.splice(i, 1); } } }
   dun.healT += dt; if (dun.healT > .5) { dun.healT = 0; let near = false; for (const ch of W.chunks.values()) for (const L of ch.lit) if (L.c === 0xffa040 && Math.hypot(L.x * T - P.x, L.z * T - P.y) < 4 * T) near = true; if (near && P.hp < pstats().maxhp) heal(2); }
   dun.saveT += dt; if (dun.saveT > 5) { dun.saveT = 0; S.wpos = { x: P.x, y: P.y }; save(); }
@@ -2924,7 +2952,7 @@ function sleepAt(pos, name) {
   if (night) { clock = 7; say(`😴 ${name}에서 푹 잤어요. 아침이 밝았어요! (리스폰 지점 저장)`, 3000); } else say(`🛏️ ${name} — 체력을 회복하고 리스폰 지점을 저장했어요.`, 2800); save();
 }
 function winteract(tx, ty) {
-  const k = ty * WN + tx, poi = WORLD.inter.get(k), c = wc(tx, ty);
+  const k = ty * WN + tx, poi = interAt(tx, ty), c = wc(tx, ty);
   if (poi) {
     if (poi.type === "shop") { openShop(); return true; }
     if (poi.type === "inn") { sleepAt({ x: (poi.x + 1.5) * T, y: (poi.y + 3) * T }, "여관"); return true; }
@@ -3027,18 +3055,20 @@ function bodyQuest() {
   return `<h2>📜 의뢰 게시판</h2><h3>진행 중 (${S.quests.length}/4)</h3>${act}<h3>새 의뢰</h3>${off}<button id="qreroll" style="margin-top:6px">의뢰 새로고침</button>`;
 }
 function bodyMap() {
-  const W = getWorld(), wps = W.pois.filter(p => p.wp && S.wp[p.id]);
-  return `<h2>🗺️ 월드 맵</h2><canvas id="wmap" width="${DN * 3}" height="${DN * 3}" style="width:100%;max-width:${DN * 3}px;image-rendering:pixelated;border:3px solid var(--ink);border-radius:8px;background:#14121c"></canvas>
+  const W = getWorld(), wps = Object.keys(S.wp).map(resolvePoi).filter(p => p && p.wp);
+  return `<h2>🗺️ 월드 맵</h2><canvas id="wmap" width="360" height="360" style="width:100%;max-width:360px;image-rendering:pixelated;border:3px solid var(--ink);border-radius:8px;background:#14121c"></canvas>
     <h3>이동석 (${wps.length}) — 발견한 곳으로 바로 이동</h3>` + (wps.map(p => `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:2px 0"><span>${p.town ? "🏘️" : "🔷"} ${p.name}</span><button style="margin:0;padding:1px 12px" data-warp="${p.id}">이동</button></div>`).join("") || "<div><small>이동석에 가까이 가면 발견돼요. 마을마다 하나씩 있어요.</small></div>");
 }
-function drawWorldMap() {
-  const cvm = document.getElementById("wmap"); if (!cvm) return; const x = cvm.getContext("2d"), W = getWorld(), k = 3; x.fillStyle = "#14121c"; x.fillRect(0, 0, cvm.width, cvm.height);
-  for (let y = 0; y < DN; y++) for (let xx = 0; xx < DN; xx++) { if (!W.disc[y * DN + xx]) continue; x.fillStyle = BIO_CS[W.bio[(y * 4 + 2) * WN + xx * 4 + 2]]; x.fillRect(xx * k, y * k, k, k); }
-  for (const p of W.pois) { if (!(W.disc[(p.y >> 2) * DN + (p.x >> 2)])) continue; const c = { town: "#ffd34d", cave: "#7a5a9a", shrine: "#6ee7ff", camp: "#e8505a", ruin: "#b8bcc8", lair: "#ff7a1a", portal: "#6ee7ff", demon: "#c03aff" }[p.type]; if (!c) continue; x.fillStyle = c; x.fillRect(p.x / 4 * k - 2, p.y / 4 * k - 2, 5, 5); }
-  if (scene === "dun" && dun && dun.kind === "world") { x.fillStyle = "#fff"; x.fillRect(player.x / T / 4 * k - 2, player.y / T / 4 * k - 2, 5, 5); }
+function drawWorldMap() {   // 끝없는 월드: 내 주변 480칸(발견한 곳만)
+  const cvm = document.getElementById("wmap"); if (!cvm) return; const x = cvm.getContext("2d"), W = getWorld(), k = 3, n = 120; x.fillStyle = "#14121c"; x.fillRect(0, 0, cvm.width, cvm.height);
+  const inW = scene === "dun" && dun && dun.kind === "world", cxp = inW ? player.x / T : W.vreg.x + 15, cyp = inW ? player.y / T : W.vreg.y + 10, bx0 = Math.floor(cxp / 4) - n / 2, by0 = Math.floor(cyp / 4) - n / 2;
+  for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) { if (!W.disc.has(DKEY(bx0 + i, by0 + j))) continue; x.fillStyle = BIO_CS[wb((bx0 + i) * 4 + 2, (by0 + j) * 4 + 2)]; x.fillRect(i * k, j * k, k, k); }
+  for (const p of poisNear(bx0 * 4, by0 * 4, (bx0 + n) * 4, (by0 + n) * 4)) { const i = (p.x >> 2) - bx0, j = (p.y >> 2) - by0; if (i < 0 || j < 0 || i >= n || j >= n || !W.disc.has(DKEY(p.x >> 2, p.y >> 2))) continue; const c = { town: "#ffd34d", cave: "#7a5a9a", shrine: "#6ee7ff", camp: "#e8505a", ruin: "#b8bcc8", lair: "#ff7a1a", portal: "#6ee7ff", demon: "#c03aff" }[p.type]; if (!c) continue; x.fillStyle = c; x.fillRect(i * k - 2, j * k - 2, 5, 5); }
+  { const i = Math.floor(cxp / 4) - bx0, j = Math.floor(cyp / 4) - by0; x.fillStyle = "#fff"; x.fillRect(i * k - 2, j * k - 2, 5, 5); }
+  x.fillStyle = "#fff8"; x.font = "11px sans-serif"; x.fillText(`좌표 ${Math.round(cxp - WC0)}, ${Math.round(cyp - WC0)}`, 6, 352);
 }
 function warpTo(id) {
-  const p = getWorld().byId.get(id); if (!p || !S.wp[id]) return;
+  const p = resolvePoi(id); if (!p || !S.wp[id]) return;
   if (scene === "dun" && dun.kind !== "world") return say("던전 안에서는 이동할 수 없어요.", 1800);
   closeShop(); const pos = { x: (p.x + .5) * T, y: (p.y + 2.5) * T };
   if (scene === "dun") { player.x = pos.x; player.y = pos.y; camInit = false; dun.mons = dun.mons.filter(m => m.poi); getWorld().first = true; sfx("portal"); burst(pos.x, pos.y, 20, ["#6ee7ff", "#fff"], 100, .7, -30, 1); say(`📍 ${p.name}(으)로 이동했어요.`, 2000); }
@@ -3059,7 +3089,7 @@ function drawWorldEnts(g, P, pz) {
   }
   if (NET.on) { labelT(NET.name, P.x / T, pz, 2.1, "#ffe27a"); if (NET.mySayT > 0) labelT(NET.mySay, P.x / T, pz, 2.7, "#ffffff"); }
   if (fishing) { const be = ent(fishing, () => ({ g: mkBobber() }), g.dyn); be.g.position.set(fishing.tx + .5, -.05 + (fishing.state === "bite" ? Math.abs(Math.sin(vtime * 20)) * .2 : Math.sin(vtime * 3) * .03), fishing.ty + .7); labelT(fishing.state === "bite" ? "❗" : "…", P.x / T, pz, 2.4, fishing.state === "bite" ? "#ff6a6a" : "#ffffff"); }
-  for (const p of WORLD.pois) { if (Math.abs(p.x - camT.x) > 12 || Math.abs(p.y - camT.z) > 9) continue; if (p.type === "shop" || p.type === "inn") labelT(p.name, p.x + 1.5, p.y + 2.3, .3); else if (p.type === "board" || p.type === "shrine" || p.type === "portal") labelT(p.name, p.x + .5, p.y + 1.3, .4, p.type === "board" ? "#fff3d6" : "#8fefff"); else if (p.type === "castle" && !p.deco) labelT("🏰 포근성", p.x + 5, p.y + 5.4, .4, "#ffe27a"); else if (p.type === "demon") labelT("😈 마왕성", p.x + 4.5, p.y + 4.4, .4, "#ff6a6a"); else if (p.type === "cave") labelT("동굴 (깊이 " + clamp(1 + Math.floor(p.dist / 45), 1, 12) + ")", p.x + 1, p.y + 2.5, .3); else if (p.type === "chest") labelT(S.wopen[p.id] ? "빈 상자" : p.name, p.x + .5, p.y + 1.2, .3, "#f5d142"); }
+  for (const p of poisNear(camT.x - 12, camT.z - 9, camT.x + 12, camT.z + 9)) { if (Math.abs(p.x - camT.x) > 12 || Math.abs(p.y - camT.z) > 9) continue; if (p.type === "shop" || p.type === "inn") labelT(p.name, p.x + 1.5, p.y + 2.3, .3); else if (p.type === "board" || p.type === "shrine" || p.type === "portal") labelT(p.name, p.x + .5, p.y + 1.3, .4, p.type === "board" ? "#fff3d6" : "#8fefff"); else if (p.type === "castle" && !p.deco) labelT("🏰 포근성", p.x + 5, p.y + 5.4, .4, "#ffe27a"); else if (p.type === "demon") labelT("😈 마왕성", p.x + 4.5, p.y + 4.4, .4, "#ff6a6a"); else if (p.type === "cave") labelT("동굴 (깊이 " + clamp(1 + Math.floor(p.dist / 45), 1, 12) + ")", p.x + 1, p.y + 2.5, .3); else if (p.type === "chest") labelT(S.wopen[p.id] ? "빈 상자" : p.name, p.x + .5, p.y + 1.2, .3, "#f5d142"); }
 }
 function drawMiniWorld() {
   const W = WORLD, P = player, px = Math.floor(P.x / T), py = Math.floor((P.y + 8) / T), hw = 26, hh = 18, k = 3 * (ov.clientWidth < 600 ? 1.4 : 1);
@@ -3067,15 +3097,15 @@ function drawMiniWorld() {
   ctx.fillStyle = "rgba(10,8,20,.7)"; ctx.fillRect(ox - 3, oy - 3, hw * 2 * k + 6, hh * 2 * k + 6);
   for (let j = -hh; j < hh; j++) for (let i = -hw; i < hw; i++) {
     const x = px + i, y = py + j; if (x < 0 || y < 0 || x >= WN || y >= WN) continue; const c = wc(x, y);
-    ctx.fillStyle = c === 1 ? "#2f6b2f" : c === 20 || c === 2 || c === 4 || (c >= 10 && c !== 13 && c !== 18) ? "#7a7e8c" : BIO_CS[W.bio[y * WN + x]]; ctx.fillRect(ox + (i + hw) * k, oy + (j + hh) * k, k + .4, k + .4);
+    ctx.fillStyle = c === 1 ? "#2f6b2f" : c === 20 || c === 2 || c === 4 || (c >= 10 && c !== 13 && c !== 18) ? "#7a7e8c" : BIO_CS[wb(x, y)]; ctx.fillRect(ox + (i + hw) * k, oy + (j + hh) * k, k + .4, k + .4);
   }
   const dot = (x, y, col, r) => { const sx = ox + (x / T - px + hw) * k, sy = oy + (y / T - py + hh) * k; if (sx < ox || sy < oy || sx > ox + hw * 2 * k || sy > oy + hh * 2 * k) return; ctx.fillStyle = col; ctx.fillRect(sx - r, sy - r, r * 2, r * 2); };
-  for (const p of W.pois) { const c = { town: "#ffd34d", cave: "#b58aff", shrine: "#6ee7ff", camp: "#e8505a", ruin: "#d8dce8", lair: "#ff7a1a", portal: "#6ee7ff", demon: "#c03aff" }[p.type]; if (c) dot((p.x + .5) * T, (p.y + .5) * T, c, k * 1.2); }
+  for (const p of poisNear(px - hw, py - hh, px + hw, py + hh)) { const c = { town: "#ffd34d", cave: "#b58aff", shrine: "#6ee7ff", camp: "#e8505a", ruin: "#d8dce8", lair: "#ff7a1a", portal: "#6ee7ff", demon: "#c03aff" }[p.type]; if (c) dot((p.x + .5) * T, (p.y + .5) * T, c, k * 1.2); }
   for (const m of dun.mons) dot(m.x, m.y, m.boss ? "#ff9f1c" : m.wild && !m.hostile ? "#7be07b" : "#ff5a5a", k * (m.boss ? 1.3 : .7));
   for (const o of NET.others.values()) dot(o.x, o.y + 8, "#8affb0", k * 1.1);
   dot(P.x, P.y + 8, "#ffffff", k * 1.1);
 }
-function worldInfo() { const px = Math.floor(player.x / T), py = Math.floor((player.y + 8) / T), b = wb(px, py); return `${BIO_E[b]} ${BIO_N[b]} ${"★".repeat(wTier(px, py) + 1)} (${px},${py})`; }
+function worldInfo() { const px = Math.floor(player.x / T), py = Math.floor((player.y + 8) / T), b = wb(px, py); return `${BIO_E[b]} ${BIO_N[b]} ${"★".repeat(wTier(px, py) + 1)} (${px - WORLD.spawn.x},${py - WORLD.spawn.y})`; }
 
 /* ---------- 왕국 · 메인 퀘스트 · 대마왕 ---------- */
 const DEMON_BASE = 6, DEMON_TOP = 8;      // 마왕성 1~3층 = 던전 깊이 6~8
@@ -3110,7 +3140,7 @@ function openKing() {
 }
 function revealDemon() {
   S.story.known = true; const d = getWorld().demon; if (!d) return;
-  for (let j = -9; j <= 9; j++) for (let i = -9; i <= 9; i++) { const x = (d.x >> 2) + i, y = (d.y >> 2) + j; if (x >= 0 && y >= 0 && x < DN && y < DN) WORLD.disc[y * DN + x] = 1; }
+  for (let j = -9; j <= 9; j++) for (let i = -9; i <= 9; i++) WORLD.disc.add(DKEY((d.x >> 2) + i, (d.y >> 2) + j));
   say("🗺️ 지도에 마왕성이 표시되었어요! (N)", 4000);
 }
 function reportStory() {
@@ -3570,7 +3600,7 @@ for (const id of ["gear", "shop"]) { const el = $(id); let y0 = null;
   const up = e => { if (y0 === null) return; const dy = e.clientY - y0; y0 = null; el.style.transform = ""; if (dy > 70 && !(id === "gear" && gearTab === "perk")) closeShop(); };
   el.addEventListener("pointerup", up); el.addEventListener("pointercancel", up); }
 renderDock();
-window.__game = { get DINOM() { return DINOM; },  equipBag, unequip, homeTileAt, openShop, enterHome: () => enterHome(), get furnSel() { return furnSel; }, ctxHint, renderBar,  get sun() { return sun; }, get GRD() { return GRD; }, get S3() { return S3; }, setYaw: v => { camYaw = v; camManT = vtime + 999; }, get MAN() { return MAN; }, get KAY() { return KAY; }, get curPE() { return curPE; }, pAnim, WX, setWeather: t => { WX.type = t; WX.t = 9999; }, startArena, arenaTick, startWave, gemGain, choosePerk, finishArena, openPerk, autoFight, idleStored, dailyTouch, genArena, mkMonT, get PERKS() { return PERKS; }, get ARES() { return ARES; }, sEvent, storyReady, reportStory, openKing, nearKing, demonAI, finalizeDemon, enterDemon, onDemonDefeat, mkDemon, damageP, addFame, get STORY() { return STORY; }, NET, spawnNear, worldTick, killMon, setBuild: i => { buildSel = i == null ? null : BUILD[i]; }, farmAct, winteract, genOffers, turnIn, warpTo, worldAct, enterWorld, getWorld, get WORLD() { return WORLD; }, get dun() { return dun; }, wc, wb, setClock: v => { clock = v; }, fireball, feed, toggleMount, craft, togglePanel, enterDungeon, get dun() { return dun; }, pstats, genGear, attack, scene: () => scene, furnSelSet: v => { furnSel = v; renderFurn(); }, player, trees, S, keys, act, get fishing() { return fishing; }, bugs, villagers }; // 디버그/테스트용
+window.__game = { get DINOM() { return DINOM; }, wsolid, bioBase,  equipBag, unequip, homeTileAt, openShop, enterHome: () => enterHome(), get furnSel() { return furnSel; }, ctxHint, renderBar,  get sun() { return sun; }, get GRD() { return GRD; }, get S3() { return S3; }, setYaw: v => { camYaw = v; camManT = vtime + 999; }, get MAN() { return MAN; }, get KAY() { return KAY; }, get curPE() { return curPE; }, pAnim, WX, setWeather: t => { WX.type = t; WX.t = 9999; }, startArena, arenaTick, startWave, gemGain, choosePerk, finishArena, openPerk, autoFight, idleStored, dailyTouch, genArena, mkMonT, get PERKS() { return PERKS; }, get ARES() { return ARES; }, sEvent, storyReady, reportStory, openKing, nearKing, demonAI, finalizeDemon, enterDemon, onDemonDefeat, mkDemon, damageP, addFame, get STORY() { return STORY; }, NET, spawnNear, worldTick, killMon, setBuild: i => { buildSel = i == null ? null : BUILD[i]; }, farmAct, winteract, genOffers, turnIn, warpTo, worldAct, enterWorld, getWorld, get WORLD() { return WORLD; }, get dun() { return dun; }, wc, wb, setClock: v => { clock = v; }, fireball, feed, toggleMount, craft, togglePanel, enterDungeon, get dun() { return dun; }, pstats, genGear, attack, scene: () => scene, furnSelSet: v => { furnSel = v; renderFurn(); }, player, trees, S, keys, act, get fishing() { return fishing; }, bugs, villagers }; // 디버그/테스트용
 </script>
 </body>
 </html>

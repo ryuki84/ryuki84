@@ -5,7 +5,7 @@
  *  - 월드 편집은 data/world-edits.json 에 저장돼 서버를 껐다 켜도 유지돼요.
  */
 const http = require("http"), fs = require("fs"), path = require("path"), { WebSocketServer } = require("ws");
-const PORT = +process.env.PORT || 3000, N = 320, MAXP = +process.env.MAX_PLAYERS || 64;
+const PORT = +process.env.PORT || 3000, N = 1048576, MAXP = +process.env.MAX_PLAYERS || 64;
 const ROOT = path.join(__dirname, ".."), DATA = process.env.DATA_DIR || path.join(__dirname, "data"), FILE = path.join(DATA, "world-edits.json");
 const ALLOWED = new Set([0, 12, 13, 14, 15, 18, 21]);          // 0 = 채집/철거, 나머지는 건설 조각 코드
 const COLORS = [0x3d6ed0, 0xd9534f, 0x4a9a4a, 0xf0a23c, 0x8a5ad0, 0x2fb0b0, 0xe8508a, 0x6a7a8a];
