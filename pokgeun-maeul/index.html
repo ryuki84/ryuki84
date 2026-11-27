@@ -1004,7 +1004,7 @@ function gatherNode() {
 function attack(held) {
   if (scene !== "dun" || modal) return; const P = player, st = pstats();
   if (dun.kind === "world") { if (!held && worldAct()) return; if (buildSel) return; }
-  if (P.atkCd > 0) return; P.atkCd = .42 / st.as; sfx("swing"); pAnim(S.eq.weapon && S.eq.weapon.e === "🔨" ? "2H_Melee_Attack_Chop" : S.eq.weapon && S.eq.weapon.e === "🪓" ? "1H_Melee_Attack_Chop" : (P.swingN = (P.swingN || 0) + 1) % 2 ? "1H_Melee_Attack_Slice_Diagonal" : "1H_Melee_Attack_Slice_Horizontal", Math.max(.3, P.atkCd + .05)); dun.arcs.push({ a: Math.atan2(P.dy, P.dx), t: .15, r: 58, whirl: false });
+  if (P.atkCd > 0) return; P.atkCd = .42 / st.as; sfx("swing"); P.swingD = -(P.swingD || 1); pAnim(S.eq.weapon && S.eq.weapon.e === "🔨" ? "2H_Melee_Attack_Chop" : S.eq.weapon && S.eq.weapon.e === "🪓" ? "1H_Melee_Attack_Chop" : (P.swingN = (P.swingN || 0) + 1) % 2 ? "1H_Melee_Attack_Slice_Diagonal" : "1H_Melee_Attack_Slice_Horizontal", Math.max(.3, P.atkCd + .05)); dun.arcs.push({ a: Math.atan2(P.dy, P.dx), t: .26, t0: .26, r: 58, whirl: false, dir: P.swingD || 1, yaw: Math.atan2(P.dx, P.dy) });
   for (const m of [...dun.mons]) { const dx = m.x - P.x, dy = m.y - P.y, d = Math.hypot(dx, dy); if (d < 58 + (dun.arena ? 12 * (dun.run.perk.multi || 0) : 0) + (m.boss ? 12 : 0) && (dx * P.dx + dy * P.dy) / (d || 1) > .1) hitMon(m, 1); }
   if (dun.kind === "wild") gatherNode(); else if (dun.kind === "world") worldGather();
 }
@@ -1655,13 +1655,16 @@ function mkKay(look, eq, armed) {
 /* 동작 이벤트: 게임 로직이 pAnim("이름", 길이)를 부르면 플레이어 모델이 한 번 재생 */
 const PEV = { n: null, d: 0, k: 0 };
 const pAnim = (n, d = 0) => { PEV.n = n; PEV.d = d; PEV.k++; };
+const MTRIM = { Sword_Attack: [.1, .82], Punch_Cross: [.15, .7], Roll: [.05, 1.2], Spell_Simple_Shoot: [0, .5] };   // 동작의 핵심 구간만 재생
 function kayPlay(e, n, dur) {
-  const a = e.act(n); if (!a) return; if (e.one && e.one !== a) e.one.fadeOut(.06);
-  a.reset(); a.setLoop(THREE.LoopOnce, 1); a.clampWhenFinished = true; a.timeScale = dur ? clamp(a.getClip().duration / dur, .7, 3.2) : 1; a.setEffectiveWeight(1); a.fadeIn(.06).play();
-  if (e.baseA) e.baseA.fadeOut(.08); e.one = a; e.base = null;
+  const a = e.act(n); if (!a) return; const cn = a.getClip().name, tr = e.man ? MTRIM[cn] : null, len = tr ? tr[1] - tr[0] : a.getClip().duration;
+  if (e.one === a && tr && e.oneEnd && (a.time - tr[0]) / len < .78) return;   // 연타해도 베는 순간이 끊기지 않게
+  if (e.one && e.one !== a) e.one.fadeOut(.06);
+  a.reset(); a.setLoop(THREE.LoopOnce, 1); a.clampWhenFinished = true; a.timeScale = dur ? clamp(len / dur, .7, 2.4) : 1; if (tr) a.time = tr[0]; a.setEffectiveWeight(1); a.fadeIn(.05).play();
+  if (e.baseA) e.baseA.fadeOut(.08); e.one = a; e.oneEnd = tr ? tr[1] : 0; e.base = null;
 }
 function kayTick(e, mv) {
-  if (e.one && (!e.one.isRunning() || e.one.time >= e.one.getClip().duration - .02)) { e.one.fadeOut(.16); e.one = null; }
+  if (e.one && (!e.one.isRunning() || e.one.time >= (e.oneEnd || e.one.getClip().duration) - .02)) { e.one.fadeOut(.16); e.one = null; }
   const want = e.pose || (mv ? "Running_A" : e.armed ? "Idle" : "Unarmed_Idle");
   if (!e.one && e.base !== want) { const a = e.act(want); if (a) { if (e.baseA && e.baseA !== a) e.baseA.fadeOut(.2); a.reset().setEffectiveWeight(1).fadeIn(.2).play(); e.baseA = a; e.base = want; } }
   if (e.baseA) e.baseA.timeScale = e.base === "Running_A" ? 1.05 : 1;
@@ -1670,7 +1673,7 @@ function kayTick(e, mv) {
 function kayEvents(e) { if (!e.kay) return; if (e.evk === undefined) e.evk = PEV.k; if (e.evk !== PEV.k) { e.evk = PEV.k; if (PEV.n) kayPlay(e, PEV.n, PEV.d); } }
 /* ----- 정상 비율 캐릭터: Quaternius Universal Animation Library 마네킹(CC0) + 옷 색 칠하기 + 장비 ----- */
 const MAN = { ready: false, failed: false, started: false, src: null, clips: {}, head: null };
-const MCLIP = { Idle: "Sword_Idle", Unarmed_Idle: "Idle_Loop", Running_A: "Jog_Fwd_Loop", "1H_Melee_Attack_Slice_Diagonal": "Sword_Attack", "1H_Melee_Attack_Slice_Horizontal": "Punch_Cross", "1H_Melee_Attack_Chop": "Sword_Attack", "2H_Melee_Attack_Chop": "Sword_Attack", "2H_Melee_Attack_Spin": "Sword_Attack", Dodge_Forward: "Roll", Spellcast_Shoot: "Spell_Simple_Shoot", Use_Item: "Interact", Hit_A: "Hit_Chest", Cheer: "Dance_Loop", Interact: "Interact", Throw: "Spell_Simple_Shoot", PickUp: "PickUp_Table", Sit_Chair_Idle: "Sitting_Idle_Loop" };
+const MCLIP = { Idle: "Sword_Idle", Unarmed_Idle: "Idle_Loop", Running_A: "Jog_Fwd_Loop", "1H_Melee_Attack_Slice_Diagonal": "Sword_Attack", "1H_Melee_Attack_Slice_Horizontal": "Sword_Attack", "1H_Melee_Attack_Chop": "Sword_Attack", "2H_Melee_Attack_Chop": "Sword_Attack", "2H_Melee_Attack_Spin": "Sword_Attack", Dodge_Forward: "Roll", Spellcast_Shoot: "Spell_Simple_Shoot", Use_Item: "Interact", Hit_A: "Hit_Chest", Cheer: "Dance_Loop", Interact: "Interact", Throw: "Spell_Simple_Shoot", PickUp: "PickUp_Table", Sit_Chair_Idle: "Sitting_Idle_Loop" };
 function loadMan() {
   if (MAN.started || !R3) return; MAN.started = true;
   new THREE.GLTFLoader().loadAsync(`assets/human/mannequin.${KEXT}`).then(gl => {
@@ -1719,7 +1722,7 @@ function mkMan(look, eq, armed) {
   return { g, body, root, la: new THREE.Group(), ra: new THREE.Group(), legs: [], h: 2.1, kay: true, man: true, armed: !!armed, mixer, act, base: null, baseA: null, one: null, seed: Math.random() * 10 };
 }
 /* ----- 3인칭 카메라 ----- */
-let camYaw = 0, camManT = -99, TPV_ON = true; try { TPV_ON = localStorage.getItem("pokgeun-tpv") !== "0"; } catch (e) {}
+let camYaw = 0, camManT = -99, TPV_ON = true, camZoom = 1; try { camZoom = clamp(+localStorage.getItem("pokgeun-zoom") || 1, .55, 1.7); } catch (e) {} try { TPV_ON = localStorage.getItem("pokgeun-tpv") !== "0"; } catch (e) {}
 const TPV = () => TPV_ON && started && !lookMode() && (scene === "out" || (scene === "dun" && dun && (dun.kind === "world" || dun.kind === "wild") && !dun.arena));
 const lookSig = () => { const L = lookOf(S.look), q = S.eq; return [KAY.ready, MAN.ready, L.h, L.hc, L.sk, L.ey, L.tp, L.c, L.hat, L.cc, q.armor ? q.armor.id : 0, q.ring ? q.ring.id : 0, q.weapon ? q.weapon.e : 0, q.armor ? q.armor.e + q.armor.rar : 0].join(","); };
 const mkPlayer = o => { const armed = o === PK.d, e = MAN.ready ? mkMan(S.look, S.eq, armed) : KAY.ready ? mkKay(S.look, S.eq, armed) : mkHeroFromLook(S.look, 0, S.eq); e.sig = lookSig() + (armed ? "A" : ""); return e; };
@@ -2162,9 +2165,9 @@ function finish(D, dim) {
   const tp = TPV(), f0 = tp ? 52 : 30, fov = cam.aspect >= 1.5 ? f0 : Math.min(f0 * 1.55, 2 * Math.atan(Math.tan(f0 * Math.PI / 360) * 1.5 / cam.aspect) * 180 / Math.PI); if (Math.abs(cam.fov - fov) > .01) { cam.fov = fov; cam.updateProjectionMatrix(); }
   if (tp) {
     const P = player; if (P.mv && P.rawF && vtime - camManT > 1.2) { let d = Math.atan2(-P.dx, -P.dy) - camYaw; d = Math.atan2(Math.sin(d), Math.cos(d)); if (Math.abs(d) < 2.2) camYaw += clamp(d, -DT * 1.6, DT * 1.6); }
-    const px = P.x / T, pz = (P.y + 8) / T, R = 7.2, pt = .33, sy = Math.sin(camYaw), cy = Math.cos(camYaw);
+    const px = P.x / T, pz = (P.y + 8) / T, R = 9.6 * camZoom, pt = .36 + (camZoom - 1) * .12, sy = Math.sin(camYaw), cy = Math.cos(camYaw);
     cam.position.set(px + sy * R * Math.cos(pt) + sh, 1.4 + R * Math.sin(pt) + sv, pz + cy * R * Math.cos(pt)); cam.lookAt(px - sy * 3, 1.15, pz - cy * 3);
-  } else { cam.position.set(camT.x + sh, D * (REAL ? .58 : .82) + sv, camT.z + D * (REAL ? .86 : .574)); cam.lookAt(camT.x + sh, 0, camT.z); }
+  } else { D *= camZoom * 1.12; cam.position.set(camT.x + sh, D * (REAL ? .58 : .82) + sv, camT.z + D * (REAL ? .86 : .574)); cam.lookAt(camT.x + sh, 0, camT.z); }
   if (lookMode() && curPE && innerWidth >= 700) { const hp = curPE.g.position, ox = .95; cam.position.set(hp.x + ox, 1.5, hp.z + 6.2); cam.lookAt(hp.x + ox, .95, hp.z); curPE.g.rotation.y = Math.sin(vtime * .8) * .9 + .25; }
   PPOS.value.set(GKIND === "village" || GKIND === "wild" ? player.x / T : 1e4, 0, (player.y + 8) / T); if (TPV()) CPOS.value.copy(cam.position); else CPOS.value.set(PPOS.value.x, 0, PPOS.value.z + 1.8);
   if (G && G.physSky) skyTick(); else if (G && G.sky) { const out = GKIND === "village" || GKIND === "wild", nd = clamp(darkness() / .55, 0, 1); G.sky.visible = out; if (out) { G.sky.position.copy(cam.position); const u = G.sky.material.uniforms; u.top.value.setHex(0x5d9fe0).lerp(new THREE.Color(0x070b20), nd); u.hor.value.copy(S3.background); } }
@@ -2362,6 +2365,13 @@ function drawDun() {
   for (const t of dun.tele) { const te = ent(t, () => { const gg = new THREE.Group(), ring = new THREE.Mesh(new THREE.RingGeometry(.92, 1, 40), new THREE.MeshBasicMaterial({ color: 0xff3a2a, transparent: true, opacity: .9, side: THREE.DoubleSide, depthWrite: false })), fill = new THREE.Mesh(new THREE.CircleGeometry(1, 36), new THREE.MeshBasicMaterial({ color: 0xff5a2a, transparent: true, opacity: .4, side: THREE.DoubleSide, depthWrite: false })); for (const m of [ring, fill]) { m.geometry.rotateX(-HALF); m.material.userData.own = 1; m.userData.ownGeo = 1; gg.add(m); } fill.position.y = .02; return { g: gg, fill }; }, g.dyn); te.g.position.set(t.x / T, .06, t.y / T); te.g.scale.setScalar(t.r / T); te.fill.scale.setScalar(Math.max(.05, 1 - t.t / t.t0)); light(t.x / T, t.y / T, 5, 0xff4a2a, .6, .8); }
   for (const q of dun.eproj) { const eq = ent(q, () => { const gg = new THREE.Group(); gg.add(new THREE.Mesh(geo("eorb", () => new THREE.SphereGeometry(.24, 10, 8)), HDR(0xc03aff))); return { g: gg }; }, g.dyn); eq.g.position.set(q.x / T, .8, (q.y + 8) / T); light(q.x / T, (q.y + 8) / T, 4, 0xc03aff, .8, 1); }
   for (const a of dun.arcs) {
+    if (!a.whirl && a.t0) {   // 칼 높이에서 대각선으로 휘두르는 빛 궤적
+      const ar = ent(a, () => { const gg = new THREE.Group(), pv = new THREE.Group(); gg.add(pv); const geo2 = geo("slash", () => { const g2 = new THREE.RingGeometry(.45, 1.45, 28, 1, -HALF - 1.2, 2.4); g2.rotateX(-HALF); return g2; });
+        const mk = (c, o) => { const m = new THREE.Mesh(geo2, new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: o, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending })); m.userData.own = 1; m.material.userData.own = 1; pv.add(m); return m; };
+        const m1 = mk(new THREE.Color(1.8, 2, 2.4), .9), m2 = mk(new THREE.Color(.6, .9, 1.6), .5); m2.scale.setScalar(1.12); return { g: gg, pv, ms: [m1, m2] }; }, g.dyn);
+      const u = 1 - a.t / a.t0; ar.g.position.set(P.x / T, 1.05, pz); ar.g.rotation.set(0, a.yaw + (u - .5) * 1.9 * a.dir, 0); ar.pv.rotation.z = .55 * a.dir; ar.pv.scale.setScalar(.85 + u * .35);
+      ar.ms.forEach((m, i) => { m.material.opacity = Math.sin(Math.min(1, u * 1.25) * Math.PI) * (i ? .45 : .95); }); continue;
+    }
     const ar = ent(a, () => { const gg = new THREE.Group(), geom = a.whirl ? new THREE.RingGeometry(.8, 1, 36) : new THREE.RingGeometry(.9, 1.55, 20, 1, -Math.atan2(P.dy, P.dx) - .9, 1.8); geom.rotateX(-HALF); const m = new THREE.Mesh(geom, new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 1, side: THREE.DoubleSide, depthWrite: false })); m.userData.own = 1; gg.add(m); return { g: gg, m }; }, g.dyn);
     ar.g.position.set(P.x / T, .6, pz); const k = a.whirl ? (a.r / T) * (1.25 - a.t) : 1; ar.g.scale.setScalar(a.whirl ? k : 1); ar.m.material.opacity = Math.min(1, a.t * 6);
   }
@@ -3289,10 +3299,14 @@ $("sty").onclick = () => {
 };
 function toggleView() { TPV_ON = !TPV_ON; try { localStorage.setItem("pokgeun-tpv", TPV_ON ? "1" : "0"); } catch (e) {} $("view").textContent = TPV_ON ? "🎥 3인칭" : "🎥 탑뷰"; sfx("ui"); say(TPV_ON ? "🎥 3인칭 시점 — 마우스 드래그(또는 , . 키)로 카메라를 돌려요" : "🎥 위에서 보는 시점", 2200); }
 $("view").textContent = TPV_ON ? "🎥 3인칭" : "🎥 탑뷰"; $("view").onclick = toggleView;
-{ let drag = null; const cv0 = $("c");
-  cv0.addEventListener("pointerdown", e => { drag = { x: e.clientX, id: e.pointerId }; });
-  addEventListener("pointermove", e => { if (!drag || e.pointerId !== drag.id) return; const dx = e.clientX - drag.x; drag.x = e.clientX; if (TPV()) { camYaw -= dx * .008; camManT = vtime; } });
-  addEventListener("pointerup", e => { if (drag && e.pointerId === drag.id) drag = null; }); addEventListener("pointercancel", () => { drag = null; });
+{ let drag = null; const cv0 = $("c"), pts = new Map(); let pinch0 = 0, zoom0 = 1;
+  const setZoom = z => { camZoom = clamp(z, .55, 1.7); try { localStorage.setItem("pokgeun-zoom", camZoom.toFixed(2)); } catch (e) {} };
+  const pd = () => { const [a, b] = [...pts.values()]; return Math.hypot(a.x - b.x, a.y - b.y); };
+  cv0.addEventListener("pointerdown", e => { pts.set(e.pointerId, { x: e.clientX, y: e.clientY }); if (pts.size === 2) { pinch0 = pd(); zoom0 = camZoom; drag = null; } else drag = { x: e.clientX, id: e.pointerId }; });
+  addEventListener("pointermove", e => { if (pts.has(e.pointerId)) pts.set(e.pointerId, { x: e.clientX, y: e.clientY }); if (pts.size === 2 && pinch0) { setZoom(zoom0 * pinch0 / Math.max(20, pd())); return; } if (!drag || e.pointerId !== drag.id) return; const dx = e.clientX - drag.x; drag.x = e.clientX; if (TPV()) { camYaw -= dx * .008; camManT = vtime; } });
+  const up = e => { pts.delete(e.pointerId); if (pts.size < 2) pinch0 = 0; if (drag && e.pointerId === drag.id) drag = null; };
+  addEventListener("pointerup", up); addEventListener("pointercancel", up);
+  cv0.addEventListener("wheel", e => { e.preventDefault(); setZoom(camZoom * (e.deltaY > 0 ? 1.08 : 1 / 1.08)); }, { passive: false });
   cv0.style.touchAction = "none"; }
 $("gfx").onclick = () => { applyQuality({ high: "mid", mid: "low", low: "high" }[gfxLv]); sfx("ui"); say(`🎨 그래픽 품질: ${QUAL.n}`, 1600); };
 requestAnimationFrame(frame);
