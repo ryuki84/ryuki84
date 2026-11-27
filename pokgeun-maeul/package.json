@@ -1,0 +1,17 @@
+{
+  "name": "pokgeun-maeul",
+  "version": "0.2.0",
+  "private": true,
+  "description": "포근 마을 — 브라우저 3D 게임 (index.html) + 멀티플레이 서버(server/)",
+  "scripts": {
+    "start": "node server/server.js",
+    "test": "node tests/run.js",
+    "test:quick": "node tests/run.js --quick",
+    "postinstall": "npm install --prefix server --no-audit --no-fund"
+  },
+  "devDependencies": {
+    "playwright": "1.63.0",
+    "three": "0.187.0"
+  },
+  "engines": { "node": ">=18" }
+}

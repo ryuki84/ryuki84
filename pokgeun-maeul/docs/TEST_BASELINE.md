@@ -44,3 +44,21 @@
 - 실제 GPU 기기·모바일 브라우저 실행과 fps 측정: 이 환경에서는 불가능해요.
 - 장시간 실행 메모리 증가: 측정 도구가 없어 미실시예요.
 - 오디오 출력: 소리를 들을 수 없어 미확인이에요.
+
+---
+
+## 갱신: 작업 A 이후 (2026-11-27, 테스트를 저장소 `tests/`로 이전)
+
+- 실행: `npm test` (저장소 안의 `tests/run.js`), 같은 소프트웨어 WebGL 환경
+- **결과: 15/15 통과**
+  - arena, demon_lord, world_cave_portal, graphics_quality, player_anim, camera_move, seamless_regions, seamless_regions_real, ui_dock, drag_drop, maze, dino_models, pbr_probe, multiplayer, multiplayer_look
+- 기준선 실패 5개 재판정 결과: **모두 테스트 쪽 문제였어요. 게임 코드는 바꾸지 않았어요.**
+
+| 시나리오 | 원인 | 바꾼 점 |
+|---|---|---|
+| player_anim, camera_move | 저프레임 환경에서 고정 시간만 기다림 | 상태가 바뀔 때까지 기다리게 변경. camera_move는 장애물 없는 왕도 광장에서 측정 |
+| seamless_regions_real | 실사 소프트웨어 렌더가 느려 30초 제한 초과 | 작은 화면, 긴 대기, 스크린샷 생략 |
+| multiplayer, multiplayer_look | 연결이 끝나기 전에 상태를 읽음, 기본 30초 제한 | 연결 완료를 기다림, 페이지 기본 대기 120초 |
+| graphics_quality | 브라우저 2개를 동시에 띄움 | 첫 브라우저를 닫고 모바일 확인 |
+
+- 전체 실행 시간: 약 23분
