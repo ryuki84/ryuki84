@@ -179,6 +179,47 @@
     #rpg { width:calc(100% - 16px) !important; }
     #touch { padding:12px 8px 0; }
   }
+
+  /* ===== 드래그 앤 드롭 + 모바일 창 ===== */
+  [data-drag] { cursor:grab; -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; }
+  body.dragging, body.dragging * { cursor:grabbing !important; }
+  #ghost { position:fixed; left:0; top:0; z-index:100; width:56px; height:56px; border-radius:16px; display:flex; align-items:center; justify-content:center; font-size:32px; background:rgba(255,255,255,.9); box-shadow:0 10px 28px rgba(0,0,0,.35); pointer-events:none; transition:background .1s; }
+  #ghost.ok { background:#c8f0c0; box-shadow:0 0 0 3px #4caf50, 0 10px 28px rgba(0,0,0,.35); }
+  .dropok { outline:3px dashed #4caf50 !important; outline-offset:2px; background:rgba(120,220,120,.25) !important; }
+  .hintsm { font-weight:400; font-size:11px; opacity:.65; margin-left:6px; }
+  #gear .slots { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
+  #gear .slot, #gear .tile { display:flex; flex-direction:column; align-items:center; text-align:center; gap:2px; padding:8px 6px; border-radius:14px; background:rgba(255,255,255,.6); border:2px solid var(--rc, rgba(74,59,42,.15)); min-height:84px; }
+  #gear .slot b, #gear .tile b { font-size:28px; line-height:1.1; }
+  #gear .slot span, #gear .tile span { font-size:12px; font-weight:700; color:var(--rc, var(--ink)); line-height:1.25; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  #gear .slot small, #gear .tile small { font-size:10px; opacity:.75; line-height:1.3; }
+  #gear .slot:not([data-un]) { opacity:.6; border-style:dashed; }
+  #gear .bagg { display:grid; grid-template-columns:repeat(auto-fill,minmax(92px,1fr)); gap:8px; min-height:90px; padding:6px; border-radius:14px; background:rgba(0,0,0,.04); }
+  #gear .bagg .empty { grid-column:1/-1; padding:10px; font-size:13px; opacity:.8; }
+  #gear .tile:hover, #gear .slot[data-un]:hover { transform:translateY(-2px); background:#fff; }
+  #shop .sellzone { margin:8px 0; padding:12px; border:2px dashed rgba(74,59,42,.3); border-radius:14px; text-align:center; font-weight:700; background:rgba(255,220,120,.18); }
+  #shop .sellzone small { display:block; font-weight:400; font-size:11px; opacity:.7; }
+  #shop .row.drag { padding:4px 6px; border-radius:10px; } #shop .row.drag:hover { background:rgba(255,255,255,.6); }
+  #furn .it[data-drag] { padding:5px 8px; }
+  .grip { display:none; }
+  #shop .x, #gear .x { position:absolute; }
+  @media (max-width:760px), (pointer:coarse) {
+    #gear, #shop { position:fixed !important; left:0 !important; right:0 !important; top:auto !important; bottom:0 !important; transform:none; width:100% !important; max-width:none !important; min-width:0 !important; max-height:80vh !important; border-radius:22px 22px 0 0 !important; padding:6px 14px calc(18px + env(safe-area-inset-bottom)) !important; font-size:14px; transition:transform .15s; overscroll-behavior:contain; }
+    #gear.side { left:0 !important; right:0 !important; }
+    .grip { display:block; position:sticky; top:0; margin:0 auto 6px; width:100%; height:22px; z-index:3; touch-action:none; cursor:grab; }
+    .grip::after { content:""; display:block; width:44px; height:5px; border-radius:3px; background:rgba(74,59,42,.35); margin:8px auto 0; }
+    #gear .x, #shop .x { position:absolute; top:8px; right:12px; }
+    #gear .gtabs { display:flex; overflow-x:auto; gap:6px; padding:2px 0 8px; margin:0 -4px; position:sticky; top:22px; z-index:2; background:inherit; -webkit-overflow-scrolling:touch; scrollbar-width:none; }
+    #gear .gtabs [data-tab] { flex:none; margin:0 !important; padding:7px 12px !important; font-size:13px; }
+    #gear h2 { font-size:18px; } #gear h3 { font-size:15px; margin-top:12px; }
+    #gear button, #shop button { min-height:40px; }
+    #gear .g { padding:8px 10px; }
+    #gear .bagg { grid-template-columns:repeat(auto-fill,minmax(84px,1fr)); }
+    #shop .row { min-height:44px; align-items:center; }
+    #shop .row button { min-height:36px; padding:2px 14px; }
+    #furn .it { min-height:42px; align-items:center; }
+    #keys .kc { max-height:88vh; }
+    #gear canvas { width:100% !important; height:auto !important; aspect-ratio:1; }
+  }
 </style>
 </head>
 <body>
@@ -460,8 +501,8 @@ function renderFurn() {
   if (scene !== "home") { el.hidden = true; return; }
   const rows = Object.entries(S.fin).filter(([, v]) => v > 0);
   el.innerHTML = `<b>🛋️ 가구 (${S.room.length}개 배치)</b>` +
-    (rows.map(([k, v]) => `<div class="it ${furnSel === k ? "on" : ""}" data-k="${k}"><span>${FURN[k].e} ${FURN[k].n}</span><span>×${v}</span></div>`).join("") || "<div>보유 가구가 없어요. 상점에서 사 보세요!</div>") +
-    `<small>스페이스: 놓기/집기<br>X: 바라보는 가구 집기<br>선택 다시 클릭: 해제<br>아래 출구로 나가기</small>`;
+    (rows.map(([k, v]) => `<div class="it ${furnSel === k ? "on" : ""}" data-k="${k}" data-drag="furn:${k}" data-icon="${FURN[k].e}"><span>${FURN[k].e} ${FURN[k].n}</span><span>×${v}</span></div>`).join("") || "<div>보유 가구가 없어요. 상점에서 사 보세요!</div>") +
+    `<small>✋ 가구를 방 화면으로 끌어다 놓기<br>또는 선택 후 스페이스로 놓기 · X 집기<br>아래 출구로 나가기</small>`;
   el.hidden = false;
 }
 $("furn").addEventListener("click", e => { const t = e.target.closest(".it"); if (t) { furnSel = furnSel === t.dataset.k ? null : t.dataset.k; renderFurn(); } });
@@ -479,21 +520,22 @@ function closeShop() { modal = false; $("shop").hidden = true; $("gear").hidden 
 function renderShop() {
   const sell = Object.entries(S.inv).filter(([k, v]) => v > 0 && ITEMS[k].p > 0);
   const total = sell.reduce((a, [k, v]) => a + ITEMS[k].p * v, 0);
-  $("shop").innerHTML = `<h2>🐿️ 다람쥐 상점</h2>
-    <div>어서 오세요! 🔔 ${S.bells.toLocaleString()} 벨</div><hr>
-    ${sell.map(([k, v]) => `<div class="row"><span>${ITEMS[k].e} ${ITEMS[k].n} ×${v}</span><span>${(ITEMS[k].p * v).toLocaleString()}</span></div>`).join("") || "<div>팔 물건이 없어요.</div>"}
+  $("shop").innerHTML = `<div class="grip"></div><button class="x" id="closeShopX">✕</button><h2>🐿️ 다람쥐 상점</h2>
+    <div>어서 오세요! 🔔 ${S.bells.toLocaleString()} 벨</div>
+    <div class="sellzone" data-drop="sell:">💰 팔 물건을 여기로 ${TOUCHY ? "길게 눌러 " : ""}끌어 놓으세요 <small>(또는 오른쪽 버튼)</small></div>
+    ${sell.map(([k, v]) => `<div class="row drag" data-drag="inv:${k}" data-icon="${ITEMS[k].e}"><span>${ITEMS[k].e} ${ITEMS[k].n} ×${v}</span><span>${(ITEMS[k].p * v).toLocaleString()}</span></div>`).join("") || "<div>팔 물건이 없어요.</div>"}
     <h3>🛋️ 가구</h3>
     ${Object.entries(FURN).map(([k, f]) => `<div class="row"><span>${f.e} ${f.n}${f.wall ? " (벽)" : f.rug ? " (바닥)" : ""}${S.fin[k] ? ` · 보유 ${S.fin[k]}` : ""}</span><button data-buy="${k}" ${S.bells >= f.p ? "" : "disabled"}>${f.p}</button></div>`).join("")}
     <h3>⚔️ 모험</h3>
     <div class="row"><span>🧪 체력 물약 (보유 ${S.potions})</span><button data-pot ${S.bells >= 60 ? "" : "disabled"}>60</button></div>
-    ${S.bag.map((it, i) => `<div class="row"><span style="color:${RD[it.rar]};font-weight:700">${it.e} ${it.n}</span><button data-sell="${i}">${it.price}</button></div>`).join("")}
+    ${S.bag.map((it, i) => `<div class="row drag" data-drag="bag:${i}" data-icon="${it.e}"><span style="color:${RD[it.rar]};font-weight:700">${it.e} ${it.n}</span><button data-sell="${i}">${it.price}</button></div>`).join("")}
     ${S.bag.some(it => it.rar < 3) ? `<button id="sellGear">전설 제외 장비 모두 팔기</button>` : ""}
     <button id="sellAll" ${total ? "" : "disabled"}>모두 팔기 (+${total.toLocaleString()})</button>
     <button id="buySap" ${S.bells >= 100 ? "" : "disabled"}>🌱 묘목 사기 (100)</button>
     <button id="closeShop">닫기 (Esc)</button>`;
   $("sellAll").onclick = () => { sfx("coin"); S.bells += total; sell.forEach(([k]) => S.inv[k] = 0); hud(); renderShop(); };
   $("buySap").onclick = () => { if (S.bells >= 100) { S.bells -= 100; add("sapling"); renderShop(); } };
-  $("closeShop").onclick = closeShop;
+  $("closeShop").onclick = closeShop; $("closeShopX").onclick = closeShop;
   $("shop").querySelectorAll("[data-pot]").forEach(b => b.onclick = () => { if (S.bells >= 60) { S.bells -= 60; S.potions++; hud(); renderShop(); } });
   $("shop").querySelectorAll("[data-sell]").forEach(b => b.onclick = () => { const it = S.bag.splice(+b.dataset.sell, 1)[0]; S.bells += it.price; hud(); renderShop(); });
   if ($("sellGear")) $("sellGear").onclick = () => { S.bag = S.bag.filter(it => it.rar >= 3 ? true : (S.bells += it.price, false)); hud(); renderShop(); };
@@ -673,10 +715,10 @@ function bodyEquip() {
   return `<h2>⚔️ 장비 · Lv.${S.lv}</h2>
     <div>경험치 ${S.xp}/${xpNeed(S.lv)} · 최고 ${S.best}층</div>
     <div>체력 ${st.maxhp} · 공격력 ${st.dmg} · 방어 ${st.armor}<br>치명타 ${st.crit}% · 공속 ×${st.as.toFixed(2)} · 이속 ×${st.ms.toFixed(2)} · 흡혈 ${st.ls}%</div>${sets}
-    <h3>착용 중 (클릭하면 해제)</h3>
-    ${["weapon", "armor", "ring"].map(k => S.eq[k] ? gearRow(S.eq[k], `data-un="${k}"`) : `<div class="g"><span>${SLOTS[k].n}: 비어 있음</span></div>`).join("")}
-    <h3>가방 ${S.bag.length}/${BAGCAP} (클릭하면 착용)</h3>
-    ${S.bag.map((it, i) => gearRow(it, `data-eq="${i}"`)).join("") || "<div>비어 있어요. 던전·야생에서 장비를 찾거나 제작해 보세요!</div>"}`;
+    <h3>착용 중 <small class="hintsm">${TOUCHY ? "길게 눌러 " : ""}끌어서 가방에 놓거나 눌러서 해제</small></h3>
+    <div class="slots">${["weapon", "armor", "ring"].map(k => { const it = S.eq[k]; return `<div class="slot g" data-drop="slot:${k}" ${it ? `data-un="${k}" data-drag="eq:${k}" data-icon="${it.e}"` : ""} style="${it ? `--rc:${RD[it.rar]}` : ""}"><b>${it ? it.e : { weapon: "🗡️", armor: "🛡️", ring: "💍" }[k]}</b><span>${it ? it.n : SLOTS[k].n + " 비어 있음"}</span>${it ? `<small>${statTxt(it.st) || ""}</small>` : ""}</div>`; }).join("")}</div>
+    <h3>가방 ${S.bag.length}/${BAGCAP} <small class="hintsm">눌러서 착용 · ${TOUCHY ? "길게 눌러 " : ""}장비 칸으로 끌어 놓기</small></h3>
+    <div class="bagg" data-drop="bag:">${S.bag.map((it, i) => `<div class="tile g" data-eq="${i}" data-drag="bag:${i}" data-icon="${it.e}" style="--rc:${RD[it.rar]}" title="${it.n} · ${statTxt(it.st)}"><b>${it.e}</b><span>${it.n}</span><small>${RARITY[it.rar].n} · iLv${it.ilvl}</small></div>`).join("") || "<div class='empty'>비어 있어요. 던전·야생에서 장비를 찾거나 제작해 보세요!</div>"}</div>`;
 }
 function bodyChar() {
   const row = (l, r) => `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:2px 0"><span>${l}</span>${r}</div>`;
@@ -698,7 +740,7 @@ function bodyCraft() {
 function renderGear() {
   const tabs = [["equip", "⚔️ 장비 (I)"], ["char", "📜 캐릭터 (K)"], ["craft", "🔨 제작 (C)"], ["build", "🏗️ 건설 (B)"], ["quest", "📜 의뢰 (J)"], ["map", "🗺️ 지도 (N)"], ["king", "👑 왕국 (L)"], ["arena", "⚔️ 아레나 (Y)"], ["look", "🧑 외형 (O)"]].map(([k, l]) => `<button data-tab="${k}" style="margin:0 6px 8px 0;padding:3px 10px;${gearTab === k ? "background:#fff" : ""}">${l}</button>`).join("");
   $("gear").classList.toggle("side", gearTab === "look" && innerWidth >= 700);
-  $("gear").innerHTML = (gearTab === "perk" ? "" : `<button id="closeX" class="x" title="닫기 (Esc)">✕</button>`) + (["ending", "perk", "arenaend"].includes(gearTab) ? "" : tabs) + (gearTab === "char" ? bodyChar() : gearTab === "craft" ? bodyCraft() : gearTab === "build" ? bodyBuild() : gearTab === "quest" ? bodyQuest() : gearTab === "map" ? bodyMap() : gearTab === "king" ? bodyKing() : gearTab === "ending" ? bodyEnding() : gearTab === "arena" ? bodyArena() : gearTab === "look" ? bodyLook() : gearTab === "perk" ? bodyPerk() : gearTab === "arenaend" ? bodyArenaEnd() : bodyEquip()) + (gearTab === "perk" ? "" : `<button id="closeGear">닫기</button>`);
+  $("gear").innerHTML = `<div class="grip"></div>` + (gearTab === "perk" ? "" : `<button id="closeX" class="x" title="닫기 (Esc)">✕</button>`) + `<div class="gtabs">` + (["ending", "perk", "arenaend"].includes(gearTab) ? "" : tabs) + `</div>` + (gearTab === "char" ? bodyChar() : gearTab === "craft" ? bodyCraft() : gearTab === "build" ? bodyBuild() : gearTab === "quest" ? bodyQuest() : gearTab === "map" ? bodyMap() : gearTab === "king" ? bodyKing() : gearTab === "ending" ? bodyEnding() : gearTab === "arena" ? bodyArena() : gearTab === "look" ? bodyLook() : gearTab === "perk" ? bodyPerk() : gearTab === "arenaend" ? bodyArenaEnd() : bodyEquip()) + (gearTab === "perk" ? "" : `<button id="closeGear">닫기</button>`);
   if (gearTab === "map") drawWorldMap();
 }
 $("gear").addEventListener("click", e => {
@@ -3273,8 +3315,67 @@ $("inv").addEventListener("click", () => { document.body.classList.toggle("showi
   if (J) { J.addEventListener("pointerdown", e => { e.preventDefault(); id = e.pointerId; try { J.setPointerCapture(id); } catch (_) {} mv(e); });
     J.addEventListener("pointermove", e => { if (e.pointerId === id) mv(e); });
     const end = () => { id = null; K.style.transform = ""; set(0, 0); }; J.addEventListener("pointerup", end); J.addEventListener("pointercancel", end); J.addEventListener("lostpointercapture", end); } }
+/* ===== 드래그 앤 드롭 (마우스·터치 공통) ===== */
+const DND = { on: false, src: null, ghost: null, over: null, timer: 0, sx: 0, sy: 0, pid: null };
+function equipBag(i, want) {
+  const it = S.bag[i]; if (!it) return; if (want && it.slot !== want) { say(`${SLOTS[want].n} 칸에는 ${SLOTS[it.slot].n}만 낄 수 있어요.`, 1500); return; }
+  const old = S.eq[it.slot]; S.eq[it.slot] = it; S.bag.splice(i, 1); if (old) S.bag.push(old); sfx("gear"); afterGear();
+}
+function unequip(k) { if (!S.eq[k]) return; if (S.bag.length >= BAGCAP) return say("가방이 가득 찼어요."); S.bag.push(S.eq[k]); S.eq[k] = null; sfx("gear"); afterGear(); }
+function afterGear() { player.hp = Math.min(player.hp, pstats().maxhp); if (!$("gear").hidden) renderGear(); if (!$("shop").hidden) renderShop(); hud(); save(); }
+function sellPouch(k) { const n = S.inv[k] || 0; if (!n || !ITEMS[k] || !(ITEMS[k].p > 0)) return; S.bells += ITEMS[k].p * n; S.inv[k] = 0; sfx("coin"); hud(); renderShop(); }
+function sellBag(i) { const it = S.bag[i]; if (!it) return; S.bag.splice(i, 1); S.bells += it.price; sfx("coin"); hud(); renderShop(); }
+function homeTileAt(cx, cy) {   // 화면 좌표 → 집 바닥 타일 (3D 레이캐스트)
+  const r = $("c").getBoundingClientRect(); if (cx < r.left || cx > r.right || cy < r.top || cy > r.bottom) return null;
+  const rc = new THREE.Raycaster(); rc.setFromCamera(new THREE.Vector2((cx - r.left) / r.width * 2 - 1, -((cy - r.top) / r.height) * 2 + 1), cam);
+  const hit = new THREE.Vector3(); if (!rc.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), hit)) return null; return { x: Math.floor(hit.x), y: Math.floor(hit.z) };
+}
+const DROP = {   // [드래그 종류][놓는 곳 종류] → 처리
+  bag: { slot: (s, d) => equipBag(+s, d), sell: s => sellBag(+s) },
+  eq: { bag: s => unequip(s), slot: (s, d) => { if (s !== d) say("같은 종류 칸으로만 옮길 수 있어요.", 1200); } },
+  inv: { sell: s => sellPouch(s) },
+  furn: { canvas: (id, _, e) => { if (scene !== "home") return; const t = homeTileAt(e.clientX, e.clientY); if (!t) return; if (FURN[id].wall) t.y = 1; if (!(S.fin[id] > 0)) return; if (!canPlace(id, t.x, t.y)) { say("거기에는 놓을 수 없어요.", 1200); return; } sfx("place"); S.room.push({ id, x: t.x, y: t.y }); S.fin[id]--; if (furnSel === id && S.fin[id] <= 0) furnSel = null; hud(); save(); } },
+};
+function dropTargetAt(x, y) { const el = document.elementFromPoint(x, y); if (!el) return null; const d = el.closest("[data-drop]"); if (d) return d; return el.id === "c" || el.id === "o" || el.closest("#stage") && !el.closest("#gear, #shop, #furn, #inv, #dock, #abar, .pill") ? $("c") : null; }
+function dndStart(e) {
+  const [type, val] = DND.src.dataset.drag.split(":"); DND.on = true; DND.type = type; DND.val = val; document.body.classList.add("dragging");
+  const g = DND.ghost = document.createElement("div"); g.id = "ghost"; g.textContent = DND.src.dataset.icon || DND.src.textContent.trim().slice(0, 2); document.body.appendChild(g); dndMove(e);
+  try { navigator.vibrate && navigator.vibrate(15); } catch (_) {} sfx("pick");
+}
+function dndMove(e) {
+  DND.ghost.style.transform = `translate(${e.clientX - 28}px,${e.clientY - 34}px)`;
+  const t = dropTargetAt(e.clientX, e.clientY), k = t ? (t.id === "c" ? "canvas" : t.dataset.drop.split(":")[0]) : null, ok = t && DROP[DND.type] && DROP[DND.type][k];
+  if (DND.over && DND.over !== t) DND.over.classList.remove("dropok"); DND.over = ok ? t : null; if (ok && t.id !== "c") t.classList.add("dropok"); DND.ghost.classList.toggle("ok", !!ok);
+}
+function dndEnd(e) {
+  clearTimeout(DND.timer); const was = DND.on; DND.pid = null;
+  if (!was) { DND.src = null; return; }
+  DND.on = false; document.body.classList.remove("dragging"); DND.ghost.remove(); if (DND.over) DND.over.classList.remove("dropok");
+  const t = dropTargetAt(e.clientX, e.clientY); if (t) { const [k, d] = t.id === "c" ? ["canvas"] : t.dataset.drop.split(":"), fn = DROP[DND.type] && DROP[DND.type][k]; if (fn) fn(DND.val, d, e); }
+  DND.src = null; DND.justDropped = performance.now();
+}
+addEventListener("pointerdown", e => {
+  const s = e.target.closest("[data-drag]"); if (!s || e.button > 0) return; DND.src = s; DND.sx = e.clientX; DND.sy = e.clientY; DND.pid = e.pointerId;
+  if (e.pointerType !== "mouse") DND.timer = setTimeout(() => { if (DND.src === s && !DND.on) dndStart(DND.last || e); }, 260);
+}, true);
+addEventListener("pointermove", e => {
+  if (DND.pid !== e.pointerId || !DND.src) return; DND.last = e; const d = Math.hypot(e.clientX - DND.sx, e.clientY - DND.sy);
+  if (!DND.on) { if (e.pointerType === "mouse" && d > 6) dndStart(e); else if (e.pointerType !== "mouse" && d > 10) { clearTimeout(DND.timer); DND.src = null; } return; }
+  dndMove(e);
+}, true);
+addEventListener("pointerup", e => { if (DND.pid === e.pointerId) dndEnd(e); }, true);
+addEventListener("pointercancel", e => { if (DND.pid === e.pointerId && !DND.on) { clearTimeout(DND.timer); DND.src = null; } }, true);
+document.addEventListener("touchmove", e => { if (DND.on) { e.preventDefault(); const t = e.touches[0]; if (t) dndMove({ clientX: t.clientX, clientY: t.clientY }); } }, { passive: false });
+document.addEventListener("touchend", e => { if (DND.on) { const t = e.changedTouches[0]; dndEnd({ clientX: t.clientX, clientY: t.clientY }); } }, { passive: false });
+addEventListener("click", e => { if (DND.justDropped && performance.now() - DND.justDropped < 300) { e.stopPropagation(); e.preventDefault(); } }, true);
+/* 모바일 시트: 손잡이를 아래로 끌어서 닫기 */
+for (const id of ["gear", "shop"]) { const el = $(id); let y0 = null;
+  el.addEventListener("pointerdown", e => { if (e.target.closest(".grip")) { y0 = e.clientY; try { el.setPointerCapture(e.pointerId); } catch (_) {} } });
+  el.addEventListener("pointermove", e => { if (y0 === null) return; const dy = Math.max(0, e.clientY - y0); el.style.transform = `translateY(${dy}px)`; });
+  const up = e => { if (y0 === null) return; const dy = e.clientY - y0; y0 = null; el.style.transform = ""; if (dy > 70 && !(id === "gear" && gearTab === "perk")) closeShop(); };
+  el.addEventListener("pointerup", up); el.addEventListener("pointercancel", up); }
 renderDock();
-window.__game = { ctxHint, renderBar,  get sun() { return sun; }, get GRD() { return GRD; }, get S3() { return S3; }, setYaw: v => { camYaw = v; camManT = vtime + 999; }, get MAN() { return MAN; }, get KAY() { return KAY; }, get curPE() { return curPE; }, pAnim, WX, setWeather: t => { WX.type = t; WX.t = 9999; }, startArena, arenaTick, startWave, gemGain, choosePerk, finishArena, openPerk, autoFight, idleStored, dailyTouch, genArena, mkMonT, get PERKS() { return PERKS; }, get ARES() { return ARES; }, sEvent, storyReady, reportStory, openKing, nearKing, demonAI, finalizeDemon, enterDemon, onDemonDefeat, mkDemon, damageP, addFame, get STORY() { return STORY; }, NET, spawnNear, worldTick, killMon, setBuild: i => { buildSel = i == null ? null : BUILD[i]; }, farmAct, winteract, genOffers, turnIn, warpTo, worldAct, enterWorld, getWorld, get WORLD() { return WORLD; }, get dun() { return dun; }, wc, wb, setClock: v => { clock = v; }, fireball, feed, toggleMount, craft, togglePanel, enterDungeon, get dun() { return dun; }, pstats, genGear, attack, scene: () => scene, furnSelSet: v => { furnSel = v; renderFurn(); }, player, trees, S, keys, act, get fishing() { return fishing; }, bugs, villagers }; // 디버그/테스트용
+window.__game = { equipBag, unequip, homeTileAt, openShop, enterHome: () => enterHome(), get furnSel() { return furnSel; }, ctxHint, renderBar,  get sun() { return sun; }, get GRD() { return GRD; }, get S3() { return S3; }, setYaw: v => { camYaw = v; camManT = vtime + 999; }, get MAN() { return MAN; }, get KAY() { return KAY; }, get curPE() { return curPE; }, pAnim, WX, setWeather: t => { WX.type = t; WX.t = 9999; }, startArena, arenaTick, startWave, gemGain, choosePerk, finishArena, openPerk, autoFight, idleStored, dailyTouch, genArena, mkMonT, get PERKS() { return PERKS; }, get ARES() { return ARES; }, sEvent, storyReady, reportStory, openKing, nearKing, demonAI, finalizeDemon, enterDemon, onDemonDefeat, mkDemon, damageP, addFame, get STORY() { return STORY; }, NET, spawnNear, worldTick, killMon, setBuild: i => { buildSel = i == null ? null : BUILD[i]; }, farmAct, winteract, genOffers, turnIn, warpTo, worldAct, enterWorld, getWorld, get WORLD() { return WORLD; }, get dun() { return dun; }, wc, wb, setClock: v => { clock = v; }, fireball, feed, toggleMount, craft, togglePanel, enterDungeon, get dun() { return dun; }, pstats, genGear, attack, scene: () => scene, furnSelSet: v => { furnSel = v; renderFurn(); }, player, trees, S, keys, act, get fishing() { return fishing; }, bugs, villagers }; // 디버그/테스트용
 </script>
 </body>
 </html>
