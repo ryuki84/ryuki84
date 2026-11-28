@@ -311,7 +311,7 @@
       <div><b>📋 메뉴</b><span>오른쪽 아이콘을 누르거나<br>단축키 (<kbd>H</kbd> 전체 보기)</span></div>
       <div><b>🧰 마을 도구</b><span><kbd>1</kbd>~<kbd>5</kbd> 손·채·낚싯대·삽·묘목</span></div>
     </div>
-    <p class="news">🆕 <b>최근 업데이트</b> · 마을 문 바로 밖에 약한 몬스터(슬라임·말벌·버섯돌이)가 낮에도 나와요 · 예전에 툰으로 바뀐 기기도 실사(듀랑고풍) 그래픽을 다시 시도해요 · 왕도의 국왕·경비병이 사람 3D 모델로(왕관·투구·검·방패) · 마을 주민(콩이·나비·토리·꼬꼬)이 움직이는 3D 동물로 바뀌고, 말을 걸면 손을 흔들어요 · 몬스터 7종이 움직이는 3D 모델로 바뀌었어요 · ★정예 몬스터 5종(깊이 3+) · 몬스터 공격 전 ❗ 예고 · 타격 순간 멈칫(히트스톱) · ⚙️ 설정 → 💾 저장 관리(백업·내보내기)</p>
+    <p class="news">🆕 <b>최근 업데이트</b> · <b>플레이어가 애니풍 캐릭터로!</b> (🧑 외형에서 3명 중 고르기, 예전 마네킹은 “커스텀”) · 마을 문 바로 밖에 약한 몬스터(슬라임·말벌·버섯돌이)가 낮에도 나와요 · 예전에 툰으로 바뀐 기기도 실사(듀랑고풍) 그래픽을 다시 시도해요 · 왕도의 국왕·경비병이 사람 3D 모델로(왕관·투구·검·방패) · 마을 주민(콩이·나비·토리·꼬꼬)이 움직이는 3D 동물로 바뀌고, 말을 걸면 손을 흔들어요 · 몬스터 7종이 움직이는 3D 모델로 바뀌었어요 · ★정예 몬스터 5종(깊이 3+) · 몬스터 공격 전 ❗ 예고 · 타격 순간 멈칫(히트스톱) · ⚙️ 설정 → 💾 저장 관리(백업·내보내기)</p>
     <p class="goals">🏪 상점에서 팔고 사기 · 🕳️ 던전 · 🌍 오픈월드(건설·채집·의뢰) · 🏟️ 아레나 · 👑 국왕의 의뢰로 대마왕 토벌</p>
     <p id="nickrow" hidden>🌐 닉네임 <input id="nick" maxlength="12" placeholder="모험가" style="font:inherit;padding:3px 8px;border:2px solid var(--ink);border-radius:8px;width:9em"></p>
     <p id="gfxinfo"></p>
@@ -330,7 +330,7 @@
   </div>
 </div>
 
-<script type="importmap">{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.187.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.187.0/examples/jsm/" } }</script>
+<script type="importmap">{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.187.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.187.0/examples/jsm/", "@pixiv/three-vrm": "https://cdn.jsdelivr.net/npm/@pixiv/three-vrm@3.5.5/lib/three-vrm.module.min.js" } }</script>
 <script>setTimeout(() => { if (!window.__game) { const h = document.getElementById("help"); if (h) h.insertAdjacentHTML("afterbegin", '<p style="color:#c0392b;font-weight:700">⚠️ 3D 엔진(three.js)을 불러오지 못했어요. 인터넷 연결을 확인하고 새로고침해 주세요.</p>'); } }, 12000);</script>
 <script type="module">
 import * as T3 from "three";
@@ -340,6 +340,7 @@ import { ShaderPass } from "three/addons/postprocessing/ShaderPass.js";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import * as SkeletonUtils from "three/addons/utils/SkeletonUtils.js";
+import { VRMLoaderPlugin, VRMUtils } from "@pixiv/three-vrm";
 const THREE = { ...T3, EffectComposer, RenderPass, ShaderPass, UnrealBloomPass, GLTFLoader, SkeletonUtils };
 // 아티팩트 뷰어는 보안 정책상 data: 주소 읽기를 막아요(blob:은 허용). glTF(JSON) 안에 data:로 넣어 둔 버퍼·이미지를
 // 먼저 blob: 주소로 바꿔서 읽어요. 이 처리가 없으면 아티팩트에서 3D 모델이 전부 실패하고 코드 모델로만 보여요.
@@ -1682,7 +1683,7 @@ function terrainGroup(w, h, at, kind) {
 const leg = (par, x, y, z, w, h, col, d = w) => { const p = new THREE.Group(); p.position.set(x, y, z); B(p, w, h, d, col, 0, -h / 2, 0); par.add(p); return p; };
 /* ----- 모던 캐릭터: 부드러운 체형 · 표정 있는 얼굴 · 헤어 4종 · 장비 외형 ----- */
 const LOOK = { hair: [0x3a2a22, 0x1c1c28, 0xe8c070, 0xc8503a, 0x6a4ac8, 0x4a9ad8, 0xf0f0f4], skin: [0xffe0c8, 0xf2c79a, 0xd9a273, 0x9a6a46, 0x6a4430], eye: [0x4a7ad8, 0x3a9a5a, 0x8a5a34, 0xd8503a, 0x8a5ad0], out: [0x3d6ed0, 0xd9534f, 0x4a9a4a, 0x8a5ad0, 0x2fb0b0, 0x2e2e3e, 0xe8a23c, 0xf2ede0], hs: ["단발", "긴 머리", "포니테일", "삐죽머리", "올림머리", "민머리"], pants: [0x3a3a48, 0x4a3a2a, 0x2c3e78, 0x6a6a5a, 0x8a7a5a, 0xe8e4d8], boots: [0x3a2a20, 0x1c1c22, 0x7a5a3a, 0x8a2a2a], ot: ["셔츠", "조끼", "긴 코트", "로브"], hats: ["없음", "투구", "밀짚모자", "두건", "왕관"], bd: ["보통", "큰 키", "작은 키", "다부진"], br: ["없음", "콧수염", "턱수염"] };
-const lookOf = l => { const g = (k, n) => (((l && l[k]) | 0) % n + n) % n; return { h: g("h", 6), hc: g("hc", 7), sk: g("sk", 5), ey: g("ey", 5), tp: g("tp", 8), c: g("c", 5), hat: g("hat", 5), cc: g("cc", 9), pc: g("pc", 6), bc: g("bc", 4), ot: g("ot", 4), bd: g("bd", 4), br: g("br", 3) }; };
+const lookOf = l => { const g = (k, n) => (((l && l[k]) | 0) % n + n) % n; return { av: g("av", 4), h: g("h", 6), hc: g("hc", 7), sk: g("sk", 5), ey: g("ey", 5), tp: g("tp", 8), c: g("c", 5), hat: g("hat", 5), cc: g("cc", 9), pc: g("pc", 6), bc: g("bc", 4), ot: g("ot", 4), bd: g("bd", 4), br: g("br", 3) }; };
 const shade = (hex, f) => new THREE.Color(hex).multiplyScalar(f).getHex();
 const RTINT = [0xb8bcc8, 0x6fa8ff, 0xffd34d, 0xff8a2b, 0x5be37d];
 const Sq = (p, r, c, x, y, z, o, sg = 20) => addM(p, geo(`q${r},${sg}`, () => new THREE.SphereGeometry(r, sg, Math.round(sg * .7))), c, x, y, z, o);
@@ -1815,7 +1816,7 @@ function kayTick(e, mv) {
   const want = e.pose || (mv ? "Running_A" : e.armed ? "Idle" : "Unarmed_Idle");
   if (!e.one && e.base !== want) { const a = e.act(want); if (a) { if (e.baseA && e.baseA !== a) e.baseA.fadeOut(.2); a.reset().setEffectiveWeight(1).fadeIn(.2).play(); e.baseA = a; e.base = want; } }
   if (e.baseA) e.baseA.timeScale = e.base === "Running_A" ? 1.05 : 1;
-  e.mixer.update(Math.min(DT, .1));
+  e.mixer.update(Math.min(DT, .1)); if (e.vrm) e.vrm.update(Math.min(DT, .1));   // 애니 캐릭터: 머리카락·옷 흔들림, 표정
 }
 function kayEvents(e) { if (!e.kay) return; if (e.evk === undefined) e.evk = PEV.k; if (e.evk !== PEV.k) { e.evk = PEV.k; if (PEV.n) kayPlay(e, PEV.n, PEV.d); } }
 /* ----- 정상 비율 캐릭터: Quaternius Universal Animation Library 마네킹(CC0) + 옷 색 칠하기 + 장비 ----- */
@@ -1834,6 +1835,48 @@ function loadMan() {
     MAN.head = n ? { c: hb.getCenter(new THREE.Vector3()), r: hb.getSize(new THREE.Vector3()).y / 2 } : { c: new THREE.Vector3(0, 1.66, .02), r: .13 };
     MAN.ready = true;
   }).catch(err => { MAN.failed = true; console.warn("정상 비율 캐릭터를 불러오지 못해 기존 캐릭터로 표시해요.", err); });
+}
+/* ----- 애니풍 캐릭터: pixiv VRoid 샘플 아바타(무료 이용·상업 이용 가능·표기 불필요, CC0 아님) + three-vrm(MToon 애니 셰이더) -----
+   고른 캐릭터 하나만 불러와서 다시 써요. 동작은 마네킹(Quaternius UAL) 19종을 VRM 뼈대로 옮겨 써요(공격·구르기·피격 그대로). */
+const VRMK = ["sample_A", "sample_B", "sample_C"], VRMN = ["애니 · 단발", "애니 · 트윈테일", "애니 · 소년", "커스텀(마네킹)"];
+const VRMS = { cur: null, loading: null, failed: {} };
+const VBONE = (() => { const m = { "DEF-hips": "hips", "DEF-spine.001": "spine", "DEF-spine.002": "chest", "DEF-spine.003": "upperChest", "DEF-neck": "neck", "DEF-head": "head" };
+  for (const [s, d] of [["L", "left"], ["R", "right"]]) Object.assign(m, { [`DEF-shoulder.${s}`]: d + "Shoulder", [`DEF-upper_arm.${s}`]: d + "UpperArm", [`DEF-forearm.${s}`]: d + "LowerArm", [`DEF-hand.${s}`]: d + "Hand", [`DEF-thigh.${s}`]: d + "UpperLeg", [`DEF-shin.${s}`]: d + "LowerLeg", [`DEF-foot.${s}`]: d + "Foot", [`DEF-toe.${s}`]: d + "Toes" });
+  const o = {}; for (const k in m) o[THREE.PropertyBinding.sanitizeNodeName(k)] = m[k]; return o; })();
+const vrmKey = () => { const a = lookOf(S.look).av; return a < 3 ? VRMK[a] : null; };
+function vrmRetarget(clip, vrm) {   // 마네킹 동작 → VRM 정규화 뼈대(three-vrm 공식 예제의 방식)
+  const src = MAN.src, tracks = [], qi = new THREE.Quaternion(), qp = new THREE.Quaternion(), q = new THREE.Quaternion(), v = new THREE.Vector3(), m4 = new THREE.Matrix4(), v0 = vrm.meta.metaVersion === "0";
+  src.updateMatrixWorld(true); const sh = src.getObjectByName("DEF-hips").getWorldPosition(v).y, vh = vrm.humanoid.getNormalizedBoneNode("hips").getWorldPosition(new THREE.Vector3()).y - vrm.scene.getWorldPosition(new THREE.Vector3()).y, sc = vh / sh;
+  for (const t of clip.tracks) { const k = t.name.lastIndexOf("."), node = t.name.slice(0, k), prop = t.name.slice(k + 1), bone = VBONE[node]; if (!bone) continue;
+    const dst = vrm.humanoid.getNormalizedBoneNode(bone), rn = src.getObjectByName(node); if (!dst || !rn) continue;
+    rn.getWorldQuaternion(qi).invert(); rn.parent.getWorldQuaternion(qp);
+    if (prop === "quaternion") { const a = t.values.slice(); for (let i = 0; i < a.length; i += 4) { q.fromArray(a, i).premultiply(qp).multiply(qi); q.toArray(a, i); if (v0) { a[i] *= -1; a[i + 2] *= -1; } } tracks.push(new THREE.QuaternionKeyframeTrack(dst.name + ".quaternion", t.times, a)); }
+    else if (prop === "position" && bone === "hips") { m4.copy(rn.parent.matrixWorld); const a = t.values.slice(); for (let i = 0; i < a.length; i += 3) { v.fromArray(a, i).applyMatrix4(m4).multiplyScalar(sc); if (v0) { v.x *= -1; v.z *= -1; } v.toArray(a, i); } tracks.push(new THREE.VectorKeyframeTrack(dst.name + ".position", t.times, a)); } }
+  return new THREE.AnimationClip(clip.name, clip.duration, tracks);
+}
+function loadVRM(k) {
+  if (!k || !R3 || !MAN.ready || VRMS.failed[k] || VRMS.loading === k || (VRMS.cur && VRMS.cur.k === k)) return;
+  VRMS.loading = k; const L = new THREE.GLTFLoader(); L.register(p => new VRMLoaderPlugin(p));
+  L.loadAsync(`assets/vrm/${k}.${KEXT === "json" ? "json" : "vrm"}`).then(gl => {
+    const vrm = gl.userData.vrm; if (!vrm) throw new Error("VRM 정보 없음"); VRMUtils.rotateVRM0(vrm);
+    vrm.scene.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; o.frustumCulled = false; } });
+    const body = new THREE.Group(); body.add(vrm.scene); vrm.scene.updateMatrixWorld(true);
+    const bb = new THREE.Box3().setFromObject(vrm.scene); body.scale.setScalar(1.78 / Math.max(.5, bb.max.y - bb.min.y)); body.updateMatrixWorld(true);
+    const clips = {}; for (const n in MAN.clips) clips[n] = vrmRetarget(MAN.clips[n], vrm);
+    const mixer = new THREE.AnimationMixer(vrm.scene), acts = {}, act = n => { const c = MCLIP[n] || n; return acts[c] || (clips[c] ? (acts[c] = mixer.clipAction(clips[c])) : null); };
+    const P = new THREE.Vector3(), hr = vrm.humanoid.getRawBoneNode("rightHand"), hl = vrm.humanoid.getRawBoneNode("leftHand"), holdR = new THREE.Group(), holdL = new THREE.Group();
+    if (hr) { hr.getWorldPosition(P); holdR.position.copy(P); holdR.rotation.set(HALF, 0, 0); attachAt(body, hr, holdR); }
+    if (hl) { hl.getWorldPosition(P); holdL.position.copy(P); holdL.rotation.set(0, HALF, 0); attachAt(body, hl, holdL); }
+    if (VRMS.cur) VRMS.cur.mixer.stopAllAction();
+    VRMS.cur = { k, vrm, body, mixer, act, holdR, holdL }; VRMS.loading = null;
+  }).catch(e => { VRMS.failed[k] = 1; VRMS.loading = null; console.warn("애니풍 캐릭터를 불러오지 못해 마네킹으로 표시해요.", e); });
+}
+function mkVrmEnt(armed) {
+  const c = VRMS.cur, g = new THREE.Group(); g.add(c.body); c.mixer.stopAllAction();
+  c.holdR.clear(); c.holdL.clear(); const eq = S.eq || {}, wp = armed && eq.weapon ? eq.weapon.e : null;
+  if (wp && KAY.ready) { if (KW[wp]) kAttach(c.holdR, KAY.wpn[KW[wp]]).scale.setScalar(.6); else { const ww = weaponModel(wp); ww.children[0].rotation.x = 0; ww.children[0].position.set(0, -.1, 0); c.holdR.add(ww); } }
+  if (armed && eq.armor && eq.armor.e === "🛡️" && KAY.ready) kAttach(c.holdL, KAY.wpn[KSH[Math.min(4, eq.armor.rar | 0)]]).scale.setScalar(.55);
+  return { g, body: c.body, root: c.vrm.scene, la: new THREE.Group(), ra: new THREE.Group(), legs: [], h: 2.0, kay: true, man: true, vrm: c.vrm, armed: !!armed, mixer: c.mixer, act: c.act, base: null, baseA: null, one: null, seed: Math.random() * 10 };
 }
 function attachAt(root, bone, obj) { root.updateMatrixWorld(true); obj.updateMatrix(); const m = new THREE.Matrix4().copy(bone.matrixWorld).invert().multiply(obj.matrix); m.decompose(obj.position, obj.quaternion, obj.scale); bone.add(obj); return obj; }
 function mkMan(look, eq, armed) {
@@ -1882,8 +1925,8 @@ function mkMan(look, eq, armed) {
 /* ----- 3인칭 카메라 ----- */
 let lookYaw = .3, lookManT = -99, camYaw = 0, camManT = -99, TPV_ON = true, camZoom = 1; try { camZoom = clamp(+localStorage.getItem("pokgeun-zoom") || 1, .55, 1.7); } catch (e) {} try { TPV_ON = localStorage.getItem("pokgeun-tpv") !== "0"; } catch (e) {}
 const TPV = () => TPV_ON && started && !lookMode() && (scene === "out" || (scene === "home" && WORLD && WORLD.vreg) || (scene === "dun" && dun && (dun.kind === "world" || dun.kind === "wild") && !dun.arena));
-const lookSig = () => { const L = lookOf(S.look), q = S.eq; return [KAY.ready, MAN.ready, JSON.stringify(L), q.armor ? q.armor.id : 0, q.ring ? q.ring.id : 0, q.weapon ? q.weapon.e : 0, q.armor ? q.armor.e + q.armor.rar : 0].join(","); };
-const mkPlayer = o => { const armed = o === PK.d, e = MAN.ready ? mkMan(S.look, S.eq, armed) : KAY.ready ? mkKay(S.look, S.eq, armed) : mkHeroFromLook(S.look, 0, S.eq); e.sig = lookSig() + (armed ? "A" : ""); return e; };
+const lookSig = () => { const L = lookOf(S.look), q = S.eq; return [KAY.ready, MAN.ready, VRMS.cur ? VRMS.cur.k : "", JSON.stringify(L), q.armor ? q.armor.id : 0, q.ring ? q.ring.id : 0, q.weapon ? q.weapon.e : 0, q.armor ? q.armor.e + q.armor.rar : 0].join(","); };
+const mkPlayer = o => { const armed = o === PK.d, vk = vrmKey(); if (vk) loadVRM(vk); const e = vk && VRMS.cur && VRMS.cur.k === vk ? mkVrmEnt(armed) : MAN.ready ? mkMan(S.look, S.eq, armed) : KAY.ready ? mkKay(S.look, S.eq, armed) : mkHeroFromLook(S.look, 0, S.eq); e.sig = lookSig() + (armed ? "A" : ""); return e; };
 let curPE = null;
 function refreshLook(e) {
   curPE = e; const armed = e.key0 === PK.d, sig = lookSig() + (armed ? "A" : "");
@@ -1891,7 +1934,7 @@ function refreshLook(e) {
   kayEvents(e); return e;
 }
 function swapInto(e, n) {
-  e.g.traverse(m => { if (m.isMesh && m.material && m.material.userData.own) m.material.dispose(); });
+  e.g.traverse(m => { if (m.isMesh && m.material && !Array.isArray(m.material) && m.material.userData.own) m.material.dispose(); });
   e.g.clear(); n.g.children.slice().forEach(c => e.g.add(c));
   for (const k of Object.keys(e)) if (!["g", "par", "key0", "seen", "sig", "osig", "evk"].includes(k)) delete e[k];
   for (const k of Object.keys(n)) if (k !== "g") e[k] = n[k]; e.wk = undefined; e.wm = null; e.fl = false;
@@ -1903,7 +1946,9 @@ function bodyLook() {
   const sw = (k, arr, hexes) => `<div style="display:flex;gap:7px;flex-wrap:wrap;margin:4px 0 8px">${arr.map((v, i) => `<button style="margin:0;${hexes ? "width:36px;height:36px;padding:0;border-radius:50%;background:" + (hexes[i] < 0 ? "linear-gradient(135deg,#fff,#ccc)" : hex(hexes[i])) : "padding:4px 10px"};outline:${L[k] === i ? "3px solid #ff8f5e" : "1px solid rgba(0,0,0,.18)"};outline-offset:2px" data-look="${k}:${i}">${hexes ? (hexes[i] < 0 ? "<small style=\"font-size:10px\">없음</small>" : "") : v}</button>`).join("")}</div>`;
   const head = `<h2>🧑 외형</h2><div><small>바로 적용돼요. 멀티플레이에서도 다른 사람에게 보여요.</small></div>`, gear = `<div><small>⚔️ 무기(검·도끼·망치)와 🛡️ 방패는 던전·오픈월드에서 손에 들려요. 💍 반지는 손에서 빛나요.</small></div>`;
   if (MAN.ready) { const chips = (k, arr) => sw(k, arr), sec = (t, body) => `<div class="lsec"><h3>${t}</h3>${body}</div>`;
-    return head + `<div class="lrow"><button data-lookrand>🎲 무작위</button><small>${TOUCHY ? "위쪽 캐릭터를 끌어서 돌려 보세요" : "왼쪽 캐릭터를 드래그해서 돌려 보세요"}</small></div>` +
+    const avs = sec(`✨ 캐릭터 · ${VRMN[L.av]}`, chips("av", VRMN) + (L.av < 3 ? `<div><small>${VRMS.loading ? "⏳ 애니 캐릭터를 불러오는 중이에요…" : VRMS.failed[VRMK[L.av]] ? "⚠️ 애니 캐릭터를 불러오지 못해 마네킹으로 보여요." : "애니 캐릭터는 생김새가 정해져 있어요. 머리·옷 꾸미기는 '커스텀(마네킹)'에서 할 수 있어요."}</small></div>` : ""));
+    if (L.av < 3) return head + avs + gear;
+    return head + avs + `<div class="lrow"><button data-lookrand>🎲 무작위</button><small>${TOUCHY ? "위쪽 캐릭터를 끌어서 돌려 보세요" : "왼쪽 캐릭터를 드래그해서 돌려 보세요"}</small></div>` +
       sec(`🧍 체형 · ${LOOK.bd[L.bd]}`, chips("bd", LOOK.bd)) + sec("🎨 피부색", sw("sk", LOOK.skin, LOOK.skin)) +
       sec(`💇 머리 모양 · ${LOOK.hs[L.h]}`, chips("h", LOOK.hs)) + sec("머리 색", sw("hc", LOOK.hair, LOOK.hair)) + sec("👁️ 눈 색", sw("ey", LOOK.eye, LOOK.eye)) + sec(`🧔 수염 · ${LOOK.br[L.br]}`, chips("br", LOOK.br)) +
       sec(`👕 상의 · ${LOOK.ot[L.ot]}`, chips("ot", LOOK.ot) + sw("tp", LOOK.out, LOOK.out)) + sec("👖 하의 색", sw("pc", LOOK.pants, LOOK.pants)) + sec("🥾 신발 색", sw("bc", LOOK.boots, LOOK.boots)) +
@@ -2180,7 +2225,7 @@ const mkBobber = () => { const g = new THREE.Group(); Sp(g, .08, 0xe8505a, 0, 0,
 /* ----- 엔티티 동기화 ----- */
 const ENT = new WeakMap(), LIVE = new Set(), PK = { v: {}, h: {}, d: {} };
 // 모델 파일이 늦게 도착하면, 먼저 만들어 둔 코드 모델(e.proc)을 버리고 새로 만들어요
-function dropEnt(o) { const e = ENT.get(o); if (!e) return; e.par.remove(e.g); e.g.traverse(m => { if (m.isMesh && m.material && m.material.userData.own) m.material.dispose(); if (m.isMesh && m.userData.ownGeo) m.geometry.dispose(); }); LIVE.delete(e); ENT.delete(o); }
+function dropEnt(o) { const e = ENT.get(o); if (!e) return; e.par.remove(e.g); e.g.traverse(m => { if (m.isMesh && m.material && !Array.isArray(m.material) && m.material.userData.own) m.material.dispose(); if (m.isMesh && m.userData.ownGeo) m.geometry.dispose(); }); LIVE.delete(e); ENT.delete(o); }
 function entM(o, make, parent) { const rd = o.model ? MAN.ready : MONM.ready, e = ENT.get(o); if (e && e.proc && rd) dropEnt(o); const n = ent(o, make, parent); if (!rd && !n.mon && !n.man) n.proc = true; return n; }
 function ent(o, make, parent) {
   let e = ENT.get(o);
@@ -2189,7 +2234,7 @@ function ent(o, make, parent) {
 }
 function sweep() {
   for (const e of LIVE) if (e.seen !== frameNo) {
-    e.par.remove(e.g); e.g.traverse(m => { if (m.isMesh && m.material && m.material.userData.own) m.material.dispose(); if (m.isMesh && m.userData.ownGeo) m.geometry.dispose(); });
+    e.par.remove(e.g); e.g.traverse(m => { if (m.isMesh && m.material && !Array.isArray(m.material) && m.material.userData.own) m.material.dispose(); if (m.isMesh && m.userData.ownGeo) m.geometry.dispose(); });
     LIVE.delete(e); ENT.delete(e.key0);
   }
 }
@@ -3819,7 +3864,7 @@ for (const id of ["gear", "shop"]) { const el = $(id); let y0 = null;
   const up = e => { if (y0 === null) return; const dy = e.clientY - y0; y0 = null; el.style.transform = ""; if (dy > 70 && !(id === "gear" && gearTab === "perk")) closeShop(); };
   el.addEventListener("pointerup", up); el.addEventListener("pointercancel", up); }
 renderDock();
-window.__game = { spawnNearV: () => spawnNear(), VILM, get hitStop() { return hitStop; }, get MONM() { return MONM; }, ENT, MON_WIND, ELITE, eliteify, eliteAI, saveApi: { save, exportSave, importSave, listBackups, restoreBackup, backupNow, SAVE, SAVE_VER },  get DINOM() { return DINOM; }, wsolid, bioBase,  equipBag, unequip, homeTileAt, openShop, enterHome: () => enterHome(), get furnSel() { return furnSel; }, ctxHint, renderBar,  get sun() { return sun; }, get GRD() { return GRD; }, get S3() { return S3; }, setYaw: v => { camYaw = v; camManT = vtime + 999; }, get MAN() { return MAN; }, get KAY() { return KAY; }, get curPE() { return curPE; }, pAnim, WX, setWeather: t => { WX.type = t; WX.t = 9999; }, startArena, arenaTick, startWave, gemGain, choosePerk, finishArena, openPerk, autoFight, idleStored, dailyTouch, genArena, mkMonT, get PERKS() { return PERKS; }, get ARES() { return ARES; }, sEvent, storyReady, reportStory, openKing, nearKing, demonAI, finalizeDemon, enterDemon, onDemonDefeat, mkDemon, damageP, addFame, get STORY() { return STORY; }, NET, spawnNear, worldTick, killMon, setBuild: i => { buildSel = i == null ? null : BUILD[i]; }, farmAct, winteract, genOffers, turnIn, warpTo, worldAct, enterWorld, getWorld, get WORLD() { return WORLD; }, get dun() { return dun; }, wc, wb, setClock: v => { clock = v; }, fireball, feed, toggleMount, craft, togglePanel, enterDungeon, get dun() { return dun; }, pstats, genGear, attack, scene: () => scene, furnSelSet: v => { furnSel = v; renderFurn(); }, player, trees, S, keys, act, get fishing() { return fishing; }, bugs, villagers }; // 디버그/테스트용
+window.__game = { get VRMS() { return VRMS; }, spawnNearV: () => spawnNear(), VILM, get hitStop() { return hitStop; }, get MONM() { return MONM; }, ENT, MON_WIND, ELITE, eliteify, eliteAI, saveApi: { save, exportSave, importSave, listBackups, restoreBackup, backupNow, SAVE, SAVE_VER },  get DINOM() { return DINOM; }, wsolid, bioBase,  equipBag, unequip, homeTileAt, openShop, enterHome: () => enterHome(), get furnSel() { return furnSel; }, ctxHint, renderBar,  get sun() { return sun; }, get GRD() { return GRD; }, get S3() { return S3; }, setYaw: v => { camYaw = v; camManT = vtime + 999; }, get MAN() { return MAN; }, get KAY() { return KAY; }, get curPE() { return curPE; }, pAnim, WX, setWeather: t => { WX.type = t; WX.t = 9999; }, startArena, arenaTick, startWave, gemGain, choosePerk, finishArena, openPerk, autoFight, idleStored, dailyTouch, genArena, mkMonT, get PERKS() { return PERKS; }, get ARES() { return ARES; }, sEvent, storyReady, reportStory, openKing, nearKing, demonAI, finalizeDemon, enterDemon, onDemonDefeat, mkDemon, damageP, addFame, get STORY() { return STORY; }, NET, spawnNear, worldTick, killMon, setBuild: i => { buildSel = i == null ? null : BUILD[i]; }, farmAct, winteract, genOffers, turnIn, warpTo, worldAct, enterWorld, getWorld, get WORLD() { return WORLD; }, get dun() { return dun; }, wc, wb, setClock: v => { clock = v; }, fireball, feed, toggleMount, craft, togglePanel, enterDungeon, get dun() { return dun; }, pstats, genGear, attack, scene: () => scene, furnSelSet: v => { furnSel = v; renderFurn(); }, player, trees, S, keys, act, get fishing() { return fishing; }, bugs, villagers }; // 디버그/테스트용
 </script>
 </body>
 </html>

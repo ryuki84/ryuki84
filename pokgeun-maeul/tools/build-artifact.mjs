@@ -23,6 +23,12 @@ for (const f of walk(path.join(ROOT, 'assets'))) {
     for (const b of json.buffers || []) if (b.uri) b.uri = `data:application/octet-stream;base64,${Buffer.from(resources[b.uri]).toString('base64')}`;
     for (const im of json.images || []) if (im.uri && resources[im.uri]) im.uri = `data:${mime(im.uri)};base64,${Buffer.from(resources[im.uri]).toString('base64')}`;
     fs.mkdirSync(path.dirname(dst), { recursive: true }); fs.writeFileSync(dst, JSON.stringify(json)); n++; bytes += fs.statSync(dst).size;
+  } else if (ext === '.vrm') {   // VRM은 확장(뼈대·표정·흔들림) 번호가 바뀌면 안 돼서 변환 도구를 쓰지 않고 그대로 JSON+data: 로 옮겨요
+    const dst = path.join(OUT, rel.replace(/\.vrm$/, '.json'));
+    if (fs.existsSync(dst) && fs.statSync(dst).mtimeMs >= fs.statSync(f).mtimeMs) continue;
+    const b = fs.readFileSync(f), jl = b.readUInt32LE(12), j = JSON.parse(b.slice(20, 20 + jl).toString()), bl = b.readUInt32LE(20 + jl), bin = b.slice(28 + jl, 28 + jl + bl);
+    j.buffers = [{ byteLength: bin.length, uri: `data:application/octet-stream;base64,${bin.toString('base64')}` }];
+    fs.mkdirSync(path.dirname(dst), { recursive: true }); fs.writeFileSync(dst, JSON.stringify(j)); n++; bytes += fs.statSync(dst).size;
   } else if (['.webp', '.png', '.jpg'].includes(ext)) { const dst = path.join(OUT, rel); fs.mkdirSync(path.dirname(dst), { recursive: true }); fs.copyFileSync(f, dst); }
 }
 console.log(`dist/artifact 준비 완료 (새로 변환한 모델 ${n}개, ${(bytes / 1048576).toFixed(1)}MB)`);

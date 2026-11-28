@@ -13,6 +13,7 @@
   "devDependencies": {
     "@gltf-transform/core": "^4.5.1",
     "@gltf-transform/extensions": "^4.5.1",
+    "@pixiv/three-vrm": "^3.5.5",
     "playwright": "1.63.0",
     "three": "0.187.0"
   },

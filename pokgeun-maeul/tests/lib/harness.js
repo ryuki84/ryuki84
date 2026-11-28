@@ -24,6 +24,7 @@ function serve() {
 }
 async function routes(p) {
   await p.route('**/npm/three@0.187.0/**', r => r.fulfill({ path: path.join(THREE_DIR, r.request().url().split('/npm/three@0.187.0/')[1].split('?')[0]), contentType: 'application/javascript', headers: { 'Access-Control-Allow-Origin': '*' } }));
+  await p.route('**/npm/@pixiv/three-vrm@3.5.5/**', r => r.fulfill({ path: path.join(ROOT, 'node_modules', '@pixiv', 'three-vrm', r.request().url().split('/npm/@pixiv/three-vrm@3.5.5/')[1].split('?')[0]), contentType: 'application/javascript', headers: { 'Access-Control-Allow-Origin': '*' } }));
   await p.route(/fonts\.(googleapis|gstatic)\.com/, r => r.abort());
 }
 function watchErrors(p) {

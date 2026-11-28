@@ -35,4 +35,12 @@
   Ultimate Monsters pack — Quaternius (quaternius.com), CC0 (github.com/mlflabs/brain 경유)
   원본 이름: Blob/Dog, Blob/Cat, Big/Bunny, Blob/Chicken. 웹용 변환: glb, 리샘플·중복 제거.
 
+애니풍 플레이어 캐릭터 — assets/vrm/ (sample_A, sample_B, sample_C)
+  VRoid 샘플 아바타 AvatarSample_A·B·C — pixiv Inc. (VRoid Project)
+  이용 조건: 파일에 들어 있는 VRM 정보 기준 이용자 제한 없음(Everyone), 상업 이용 허용, 라이선스 Other(CC0 아님).
+  pixiv 이용 조건 원문(vroid.pixiv.help 문서 4402394424089 / 4402614652569)은 이 개발 환경에서 열어 보지 못했어요.
+  2차 기록에 따르면 무료·상업 이용 가능·출처 표기 불필요, 단 CC0로 재표기 금지·이유 없는 유료 재배포 금지·캐릭터 제작 서비스 구축 금지·pixiv 추천처럼 보이게 하는 사용 금지.
+  파일: github.com/V-Sekai-archive/datasource-anim-female-doll-retargeting 경유. 웹용으로 텍스처만 줄였어요(tools/slim-vrm.py, 512px).
+  표시: three-vrm 3.5.5 (pixiv, MIT)
+
 3D 엔진 — three.js r187 (mrdoob, MIT) / 글꼴 — Noto Sans KR (Google Fonts, SIL OFL 1.1)

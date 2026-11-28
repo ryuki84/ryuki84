@@ -16,6 +16,7 @@ const MIME = { '.html': 'text/html; charset=utf-8', '.json': 'application/json',
   await p.click('#start').catch(() => {});
   await p.waitForFunction(() => { const g = window.__game; return g.MONM.ready && g.MAN.ready && g.KAY.ready && g.DINOM.ready; }, null, { timeout: 240000 }).catch(() => {});
   const r = await p.evaluate(() => { const g = window.__game; return { mon: !!g.MONM.ready, man: !!g.MAN.ready, kay: !!g.KAY.ready, dino: !!g.DINOM.ready }; });
+  r.vrm = await p.waitForFunction(() => window.__game.curPE && window.__game.curPE.vrm, null, { timeout: 240000 }).then(() => true).catch(() => false);
   r.vil = await p.waitForFunction(() => window.__game.villagers.every(v => { const e = window.__game.ENT.get(v); return e && e.mon; }), null, { timeout: 60000 }).then(() => true).catch(() => false);
   r.csp = csp.slice(0, 3);
   h.report(r, errs.filter(e => !/Content Security Policy|fonts/.test(e)).slice(0, 4)); await b.close(); srv.close();
