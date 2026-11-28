@@ -157,6 +157,7 @@
   #help .hcards div { background:rgba(255,255,255,.6); border-radius:14px; padding:8px 10px; display:flex; flex-direction:column; gap:3px; }
   #help .hcards b { font-size:14px; } #help .hcards span { font-size:12px; line-height:1.55; }
   #help .goals { font-size:12px; opacity:.85; }
+  #help .news { font-size:12px; background:#fff1c9; border:2px solid #f2c46a; border-radius:10px; padding:6px 10px; margin:8px 0; line-height:1.5; }
   #joy { width:128px; height:128px; border-radius:50%; background:radial-gradient(circle, rgba(255,255,255,.55), rgba(255,255,255,.18)); border:2px solid rgba(74,59,42,.25); position:relative; touch-action:none; flex:none; }
   #joy i { position:absolute; left:50%; top:50%; width:54px; height:54px; margin:-27px 0 0 -27px; border-radius:50%; background:linear-gradient(180deg,#ffd2a0,#f2a65a); box-shadow:0 4px 10px rgba(0,0,0,.25); pointer-events:none; }
   #touch .acts { flex-direction:row; align-items:center; gap:10px; }
@@ -309,6 +310,7 @@
       <div><b>📋 메뉴</b><span>오른쪽 아이콘을 누르거나<br>단축키 (<kbd>H</kbd> 전체 보기)</span></div>
       <div><b>🧰 마을 도구</b><span><kbd>1</kbd>~<kbd>5</kbd> 손·채·낚싯대·삽·묘목</span></div>
     </div>
+    <p class="news">🆕 <b>최근 업데이트</b> · 몬스터 7종이 움직이는 3D 모델로 바뀌었어요 · ★정예 몬스터 5종(깊이 3+) · 몬스터 공격 전 ❗ 예고 · 타격 순간 멈칫(히트스톱) · ⚙️ 설정 → 💾 저장 관리(백업·내보내기)</p>
     <p class="goals">🏪 상점에서 팔고 사기 · 🕳️ 던전 · 🌍 오픈월드(건설·채집·의뢰) · 🏟️ 아레나 · 👑 국왕의 의뢰로 대마왕 토벌</p>
     <p id="nickrow" hidden>🌐 닉네임 <input id="nick" maxlength="12" placeholder="모험가" style="font:inherit;padding:3px 8px;border:2px solid var(--ink);border-radius:8px;width:9em"></p>
     <button id="start">시작하기</button><button id="reset" style="background:#e8dcc0">새로 시작</button>
@@ -1026,7 +1028,7 @@ function petXp(n) {
 function matAdd(k, n) { S.mat[k] = (S.mat[k] || 0) + n; fx(player.x, player.y - 26 - (dun.fx.length % 4) * 14, `${MAT[k][0]}+${n}`, "#ffffff"); qEvent("mat", k, n); hud(); }
 function hitMon(m, mult) {
   const st = pstats(), crit = Math.random() * 100 < st.crit, d = Math.max(1, Math.round(st.dmg * mult * (.85 + Math.random() * .3) * (crit ? 2 : 1)));
-  m.hp -= d; m.flash = .12; m.kb = .12; if (m.wild) m.hostile = true;
+  m.hp -= d; m.flash = .12; m.kb = .12; if (m.wild) m.hostile = true; hitStop = Math.max(hitStop, crit ? .1 : .055);
   burst(m.x, m.y, crit ? 9 : 4, crit ? ["#fff", "#ffd34d"] : ["#fff", "#e8e4d8"], 90, .3); sfx(crit ? "crit" : "hit"); if (crit) shake = Math.max(shake, 3);
   const a = Math.atan2(m.y - player.y, m.x - player.x); m.kx = Math.cos(a) * (m.boss ? 80 : 220); m.ky = Math.sin(a) * (m.boss ? 80 : 220);
   fx(m.x, m.y - 18, (crit ? "💥" : "") + d, crit ? "#ffd34d" : "#ffffff");
@@ -1073,11 +1075,18 @@ function gatherNode() {
     return;
   }
 }
+const HIT_AT = .14;   // 공격 버튼 뒤 실제 타격까지(초). 칼이 앞으로 지나가는 순간
+let hitStop = 0;      // 타격 순간 아주 잠깐 멈칫(히트스톱)
+function swingHit(h) {
+  const P = player; let n = 0;
+  for (const m of [...dun.mons]) { const dx = m.x - P.x, dy = m.y - P.y, d = Math.hypot(dx, dy); if (d < 58 + (dun.arena ? 12 * (dun.run.perk.multi || 0) : 0) + (m.boss ? 12 : 0) && (dx * h.dx + dy * h.dy) / (d || 1) > .1) { hitMon(m, 1); n++; } }
+  if (n) shake = Math.max(shake, 1.5);
+}
 function attack(held) {
   if (scene !== "dun" || modal) return; const P = player, st = pstats();
   if (dun.kind === "world") { if (!held && worldAct()) return; if (buildSel) return; }
   if (P.atkCd > 0) return; P.atkCd = .42 / st.as; sfx("swing"); P.swingD = -(P.swingD || 1); pAnim(S.eq.weapon && S.eq.weapon.e === "🔨" ? "2H_Melee_Attack_Chop" : S.eq.weapon && S.eq.weapon.e === "🪓" ? "1H_Melee_Attack_Chop" : (P.swingN = (P.swingN || 0) + 1) % 2 ? "1H_Melee_Attack_Slice_Diagonal" : "1H_Melee_Attack_Slice_Horizontal", Math.max(.3, P.atkCd + .05)); dun.arcs.push({ a: Math.atan2(P.dy, P.dx), t: .26, t0: .26, r: 58, whirl: false, dir: P.swingD || 1, yaw: Math.atan2(P.dx, P.dy) });
-  for (const m of [...dun.mons]) { const dx = m.x - P.x, dy = m.y - P.y, d = Math.hypot(dx, dy); if (d < 58 + (dun.arena ? 12 * (dun.run.perk.multi || 0) : 0) + (m.boss ? 12 : 0) && (dx * P.dx + dy * P.dy) / (d || 1) > .1) hitMon(m, 1); }
+  P.pendHit = { t: Math.min(HIT_AT, P.atkCd * .45), dx: P.dx, dy: P.dy };   // 휘두르는 동작이 닿는 순간에 판정해요
   if (dun.kind === "wild") gatherNode(); else if (dun.kind === "world") worldGather();
 }
 function whirl() {
@@ -1147,6 +1156,8 @@ function eliteAI(m, dt, d, dx, dy, st) {
 }
 function tryMove(e, vx, vy) { if (!blocked(e.x + vx, e.y + 8, 8, 6)) e.x += vx; if (!blocked(e.x, e.y + 8 + vy, 8, 6)) e.y += vy; }
 function updateDun(dt) {
+  if (hitStop > 0) { hitStop -= dt; dt *= .12; }   // 히트스톱: 그 순간 전투 시간을 거의 멈춰요
+  if (player.pendHit && (player.pendHit.t -= dt) <= 0) { const h = player.pendHit; player.pendHit = null; if (scene === "dun") swingHit(h); }
   const P = player, st = pstats(), wild = dun.kind === "wild", world = dun.kind === "world";
   for (const k of ["atkCd", "qCd", "eCd", "fCd", "rCd", "dash", "inv", "flash"]) P[k] = Math.max(0, P[k] - dt);
   if (!world) { const MW = dun.map[0].length, MH = dun.map.length, R = wild ? 10 : 7, px = P.x / T | 0, py = P.y / T | 0;
@@ -3776,7 +3787,7 @@ for (const id of ["gear", "shop"]) { const el = $(id); let y0 = null;
   const up = e => { if (y0 === null) return; const dy = e.clientY - y0; y0 = null; el.style.transform = ""; if (dy > 70 && !(id === "gear" && gearTab === "perk")) closeShop(); };
   el.addEventListener("pointerup", up); el.addEventListener("pointercancel", up); }
 renderDock();
-window.__game = { get MONM() { return MONM; }, ENT, MON_WIND, ELITE, eliteify, eliteAI, saveApi: { save, exportSave, importSave, listBackups, restoreBackup, backupNow, SAVE, SAVE_VER },  get DINOM() { return DINOM; }, wsolid, bioBase,  equipBag, unequip, homeTileAt, openShop, enterHome: () => enterHome(), get furnSel() { return furnSel; }, ctxHint, renderBar,  get sun() { return sun; }, get GRD() { return GRD; }, get S3() { return S3; }, setYaw: v => { camYaw = v; camManT = vtime + 999; }, get MAN() { return MAN; }, get KAY() { return KAY; }, get curPE() { return curPE; }, pAnim, WX, setWeather: t => { WX.type = t; WX.t = 9999; }, startArena, arenaTick, startWave, gemGain, choosePerk, finishArena, openPerk, autoFight, idleStored, dailyTouch, genArena, mkMonT, get PERKS() { return PERKS; }, get ARES() { return ARES; }, sEvent, storyReady, reportStory, openKing, nearKing, demonAI, finalizeDemon, enterDemon, onDemonDefeat, mkDemon, damageP, addFame, get STORY() { return STORY; }, NET, spawnNear, worldTick, killMon, setBuild: i => { buildSel = i == null ? null : BUILD[i]; }, farmAct, winteract, genOffers, turnIn, warpTo, worldAct, enterWorld, getWorld, get WORLD() { return WORLD; }, get dun() { return dun; }, wc, wb, setClock: v => { clock = v; }, fireball, feed, toggleMount, craft, togglePanel, enterDungeon, get dun() { return dun; }, pstats, genGear, attack, scene: () => scene, furnSelSet: v => { furnSel = v; renderFurn(); }, player, trees, S, keys, act, get fishing() { return fishing; }, bugs, villagers }; // 디버그/테스트용
+window.__game = { get hitStop() { return hitStop; }, get MONM() { return MONM; }, ENT, MON_WIND, ELITE, eliteify, eliteAI, saveApi: { save, exportSave, importSave, listBackups, restoreBackup, backupNow, SAVE, SAVE_VER },  get DINOM() { return DINOM; }, wsolid, bioBase,  equipBag, unequip, homeTileAt, openShop, enterHome: () => enterHome(), get furnSel() { return furnSel; }, ctxHint, renderBar,  get sun() { return sun; }, get GRD() { return GRD; }, get S3() { return S3; }, setYaw: v => { camYaw = v; camManT = vtime + 999; }, get MAN() { return MAN; }, get KAY() { return KAY; }, get curPE() { return curPE; }, pAnim, WX, setWeather: t => { WX.type = t; WX.t = 9999; }, startArena, arenaTick, startWave, gemGain, choosePerk, finishArena, openPerk, autoFight, idleStored, dailyTouch, genArena, mkMonT, get PERKS() { return PERKS; }, get ARES() { return ARES; }, sEvent, storyReady, reportStory, openKing, nearKing, demonAI, finalizeDemon, enterDemon, onDemonDefeat, mkDemon, damageP, addFame, get STORY() { return STORY; }, NET, spawnNear, worldTick, killMon, setBuild: i => { buildSel = i == null ? null : BUILD[i]; }, farmAct, winteract, genOffers, turnIn, warpTo, worldAct, enterWorld, getWorld, get WORLD() { return WORLD; }, get dun() { return dun; }, wc, wb, setClock: v => { clock = v; }, fireball, feed, toggleMount, craft, togglePanel, enterDungeon, get dun() { return dun; }, pstats, genGear, attack, scene: () => scene, furnSelSet: v => { furnSel = v; renderFurn(); }, player, trees, S, keys, act, get fishing() { return fishing; }, bugs, villagers }; // 디버그/테스트용
 </script>
 </body>
 </html>
