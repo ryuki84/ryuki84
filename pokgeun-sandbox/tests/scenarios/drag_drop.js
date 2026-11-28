@@ -1,7 +1,7 @@
 const open = require('../lib/harness'); const D = open.OUT + '/';
 const drag = async (p, from, to, touch) => { const a = await p.locator(from).first().boundingBox(), b = typeof to === 'string' ? await p.locator(to).first().boundingBox() : to; const ax = a.x + a.width / 2, ay = a.y + a.height / 2, bx = b.x + (b.width || 0) / 2, by = b.y + (b.height || 0) / 2;
   await p.mouse.move(ax, ay); await p.mouse.down(); for (let i = 1; i <= 8; i++) { await p.mouse.move(ax + (bx - ax) * i / 8, ay + (by - ay) * i / 8); await p.waitForTimeout(30); } await p.mouse.up(); await p.waitForTimeout(250); };
-(async () => { const { b, p, errs } = await open({ viewport: { width: 1100, height: 720 }, qs: '?style=toon' }); await p.click('#start'); await p.waitForFunction(() => __game.MAN.ready, null, { timeout: 60000 });
+(async () => { const { b, p, errs } = await open({ viewport: { width: 1100, height: 720 }, qs: '?style=toon' }); await p.click('#start'); await p.waitForFunction(() => __game.KAY.ready, null, { timeout: 60000 });
   const r = {};
   await p.evaluate(() => { const g = __game; g.S.bag.length = 0; g.S.bag.push({ id: 901, slot: 'weapon', e: '🪓', n: '테스트 도끼', rar: 2, ilvl: 3, st: { dmg: 9 }, price: 50 }, { id: 902, slot: 'ring', e: '💍', n: '테스트 반지', rar: 1, ilvl: 2, st: { crit: 2 }, price: 30 }); g.S.eq.ring = null; });
   await p.keyboard.press('KeyI'); await p.waitForTimeout(400); await p.screenshot({ timeout: 180000, path: D + 'dd_equip.png' });

@@ -4,7 +4,7 @@ const h = require('../lib/harness');
 (async () => {
   const { b, p, errs } = await h.open({ ...h.devices['iPhone 13'], deviceScaleFactor: 1, viewport: { width: 844, height: 390 }, qs: '?' });
   await p.evaluate(() => document.getElementById('start').click());
-  await p.waitForFunction(() => __game.WORLD && __game.MAN.ready, null, { timeout: 240000 }).catch(() => {});
+  await p.waitForFunction(() => __game.WORLD && __game.KAY.ready, null, { timeout: 240000 }).catch(() => {});
   const info = () => p.evaluate(async () => { const r = __game.R3, out = []; for (let i = 0; i < 4; i++) { await new Promise(res => requestAnimationFrame(res)); out.push([r.info.render.calls, r.info.render.triangles]); } return { calls: Math.max(...out.map(o => o[0])), tris: Math.max(...out.map(o => o[1])), dpr: r.getPixelRatio(), lite: true }; });
   await p.waitForTimeout(4000); const village = await info();
   await p.evaluate(() => { __game.setClock(13); __game.enterWorld(); }); await p.waitForTimeout(9000); const world = await info();

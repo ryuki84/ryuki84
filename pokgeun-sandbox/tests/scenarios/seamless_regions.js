@@ -1,5 +1,5 @@
 const open = require('../lib/harness'); const D = open.OUT + '/';
-(async () => { const { b, p, errs } = await open({ viewport: process.argv[2] === 'real' ? { width: 480, height: 320 } : { width: 960, height: 600 }, qs: '?style=' + (process.argv[2] || 'toon') + '&noao' }); await p.keyboard.press('Space'); await p.waitForFunction(() => __game.MAN.ready && __game.WORLD, null, { timeout: 300000 });
+(async () => { const { b, p, errs } = await open({ viewport: process.argv[2] === 'real' ? { width: 480, height: 320 } : { width: 960, height: 600 }, qs: '?style=' + (process.argv[2] || 'toon') + '&noao' }); await p.keyboard.press('Space'); await p.waitForFunction(() => __game.KAY.ready && __game.WORLD, null, { timeout: 300000 });
   await p.evaluate(() => { __game.setClock(14); __game.setWeather('clear'); });
   const st = () => p.evaluate(() => { const g = __game, P = g.player; return [g.scene(), g.dun && g.dun.kind, Math.round(P.x / 32 * 10) / 10, Math.round((P.y + 8) / 32 * 10) / 10]; });
   const walk = async (key, until) => { const s0 = await p.evaluate(() => __game.scene() + (__game.dun ? __game.dun.kind : '')); await p.keyboard.down(key); await p.waitForFunction(s0 => (__game.scene() + (__game.dun ? __game.dun.kind : '')) !== s0, s0, { timeout: 120000 }).catch(() => {}); await p.keyboard.up(key); await p.waitForTimeout(400); };

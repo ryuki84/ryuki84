@@ -4,7 +4,7 @@ const open = require('../lib/harness'); const D = open.OUT + '/';
   const { b, p, errs } = await open({ viewport: { width: 960, height: 600 } });
   const until = (fn, arg, t = 120000) => p.waitForFunction(fn, arg, { timeout: t }).then(() => true).catch(() => false);
   await p.keyboard.press('Space');
-  await until(() => __game.MONM.ready && __game.MAN.ready && __game.WORLD, null, 180000);
+  await until(() => __game.MONM.ready && __game.KAY.ready && __game.WORLD, null, 180000);
   await p.evaluate(() => { __game.setClock(13); __game.setWeather('clear'); __game.enterWorld(); });
   await until(() => __game.scene() === 'dun' && __game.dun.kind === 'world');
   const r = {};

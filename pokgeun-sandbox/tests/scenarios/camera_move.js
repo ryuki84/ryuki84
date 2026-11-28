@@ -2,7 +2,7 @@
 const open = require('../lib/harness');
 (async () => {
   const { b, p, errs } = await open(); await p.keyboard.press('Space');
-  await p.waitForFunction(() => __game.MAN.ready && __game.curPE, null, { timeout: 90000 });
+  await p.waitForFunction(() => __game.KAY.ready && __game.curPE, null, { timeout: 90000 });
   await p.evaluate(() => __game.enterWorld()); await p.waitForFunction(() => __game.dun && __game.dun.kind === 'world', null, { timeout: 30000 });   // 왕도 광장(장애물 없는 곳)에서 측정
   const mv = async (yaw, key) => {
     await p.evaluate(y => { const g = __game, P = g.player; g.setYaw(y); const s = g.WORLD.spawn; P.x = (s.x + 3.5) * 32; P.y = (s.y + 1.5) * 32 - 8; P.mounted = false; }, yaw);

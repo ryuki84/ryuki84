@@ -7,7 +7,7 @@ const open = require('../lib/harness'); const D = open.OUT + '/';
   r.news = await p.evaluate(() => { const n = document.querySelector('#help .news'); return !!n && n.offsetHeight > 0 && n.textContent.includes('최근 업데이트'); });
   await p.screenshot({ timeout: 180000, path: D + 'start_news.png' });
   await p.keyboard.press('Space');
-  await until(() => __game.MAN.ready && __game.WORLD, null, 180000);
+  await until(() => __game.KAY.ready && __game.WORLD, null, 180000);
   await p.evaluate(() => __game.enterWorld());
   await until(() => __game.scene() === 'dun' && __game.dun.kind === 'world');
   r.swing = await p.evaluate(() => {

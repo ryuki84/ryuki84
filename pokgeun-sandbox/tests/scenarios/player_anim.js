@@ -3,7 +3,7 @@
 const open = require('../lib/harness');
 (async () => {
   const { b, p, errs } = await open(); await p.keyboard.press('Space');
-  await p.waitForFunction(() => __game.MAN.ready && __game.curPE && __game.curPE.kay, null, { timeout: 90000 });
+  await p.waitForFunction(() => __game.KAY.ready && __game.curPE && __game.curPE.kay, null, { timeout: 90000 });
   const st = () => p.evaluate(() => { const e = __game.curPE; return { man: !!e.man, base: e.base, one: e.one && e.one.getClip().name }; });
   const until = (fn, arg) => p.waitForFunction(fn, arg, { timeout: 30000 }).then(() => true).catch(() => false);
   const r = {};

@@ -1,5 +1,5 @@
 const open = require('../lib/harness'); const D = open.OUT + '/';
-(async () => { const { b, p, errs } = await open({ viewport: { width: 960, height: 600 }, qs: '?style=' + (process.argv[2] || 'toon') + '&noao' }); await p.keyboard.press('Space'); await p.waitForFunction(() => __game.MAN.ready && __game.WORLD, null, { timeout: 90000 });
+(async () => { const { b, p, errs } = await open({ viewport: { width: 960, height: 600 }, qs: '?style=' + (process.argv[2] || 'toon') + '&noao' }); await p.keyboard.press('Space'); await p.waitForFunction(() => __game.KAY.ready && __game.WORLD, null, { timeout: 90000 });
   await p.evaluate(() => { __game.setClock(13); __game.setWeather('clear'); __game.enterWorld(); }); await p.waitForTimeout(1500);
   const r = await p.evaluate(() => { const g = __game, W = g.WORLD, s = W.spawn; let mz = null; for (let d = 1; d < 12 && !mz; d++) { const ps = g.poisNear ? null : null; } 
     for (let ry = -8; ry <= 8 && !mz; ry++) for (let rx = -8; rx <= 8 && !mz; rx++) { g.wb(s.x + rx * 64 + 32, s.y + ry * 64 + 32); mz = W.pois.find(q => q.type === 'maze'); }
