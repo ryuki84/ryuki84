@@ -22,10 +22,11 @@ npm test -- save_system maze   # 이름으로 골라 실행
 |---|---|
 | `tests/run.js` | 실행기: 시나리오 목록, 판정 조건, 서버 자동 실행, 결과 표 |
 | `tests/lib/harness.js` | 공통 도구: 정적 서버, three.js 로컬 공급(CDN 대신 `node_modules/three`), 폰트 요청 차단, 결과 출력 |
-| `tests/scenarios/*.js` | 시나리오 27개(아래 표) |
+| `tests/scenarios/*.js` | 시나리오 28개(아래 표) |
 
 | 시나리오 | 확인 내용 |
 |---|---|
+| mobile_hud | 휴대폰(iPhone 13): 시작 화면, 공통 HUD, 아날로그 조이스틱 대각선 이동, 행동 버튼(나무 베기), 지역 이름, 미니맵→지도, 가로 화면 패널 위치 |
 | sandbox_features | 샌드박스 전환: 아레나·마왕성·왕국 스토리·정예가 꺼짐, 기본 몬스터·마을은 유지 |
 | world_cave_portal | 동굴 던전 입장·복귀, 포털, 저장 |
 | graphics_quality | 화질 단계 순환·저장, 모바일 기본값 |
