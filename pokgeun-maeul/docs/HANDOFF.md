@@ -140,7 +140,7 @@ npm run build:artifact         # 아티팩트 게시용 사본 → dist/artifact
 
 ## 7. 테스트 현황
 - 시나리오 29개(`tests/README.md` 표 참고). 주요 신규: `save_system`, `monster_models`, `elite_monsters`, `combat_feel`, `villager_models`, `npc_models`, `render_mode`, `artifact_copy`, `near_village`, `vrm_player`, `perf_budget`, `view_2d`, `view_2d_scenes`, `style_select`
-- 마지막 전체 실행: **27/27 통과**(2D 1단계 직후). 그 뒤 2D 2단계·스타일 선택은 관련 테스트만 통과 확인(`view_2d_scenes`, `style_select`, `render_mode`, `pbr_probe`, `graphics_quality`, `arena`, `demon_lord`) — **다음 작업 때 29개 전체 실행 필요**
+- 마지막 전체 실행: **29/29 통과**(2026-11-28, 그래픽 스타일 선택까지 반영)
 - `perf_budget`(휴대폰 조건·실사): 마을 약 1,063콜/107만 삼각형, 월드 약 976콜/150만 — 예산 1,300콜·150만/200만
 - `player_anim`·`villager_models`·`npc_models`·`monster_models`·`elite_monsters`는 `?chars=3d` 환경 이름(T.toon3d)으로 돌지만 지금은 의미 없는 매개변수(2.5D 폐기 흔적, 정리 대상)
 
@@ -159,7 +159,6 @@ npm run build:artifact         # 아티팩트 게시용 사본 → dist/artifact
 ---
 
 ## 9. 다음 작업 (`docs/WORK_QUEUE.md`의 미완료 항목)
-1. **29개 전체 회귀** 다시 실행(2D 2단계·스타일 선택 반영)
 2. **2D 다듬기**: 물가·길 경계 타일(autotile), 공격·피격 이펙트(Ninja Adventure SlashFx), 날씨, 휴대폰 글자·캐릭터 크기
 3. 보스 2종 추가(Ultimate Monsters의 Demon·Yeti 등) + 보스 전용 패턴
 4. 도깨비 정예 변종
