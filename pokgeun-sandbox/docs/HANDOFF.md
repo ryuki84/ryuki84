@@ -8,7 +8,7 @@
 | 저장소·브랜치 | `ryuki84/ryuki84`, 브랜치 `claude/chatgpt-share-link-k3f3we` |
 | 코드 | `src/`에서 편집 → `npm run build` → `index.html`(생성 파일, 커밋함) |
 | 저장 | `localStorage` 키 `pokgeun-sandbox`(+`.bak1~3`), 형식은 기존 v3 그대로 |
-| 테스트 | `npm test` — 시나리오 28개(빌드 최신 확인 후 실행) |
+| 테스트 | `npm test` — 시나리오 31개(빌드 최신 확인 후 실행) |
 | 작업 순서 | `docs/WORK_QUEUE.md` |
 | 아티팩트 | https://claude.ai/artifact/Aoc5seu2i8uMxrq32mo6mz (3판: 모바일 개편 v2, 비공개). `npm run build:artifact` → `dist/artifact/`를 root로, 파일 161개 게시 |
 
@@ -33,6 +33,15 @@
 - 보조 버튼은 `SUBS[장면]`(out·home·dun·wild·world·building, 더보기=more).
 - 화면 전환: `enterDungeon`·`leaveDungeon`·`warpTo`를 감싸 `#fade`. 걸어서 넘는 경계(seamTo…)는 전환 없이 이어져요.
 - 지역 이름: `areaName()` → 1초 머물면 `#banner`. 휴대폰에서는 예전 "○○ — 안전지대예요" 알림을 띄우지 않아요(배너와 겹침).
+
+## 생활 시스템 (2026-11-28, GDD P1·P2·P3-1)
+| 파일 | 내용 | 저장 |
+|---|---|---|
+| `src/js/06-tools-craft.js` | 도구(`TOOLDEF`, 돌/철 도끼·곡괭이)·도구별 채집(`gatherHp`·`gatherYield`)·작업대 근처(`nearBench`)·생활 제작법(`CRAFT2`)·제작 창(`bodyCraft2`)·숙련도(`PROF`·`profAdd`) | `S.tools`, `S.prof`, `S.mat.plank` (저장 v4) |
+| `src/js/06-u-survival.js` | 배부름·스태미나·먹기(`eatBest`, T)·모닥불 요리(`CRAFT2` food, `nearFire`)·굶주림(최대 체력 25%까지만) | `S.surv.food` (스태미나는 저장 안 함) |
+| `src/js/21-build-presets.js` | 완성형 건물 `PRESETS`(블록 조각 틀, `presetCells`·미리보기·`bRot`)·밖에 가구 놓기(칸 40+ `FURN_CODE`)·건설 창(`bodyBuild2`) | 칸은 `S.wedits`, 바닥 위 가구 자리 `S.wfloor` |
+- 칸 코드: 22 작업대, 40~(40+가구 수) 밖에 놓은 가구. 서버 `ALLOWED`에도 넣어야 멀티에서 보여요.
+- 기존 함수는 덮어쓰지 않고 감싸서(`attack`·`dash`·`sleepAt`·`buildPlace`·`worldRemove`·`worldCursor`·`bodyCraft`·`bodyBuild`) 확장했어요. 파일 이름 순서가 곧 실행 순서라 앞 파일의 상수를 쓰려면 이름이 뒤에 와야 해요(예: `06-u-survival`은 `06-tools-craft` 뒤).
 
 ## 꼭 지킬 것 (기존 게임에서 이어짐)
 - `src/js/00-boot.js`의 `GLTFLoader` `data:`→`blob:` 보정은 지우지 않기(아티팩트에서 모델 전부 실패)
