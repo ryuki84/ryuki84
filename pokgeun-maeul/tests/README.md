@@ -22,7 +22,7 @@ npm test -- arena maze   # 이름으로 골라 실행
 |---|---|
 | `tests/run.js` | 실행기: 시나리오 목록, 판정 조건, 서버 자동 실행, 결과 표 |
 | `tests/lib/harness.js` | 공통 도구: 정적 서버, three.js 로컬 공급(CDN 대신 `node_modules/three`), 폰트 요청 차단, 결과 출력 |
-| `tests/scenarios/*.js` | 시나리오 27개(아래 표) |
+| `tests/scenarios/*.js` | 시나리오 28개(아래 표) |
 
 | 시나리오 | 확인 내용 |
 |---|---|
@@ -40,6 +40,7 @@ npm test -- arena maze   # 이름으로 골라 실행
 | pbr_probe | 실사 셰이더 기기 검사 |
 | save_system | 저장 마이그레이션·백업 복구·저장 실패 알림·내보내기/가져오기 |
 | view_2d | 귀여운 2D 화면(?view=2d): 마을·월드 2D 그리기, 이동·공격 |
+| view_2d_scenes | 2D 화면: 동굴 던전·집 안·아레나 |
 | perf_budget | 휴대폰 조건 실사 모드 한 프레임 삼각형·드로우콜 예산 |
 | vrm_player | 애니풍 플레이어(VRoid 샘플): 기본 적용·대기·달리기·무기 공격·캐릭터 바꾸기·마네킹 복귀 |
 | near_village | 마을 바로 바깥 약한 몬스터 등장, 마을·집 안 제외 |

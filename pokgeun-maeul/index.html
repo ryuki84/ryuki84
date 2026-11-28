@@ -2756,7 +2756,7 @@ function drawDun() {
 
 /* ===== 귀여운 2D 화면 (설정에서 3D ↔ 2D) — Ninja Adventure 도트 그림(Pixel-boy, CC0) =====
    게임 내용(마을·월드·전투·저장)은 그대로, 보이는 것만 위에서 내려다보는 2D로 그려요. 3D 렌더링은 건너뛰어서 휴대폰에서 훨씬 가벼워요.
-   1단계: 마을·오픈월드. 동굴·던전·집 안·아레나는 아직 3D로 보여요. */
+   마을·오픈월드·동굴·던전·마왕성·아레나·야생·집 안 모두 2D로 그려요. */
 const VIEW2D = (() => { try { const q = new URLSearchParams(location.search).get("view"); if (q) return q === "2d"; return localStorage.getItem("pokgeun-view") === "2d"; } catch (e) { return false; } })();
 const V2 = { ready: false, started: false, img: {}, st: new WeakMap(), k: 1, cx: 0, cy: 0, W: 0, H: 0, atk: 0, evk: -1 };
 const V2CH = ["Boy", "Woman", "Princess", "Knight", "Noble", "Villager", "OldMan", "GoldKnight", "Monk"];
@@ -2780,7 +2780,7 @@ function load2D() {
   V2CH.forEach(n => add("c:" + n, `assets/2d/chars/${n}.png`)); V2MO.forEach(n => add("m:" + n, `assets/2d/mons/${n}.png`)); Object.keys(V2AN).forEach(n => add("a:" + n, `assets/2d/animals/${n}.png`));
   Promise.all(jobs).then(() => { V2.ready = !!(V2.img.floor && V2.img.nature); });
 }
-const v2on = () => VIEW2D && V2.ready && (scene === "out" || (scene === "dun" && dun && dun.kind === "world"));
+const v2on = () => VIEW2D && V2.ready && (scene === "out" || scene === "home" || (scene === "dun" && !!dun));
 const v2hash = (x, y) => { let h = (x * 374761393 + y * 668265263) | 0; h = (h ^ (h >>> 13)) * 1274126177; return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
 function v2tile(c, key, wx, wy, scale = 1) {   // wx,wy: 타일 왼쪽 위(월드 칸)
   const t = V2T[key], im = t && V2.img[t[0]]; if (!im) return; const w = t[3] || 1, h = t[4] || 1, k = V2.k * T;
@@ -2810,13 +2810,32 @@ function v2sprite(c, name, kind, px, py, o, scale = 1) {   // px,py: 월드 픽�
 function draw2D() {
   const c = ctx; c.setTransform(1, 0, 0, 1, 0, 0); c.imageSmoothingEnabled = false;
   const Wd = ov.width, Ht = ov.height, TS = Math.max(32, Math.round(Ht / 12 / 16) * 16), k = TS / T;
-  const local = scene === "out", V = WORLD && WORLD.vreg, ox = local && V ? V.x * T : 0, oy = local && V ? V.y * T : 0, P = player;
+  const local = scene === "out", home = scene === "home", mapd = scene === "dun" && dun && dun.kind !== "world" ? dun : null, V = !home && !mapd && WORLD && WORLD.vreg, ox = local && V ? V.x * T : 0, oy = local && V ? V.y * T : 0, P = player;
   const sh = shake > 0 ? (Math.random() - .5) * shake * .6 : 0;
   Object.assign(V2, { k, W: Wd, H: Ht, cx: P.x + ox + sh, cy: P.y + oy + 8 + sh, ox, oy });
   c.fillStyle = "#4a94d8"; c.fillRect(0, 0, Wd, Ht);
   const x0 = Math.floor((V2.cx - Wd / 2 / k) / T) - 1, x1 = Math.ceil((V2.cx + Wd / 2 / k) / T) + 1, y0 = Math.floor((V2.cy - Ht / 2 / k) / T) - 1, y1 = Math.ceil((V2.cy + Ht / 2 / k) / T) + 3;
   const objs = [], push = (y, f) => objs.push([y, f]);
   const inV = (x, y) => V && x >= V.x && x < V.x + W && y >= V.y && y < V.y + H, Hr = WORLD && WORLD.hreg;
+  if (home) {   // 집 안: 위 2줄 벽, 나머지 나무 바닥
+    c.fillStyle = "#2a2230"; c.fillRect(0, 0, Wd, Ht);
+    for (let ty = 0; ty < RH; ty++) for (let tx = 0; tx < RW; tx++) { const X = Math.round((tx * T - V2.cx) * k + Wd / 2), Y = Math.round((ty * T - V2.cy) * k + Ht / 2);
+      if (ty < 2) { c.fillStyle = ty === 0 ? "#c9a27a" : "#b88a5e"; c.fillRect(X, Y, Math.ceil(TS), Math.ceil(TS)); c.fillStyle = "rgba(0,0,0,.12)"; c.fillRect(X, Y + TS - 3, Math.ceil(TS), 3); } else v2tile(c, "plank", tx, ty); }
+    for (const it of S.room) { const fu = FURN[it.id]; if (!fu) continue; push(it.y + 1, () => { c.font = `${TS * .85}px sans-serif`; c.textAlign = "center"; c.fillText(fu.e, ((it.x + .5) * T - V2.cx) * k + Wd / 2, ((it.y + 1) * T - V2.cy) * k + Ht / 2 - TS * .18); }); }
+    push(RH, () => { c.font = `${TS * .7}px sans-serif`; c.textAlign = "center"; c.fillText("🚪", ((RW / 2) * T - V2.cx) * k + Wd / 2, (RH * T - V2.cy) * k + Ht / 2 - TS * .1); });
+  } else if (mapd) {   // 동굴·던전·마왕성·아레나·야생: 글자 지도
+    const M = mapd.map, wildm = mapd.kind === "wild", arena = !!mapd.arena, demon = !!mapd.demon, floor = wildm ? "grass" : arena ? "sand" : "mud";
+    c.fillStyle = wildm ? "#3f6e34" : "#1c1824"; c.fillRect(0, 0, Wd, Ht);
+    for (let ty = Math.max(0, y0); ty <= Math.min(M.length - 1, y1); ty++) for (let tx = Math.max(0, x0); tx <= Math.min(M[0].length - 1, x1); tx++) {
+      const ch = M[ty][tx], X = Math.round((tx * T - V2.cx) * k + Wd / 2), Y = Math.round((ty * T - V2.cy) * k + Ht / 2);
+      if (ch === "#") { if (wildm) { v2tile(c, "grass", tx, ty); push(ty + 1, () => v2obj(c, "pine", tx + .5, ty + 1.15)); } else { c.fillStyle = demon ? "#3a2440" : arena ? "#8a6a4a" : "#4a4256"; c.fillRect(X, Y, Math.ceil(TS), Math.ceil(TS)); c.fillStyle = demon ? "#5a3a64" : arena ? "#a8845e" : "#6a6078"; c.fillRect(X, Y, Math.ceil(TS), Math.ceil(TS * .3)); } continue; }
+      v2tile(c, ch === "w" ? (((vtime * 1.5 + v2hash(tx, ty) * 4) | 0) % 4 ? "water" : "water2") : floor, tx, ty);
+      if (demon) { c.fillStyle = "rgba(60,20,70,.35)"; c.fillRect(X, Y, Math.ceil(TS), Math.ceil(TS)); }
+      if (ch === "T") push(ty + 1, () => v2obj(c, "pine", tx + .5, ty + 1.15)); else if (ch === "R") push(ty + 1, () => v2obj(c, "rockG", tx + .5, ty + 1)); else if (ch === "B") push(ty + 1, () => v2obj(c, "bush", tx + .5, ty + 1));
+    }
+    if (mapd.exit) push(mapd.exit.y + 1, () => v2obj(c, "torii", mapd.exit.x + .5, mapd.exit.y + 1));
+    if (mapd.stairs) push(mapd.stairs.y + 1, () => { c.font = `${TS * .8}px sans-serif`; c.textAlign = "center"; c.fillText("🪜", ((mapd.stairs.x + .5) * T - V2.cx) * k + Wd / 2, ((mapd.stairs.y + 1) * T - V2.cy) * k + Ht / 2 - TS * .2); labelT("다음 층", mapd.stairs.x + .5, mapd.stairs.y + .5, 1, "#ffd34d"); });
+  } else
   for (let ty = y0; ty <= y1; ty++) for (let tx = x0; tx <= x1; tx++) {
     if (inV(tx, ty) || (!WORLD && local)) { const lx = V ? tx - V.x : tx, ly = V ? ty - V.y : ty, ch = terrain[ly] && terrain[ly][lx]; if (ch === undefined) continue;
       const g = ch === "w" ? (((vtime * 1.5 + v2hash(tx, ty) * 4) | 0) % 4 ? "water" : "water2") : ch === "s" ? "sand" : ch === "p" ? "dirt" : v2hash(tx, ty) < .82 ? "grass" : v2hash(tx, ty) < .91 ? "grass2" : "grass3"; v2tile(c, g, tx, ty); continue; }
@@ -2837,7 +2856,7 @@ function draw2D() {
   }
   // 마을(지역) 물체 — 월드에서도 이어 보여요
   const vx = V ? V.x : 0, vy = V ? V.y : 0, vpx = vx * T, vpy = vy * T;
-  if (V || local) {
+  if (!home && !mapd && (V || local)) {
     for (const t of trees) { const st = t.age < 20 ? .5 : t.age < 60 ? .75 : 1, by = vy + t.y + 1; push(by, () => { v2obj(c, "treeR", vx + t.x + .5, by + .15, st); if (t.fruit > 0 && t.age >= 60) { c.fillStyle = "#e8505a"; for (let i = 0; i < t.fruit; i++) { const X = ((vx + t.x + .3 + i * .22) * T - V2.cx) * k + Wd / 2, Y = ((by - 1.2 + (i % 2) * .2) * T - V2.cy) * k + Ht / 2; c.beginPath(); c.arc(X, Y, TS * .09, 0, 6.28); c.fill(); } } }); }
     for (const r of rocks) { const by = vy + r.y + 1; push(by, () => v2obj(c, "rockG", vx + r.x + .5, by)); }
     for (const f of flowers) if (!(f.back > 0)) { const by = vy + f.y + 1; push(by - .5, () => v2obj(c, "flower", vx + f.x + .5, by - .1)); }
@@ -2847,17 +2866,17 @@ function draw2D() {
     for (const v of villagers) { const [nm, an] = V2VIL[v.e] || ["Villager", 0]; const o = v; o.vdx = v.vx; o.vdy = v.vy; o.vmv = v.talk <= 0 && !!(v.vx || v.vy); o.vemote = v.talk > 0; push((vpy + v.y + 8) / T, () => { v2sprite(c, nm, an ? "a" : "c", vpx + v.x, vpy + v.y + 8, o); }); if (local && Math.hypot(v.x - P.x, v.y - P.y) < 80) labelT(v.name, vx + v.x / T, vy + (v.y + 8) / T, 1.6, "#fff3d6"); }
     for (const cr of critters) { const o = cr; o.vdx = cr.vx; o.vdy = cr.vy; o.vmv = !!(cr.vx || cr.vy); o.vfast = Math.hypot(cr.vx, cr.vy) > 40; push((vpy + cr.y + 8) / T, () => v2sprite(c, cr.k === "v/fox" ? "Cat" : "Dog2", "a", vpx + cr.x, vpy + cr.y + 8, o, .8)); }
   }
-  if (Hr) { const by = Hr.y + RH + .2; push(by, () => v2obj(c, "house", Hr.x + RW / 2, by, 1.2)); }
+  if (Hr && !home && !mapd) { const by = Hr.y + RH + .2; push(by, () => v2obj(c, "house", Hr.x + RW / 2, by, 1.2)); }
   // 월드 물체
   if (scene === "dun" && dun) {
-    for (const p of poisNear(x0, y0, x1, y1)) { const cx2 = p.x + (p.w || 1) / 2, by = p.y + (p.h || 1);
+    if (!mapd) for (const p of poisNear(x0, y0, x1, y1)) { const cx2 = p.x + (p.w || 1) / 2, by = p.y + (p.h || 1);
       const key = p.type === "shop" ? "shop" : p.type === "inn" ? "inn" : p.type === "castle" ? (p.deco ? "rockG" : "dojo") : p.type === "demon" ? "dojo" : p.type === "cave" ? "cave" : p.type === "portal" || p.type === "shrine" ? "torii" : null;
       if (key) push(by, () => { c.save(); if (p.type === "demon") c.filter = "hue-rotate(220deg) brightness(.6)"; v2obj(c, key, p.type === "castle" && !p.deco ? p.x + 5 : cx2, p.type === "castle" && !p.deco ? p.y + 5 : by, p.type === "castle" && !p.deco ? 2.4 : p.type === "demon" ? 2.6 : 1); c.restore(); });
       else if (p.type === "chest") push(by, () => { c.font = `${TS * .8}px sans-serif`; c.textAlign = "center"; c.fillText(S.wopen[p.id] ? "📭" : "🎁", (cx2 * T - V2.cx) * k + Wd / 2, (by * T - V2.cy) * k + Ht / 2 - TS * .2); });
       else if (p.type === "board") push(by, () => { c.font = `${TS * .8}px sans-serif`; c.textAlign = "center"; c.fillText("📋", (cx2 * T - V2.cx) * k + Wd / 2, (by * T - V2.cy) * k + Ht / 2 - TS * .2); });
     }
     for (const l of dun.loot) push((l.y + 8) / T, () => { c.font = `${TS * .6}px sans-serif`; c.textAlign = "center"; c.fillText(l.t === "bell" ? "🔔" : l.t === "gear" ? "✨" : l.t === "pot" ? "🧪" : l.t === "furn" ? "🪑" : "🎁", (l.x - V2.cx) * k + Wd / 2, (l.y + 8 - V2.cy) * k + Ht / 2 - Math.abs(Math.sin(vtime * 3 + l.x)) * TS * .12); });
-    for (const v of dun.vil || []) { const o = v; o.vdx = v.vx; o.vdy = v.vy; o.vmv = v.talk <= 0 && !!(v.vx || v.vy); o.vemote = v.talk > 0; const nm = v.model === "king" ? "Noble" : v.model === "guard" ? "Knight" : (V2VIL[v.e] || ["Villager"])[0], an = !v.model && (V2VIL[v.e] || [0, 0])[1];
+    if (!mapd) for (const v of dun.vil || []) { const o = v; o.vdx = v.vx; o.vdy = v.vy; o.vmv = v.talk <= 0 && !!(v.vx || v.vy); o.vemote = v.talk > 0; const nm = v.model === "king" ? "Noble" : v.model === "guard" ? "Knight" : (V2VIL[v.e] || ["Villager"])[0], an = !v.model && (V2VIL[v.e] || [0, 0])[1];
       push((v.y + 8) / T, () => v2sprite(c, nm, an ? "a" : "c", v.x, v.y + 8, o, v.model === "king" ? 1.15 : 1)); if (v.model === "king") labelT("👑 " + v.name, v.x / T, (v.y + 8) / T, 1.9, "#ffe27a"); else if (Math.hypot(v.x - P.x, v.y - P.y) < 90) labelT(v.name, v.x / T, (v.y + 8) / T, 1.6, "#fff3d6"); }
     for (const m of dun.mons) { if (Math.abs(m.x / T - V2.cx / T) > 24 || Math.abs(m.y / T - V2.cy / T) > 16) continue;
       const o = m, dx = P.x - m.x, dy = P.y - m.y, chase = !(m.wild && !m.hostile); o.vdx = chase ? dx : m.wvx; o.vdy = chase ? dy : m.wvy; o.vmv = undefined; o.vatk = (m.wind > 0 || m.cw > 0) ? 1 : 0; o.vflash = m.flash > 0; o.vfast = m.spd >= 90;
@@ -2879,7 +2898,7 @@ function draw2D() {
   if (dun && dun.arcs) for (const a of dun.arcs) { const X = (P.x + ox - V2.cx) * k + Wd / 2, Y = (P.y + oy - V2.cy) * k + Ht / 2; c.strokeStyle = "rgba(255,255,255,.8)"; c.lineWidth = TS * .12; c.beginPath(); if (a.whirl) c.arc(X, Y, a.r * k, 0, 6.28); else c.arc(X, Y, a.r * k * .8, a.a - 1, a.a + 1); c.stroke(); }
   for (const p of parts) { c.fillStyle = "#" + p.c.getHexString(); const X = ((p.x * T + (local ? ox : 0)) - V2.cx) * k + Wd / 2, Y = ((p.z * T + (local ? oy : 0)) - V2.cy) * k + Ht / 2 - p.h * TS * .6; c.fillRect(X - TS * .05, Y - TS * .05, TS * .1, TS * .1); }
   // 밤
-  const dk = darkness(); if (dk > .05) { const X = Wd / 2, Y = Ht / 2 - TS * .4, gr = c.createRadialGradient(X, Y, TS * 1.5, X, Y, TS * 6); gr.addColorStop(0, `rgba(20,24,60,0)`); gr.addColorStop(1, `rgba(20,24,60,${Math.min(.72, dk * 1.1)})`); c.fillStyle = gr; c.fillRect(0, 0, Wd, Ht); }
+  const dk = mapd && !mapd.arena && mapd.kind !== "wild" ? Math.max(.42, darkness()) : home ? 0 : darkness(); if (dk > .05) { const X = Wd / 2, Y = Ht / 2 - TS * .4, gr = c.createRadialGradient(X, Y, TS * 1.5, X, Y, TS * 6); gr.addColorStop(0, `rgba(20,24,60,0)`); gr.addColorStop(1, `rgba(20,24,60,${Math.min(.72, dk * 1.1)})`); c.fillStyle = gr; c.fillRect(0, 0, Wd, Ht); }
   if (local && started && !modal) { const { tx, ty } = target(); c.strokeStyle = `rgba(255,255,255,${.5 + .35 * Math.sin(vtime * 6)})`; c.lineWidth = Math.max(2, TS * .06); c.strokeRect(((vx + tx) * T - V2.cx) * k + Wd / 2 + 2, ((vy + ty) * T - V2.cy) * k + Ht / 2 + 2, TS - 4, TS - 4); }
 }
 // 라벨 좌표(칸 단위)는 장면 기준이에요: 마을에서는 이미 월드 칸으로 넘겨요
