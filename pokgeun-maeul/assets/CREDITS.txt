@@ -51,4 +51,8 @@
   Ultimate Animated Animals — Quaternius (quaternius.com), CC0 (github.com/xxfrigorizxx/The-Legacy-Of-Seroka 경유, License.txt CC0 포함)
 마을 사람 주민 나비·토리 — 애니풍 플레이어와 같은 VRoid 샘플 B·C (위 '애니풍 플레이어 캐릭터' 조건)
 
+귀여운 2D 화면 — assets/2d/ (타일셋·캐릭터·몬스터·동물·그림자)
+  Ninja Adventure Asset Pack — Pixel-boy & AAA (pixel-boy.itch.io/ninja-adventure-asset-pack), CC0 1.0
+  (파일: github.com/wojciech-bilicki/Zelda 의 Assets/Sprites 경유)
+
 3D 엔진 — three.js r187 (mrdoob, MIT) / 글꼴 — Noto Sans KR (Google Fonts, SIL OFL 1.1)

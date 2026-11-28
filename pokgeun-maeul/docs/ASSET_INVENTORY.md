@@ -16,6 +16,7 @@
 | `assets/vrm/*.vrm` (3) | 애니풍 플레이어 캐릭터(단발·트윈테일·소년), 표정·머리카락 흔들림 | pixiv VRoid 샘플 AvatarSample_A·B·C / github.com/V-Sekai-archive/datasource-anim-female-doll-retargeting 경유 | 무료 이용·상업 가능(파일 내 VRM 정보: Everyone, commercial Allow, license Other). **CC0 아님** | 일부 확인 | 원문 이용 조건 페이지는 접근 불가로 미확인(사용자 승인 하에 진행, 2026-11-28). 텍스처를 512px로 줄여 1명당 약 5MB. 고른 캐릭터 하나만 불러와요. |
 | `assets/villagers/pug.glb`, `cow.glb` | 두 발 동물 주민(콩이·음메) | Quaternius Ultimate Animated Character Pack / github.com/AbrahamBrookes/hey-you-steal-that-bling 경유 | CC0 1.0 | 일부 확인 | 경유 저장소에 라이선스 파일이 없어요. Quaternius 공식 페이지 기준 CC0. |
 | `assets/villagers/shiba.glb`, `fox.glb` | 마을을 돌아다니는 동물 | Quaternius Ultimate Animated Animals / github.com/xxfrigorizxx/The-Legacy-Of-Seroka 경유 | CC0 1.0 | 확인됨 (경유 저장소에 원본 License.txt) | |
+| `assets/2d/**/*.png` (41) | 귀여운 2D 화면: 타일셋 5종(바닥·자연·건물·물·사막), 캐릭터 9·몬스터 20·동물 5, 그림자 | Ninja Adventure Asset Pack — Pixel-boy & AAA / github.com/wojciech-bilicki/Zelda 경유 | CC0 1.0 | 확인됨 (itch.io 공식 페이지 CC0) | 약 0.37MB. 설정에서 2D를 고를 때만 불러와요. |
 | `assets/ground/*.webp` (24) | 지형 6종과 디테일 질감 6종(색·노멀) | Poly Haven (polyhaven.com) | CC0 1.0 | 확인됨 (Poly Haven API 직접 다운로드) | |
 | 폰트 Noto Sans KR | UI 글꼴 | Google Fonts | SIL OFL 1.1 | 확인됨 (공개 라이선스) | CDN으로 불러와요. CREDITS에 기록했어요(작업 C). |
 | three.js r187 + addons | 3D 엔진 | mrdoob/three.js (jsDelivr CDN) | MIT | 확인됨 | CREDITS에 기록했어요(작업 C). |
