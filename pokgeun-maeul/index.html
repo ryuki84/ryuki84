@@ -3095,6 +3095,7 @@ function worldGather() {
   }
 }
 function worldAct() {
+  if (dun.kind !== "world") return false;   // 월드가 아닐 때(동굴 등) 호출되면 무시
   const P = player, fx_ = P.x + P.dx * 26, fy_ = P.y + 8 + P.dy * 26, tx = Math.floor(fx_ / T), ty = Math.floor(fy_ / T);
   if (fishing) { if (fishing.state === "bite") catchFish(); else say("너무 일렀어요… 찌가 움직일 때까지 기다려요."); fishing = null; return true; }
   const v = dun.vil.find(v => Math.hypot(v.x - fx_, v.y + 8 - fy_) < 40); if (v) { if (v.model === "king") openKing(); else talk(v); return true; }
