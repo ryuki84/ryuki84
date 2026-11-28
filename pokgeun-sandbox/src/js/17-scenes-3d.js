@@ -22,7 +22,7 @@ function drawVillageEnts(act) {
   for (const f of flowers) { const e = ent(f, () => ({ g: mkFlower(f.e) }), g.vdyn); e.g.position.set(f.x + .5, 0, f.y + .5); e.g.visible = !(f.back > 0); }
   for (const it of ground) { const e = ent(it, () => { const m = Sp(new THREE.Group(), .13, FRC[it.k] || 0xe8505a, 0, 0, 0); return { g: m.parent }; }, g.vdyn); e.g.position.set(it.x + .5, .2 + Math.abs(Math.sin(vtime * 4 + it.x)) * .12, it.y + .5); }
   for (const v of villagers) {
-    const e = entM(v, () => mkVilEnt(v), g.vdyn), mv = v.talk <= 0 && (v.vx || v.vy); e.emote = v.talk > 0 ? "Wave" : null; if (e.vrm) e.pose = v.talk > 0 ? "Idle_Talking_Loop" : null;
+    const e = entM(v, () => mkVilEnt(v), g.vdyn), mv = v.talk <= 0 && (v.vx || v.vy); e.emote = v.talk > 0 ? "Wave" : null; if (e.vrm) e.pose = v.talk > 0 ? "Idle_Talking_Loop" : null; else if (e.cbk) e.pose = v.talk > 0 ? "Cheer" : null;
     e.g.position.set(v.x / T, 0, (v.y + 8) / T); if (mv) face(e.g, v.vx, v.vy); else if (act && v.talk > 0) face(e.g, P.x - v.x, P.y - v.y);
     animE(e, mv, e.mon ? 5 : 8, .5); if (act && Math.hypot(v.x - P.x, v.y - P.y) < 80) labelT(v.name, v.x / T, (v.y + 8) / T, 2, "#fff3d6");
   }

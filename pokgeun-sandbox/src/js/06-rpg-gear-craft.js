@@ -98,6 +98,9 @@ $("gear").addEventListener("click", e => {
   const t = e.target, d = t.dataset || {};
   if (t.id === "closeGear" || t.id === "closeX") return closeShop();
   if (t.closest("[data-lookrand]")) { const R = n => Math.floor(Math.random() * n); S.look = { h: R(6), hc: R(7), sk: R(5), ey: R(5), tp: R(8), pc: R(6), bc: R(4), ot: R(4), bd: R(4), br: Math.random() < .7 ? 0 : 1 + R(2), hat: Math.random() < .6 ? 0 : R(5), cc: Math.random() < .5 ? 0 : 1 + R(8), c: 0 }; sfx("ui"); save(); netLook(); return renderGear(); }
+  if (t.closest("[data-cbrand]")) { const R = n => Math.floor(Math.random() * n), b = R(5); S.cb = { head: R(5), body: b, legs: Math.random() < .7 ? b : R(5), hat: Math.random() < .7 ? 0 : R(CB_HAT.length), cape: R(CB_CAPE.length), cc: R(CB_COL.length), hc: R(CB_COL.length) }; save(); netLook(); return renderGear(); }
+  if (d.cbpre) { S.cb = { ...CB_PRESET[+d.cbpre] }; delete S.cb.n; save(); netLook(); return renderGear(); }
+  if (d.cb) { const [k, v] = d.cb.split(":"); S.cb = { ...cbOf(S.cb), [k]: +v }; save(); netLook(); return renderGear(); }
   if (d.look) { const [k, v] = d.look.split(":"); S.look = { ...lookOf(S.look), [k]: +v }; save(); netLook(); return renderGear(); }
   if (d.tab) { gearTab = d.tab; return renderGear(); }
   if (d.craft !== undefined) return craft(+d.craft);

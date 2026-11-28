@@ -20,17 +20,17 @@ const DINO_K = idx => [null, null, "parasaurolophus", "triceratops", "velocirapt
 const mkWildDino = (idx, boss) => { const k = boss ? "trex" : DINO_K(idx); return DINOM.ready && k ? mkDinoG(k) : boss ? mkTrex() : DINO3[idx](); };
 /* ----- 몬스터 모델: Quaternius Ultimate Monsters (CC0) — 대기·걷기·달리기·공격·피격·죽음 ----- */
 const MONK = { "🐀": "slime", "🦇": "bee", "🕷️": "mushnub", "💀": "ghost", "🧟": "orc", "👹": "bluedemon", "🐲": "dragon" };
-const MTGT = { slime: .95, bee: 1.15, mushnub: 1.05, ghost: 1.5, orc: 1.95, bluedemon: 2.3, dragon: 2.1, spikyslime: 1.15, hornet: 1.35, mushking: 1.35, skullghost: 1.65, skullorc: 2.15, "v/dog": 1.15, "v/cat": 1.15, "v/bunny": 1.55, "v/chicken": 1.2, "v/pug": 1.75, "v/cow": 1.8, "v/shiba": .95, "v/fox": .8 };
-const MONCLIP = { Idle: [/^Idle$/, /Flying_Idle/, /Idle/], Walk: [/^Walk$/, /^Flying$/, /Fast_Flying/, /Walk/], Run: [/^Run$/, /^Gallop$/, /Fast_Flying/, /^Walk$/, /Flying/], Attack: [/Bite_Front/, /Headbutt/, /^Punch$/, /Weapon/, /Bite/, /Punch/, /Attack/], Hit: [/Hit/], Death: [/Death/], Wave: [/^Wave$/, /^Victory$/, /^Yes$/, /Dance/, /Idle/], Yes: [/^Yes$/, /^Wave$/, /Idle/] };
+const MTGT = { slime: .95, bee: 1.15, mushnub: 1.05, ghost: 1.5, orc: 1.95, bluedemon: 2.3, dragon: 2.1, spikyslime: 1.15, hornet: 1.35, mushking: 1.35, skullghost: 1.65, skullorc: 2.15, "p/dog": .75, "p/cat": .7, "p/bunny": .75, "p/chick": .55, "p/cow": 1.05, "p/pig": .85 };
+const MONCLIP = { Idle: [/^Idle$/i, /Flying_Idle/, /Idle/], Walk: [/^Walk$/i, /^Flying$/, /Fast_Flying/, /Walk/], Run: [/^Run$/i, /^Gallop$/, /Fast_Flying/, /^Walk$/i, /Flying/], Attack: [/Bite_Front/, /Headbutt/, /^Punch$/, /Weapon/, /Bite/, /Punch/, /Attack/], Hit: [/Hit/], Death: [/Death/], Wave: [/^Wave$/, /^Victory$/, /^Yes$/, /gesture-positive/, /Dance/i, /Idle/i], Yes: [/^Yes$/, /^Wave$/, /Idle/] };
 const MONM = { ready: false, started: false, src: {}, clips: {}, sc: {}, map: {} };
 function loadMonsters() {
   if (MONM.started || !R3) return; MONM.started = true; const L = new THREE.GLTFLoader(), ks = Object.keys(MTGT);
-  Promise.all(ks.map(k => L.loadAsync(k.startsWith("v/") ? `assets/villagers/${k.slice(2)}.${KEXT}` : `assets/monsters/${k}.${KEXT}`))).then(r => { ks.forEach((k, i) => {
+  Promise.all(ks.map(k => L.loadAsync(k.startsWith("p/") ? `assets/pets/animal-${k.slice(2)}.${KEXT}` : `assets/monsters/${k}.${KEXT}`))).then(r => { ks.forEach((k, i) => {
     const sc = r[i].scene, cl = r[i].animations; MONM.src[k] = sc; MONM.clips[k] = cl; const bb = new THREE.Box3().setFromObject(sc); MONM.sc[k] = MTGT[k] / Math.max(.1, bb.max.y - bb.min.y);
     MONM.map[k] = {}; for (const st in MONCLIP) { let c = null; for (const re of MONCLIP[st]) if ((c = cl.find(a => re.test(a.name)))) break; MONM.map[k][st] = c || cl[0]; }
   }); MONM.ready = true; }).catch(e => console.warn("몬스터 모델을 불러오지 못해 기본 모델로 표시해요.", e));
 }
-const MONFIX = { "v/pug": { Skin: 0xd8b088 }, "v/cow": { Skin: 0xf0e8e0 } };   // 원본에서 거의 검게 저장된 피부색 바로잡기
+const MONFIX = {};   // 원본에서 거의 검게 저장된 피부색 바로잡기
 function mkMonG(k) {
   const root = THREE.SkeletonUtils.clone(MONM.src[k]), g = new THREE.Group(), body = new THREE.Group(); g.add(body); body.add(root); root.scale.setScalar(MONM.sc[k]);
   const fix = MONFIX[k] || {}; root.traverse(o => { if (o.isMesh) { const src = o.material, col = src.map ? 0xffffff : fix[src.name] ?? (src.color ? src.color.getHex() : 0xffffff), m = toonPatch(TOON({ color: col, map: src.map || null, gradientMap: gradTex, ...(PBRL ? { roughness: .78 } : {}) })); m.userData.own = 1; o.material = m; o.castShadow = true; o.frustumCulled = false; } });   // 텍스처 없는 모델은 원래 재질 색 유지
@@ -45,7 +45,7 @@ function monTick(e, mv, fast) {
   e.mixer.update(Math.min(DT, .1));
 }
 // 마을 주민: Quaternius Ultimate Monsters의 동물(CC0). 말을 걸면 손을 흔들어요
-const VILM = { "🐶": "v/pug", "🐱": "v/cat", "🐰": "v/bunny", "🐔": "v/chicken", "🐮": "v/cow" };
+const VILM = { "🐶": "p/dog", "🐱": "p/cat", "🐰": "p/bunny", "🐔": "p/chick", "🐮": "p/cow" };
 const mkVilModel = em => MONM.ready && VILM[em] ? mkMonG(VILM[em]) : mkAnimal(em);
 const mkMonModel = (em, el) => MONM.ready && (el ? ELITE[el].model : MONK[em]) ? mkMonG(el ? ELITE[el].model : MONK[em]) : MON3[em]();
 const MON3 = { "🐀": mkRat, "🦇": mkBat, "🕷️": mkSpider, "💀": mkSkel, "🧟": mkZombie, "👹": mkOgre, "🐲": mkDragon };

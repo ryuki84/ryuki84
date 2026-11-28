@@ -11,11 +11,6 @@
   웹용 변환: FBX → glb, 폴리곤 감소(meshoptimizer), 텍스처는 webp(최대 512px)로 분리해 공유.
   먼 나무용 간략 모델 assets/nature/lod/ — 같은 원본을 meshoptimizer로 약 25%로 줄임(tools/make-nature-lod.mjs).
 
-정상 비율 사람 캐릭터·애니메이션 — assets/human/mannequin.glb
-  Universal Animation Library (Standard) — Quaternius (quaternius.com), CC0 (LICENSE-UAL.txt)
-  (glTF: github.com/J-Ponzo/gltf-universal-animation-library)
-  웹용 변환: 애니메이션 19종만 남기고 리샘플. 옷 색은 게임에서 뼈대 부위별로 칠해요.
-
 지형 텍스처 — assets/ground/
   Poly Haven (polyhaven.com), CC0: leafy_grass, forest_leaves_02, coast_sand_01, snow_02, rocky_terrain_02, brown_mud_dry, grey_plaster_02
   웹용 변환: 1k 색상/노멀(GL) 맵을 512px webp로 줄임(plaster는 흑백 디테일로 변환).
@@ -32,24 +27,11 @@
   정예(spikyslime, hornet, mushking, skullghost, skullorc): GreenSpikyBlob, Armabee_Evolved, Mushnub_Evolved, Ghost_Skull, Orc_Skull
   웹용 변환: glTF → glb(텍스처 내장), 리샘플·중복 제거(@gltf-transform).
 
-마을 주민 — assets/villagers/ (dog, cat, bunny, chicken)
-  Ultimate Monsters pack — Quaternius (quaternius.com), CC0 (github.com/mlflabs/brain 경유)
-  원본 이름: Blob/Dog, Blob/Cat, Big/Bunny, Blob/Chicken. 웹용 변환: glb, 리샘플·중복 제거.
+마을 동물 — assets/pets/ (animal-dog, cat, cow, pig, chick, bunny + Textures/colormap.png)
+  Cube Pets (1.0) — Kenney (www.kenney.nl), CC0 1.0 (License.txt 포함, kenney.nl/assets/cube-pets 에서 직접 받음)
 
-애니풍 플레이어 캐릭터 — assets/vrm/ (sample_A, sample_B, sample_C)
-  VRoid 샘플 아바타 AvatarSample_A·B·C — pixiv Inc. (VRoid Project)
-  이용 조건: 파일에 들어 있는 VRM 정보 기준 이용자 제한 없음(Everyone), 상업 이용 허용, 라이선스 Other(CC0 아님).
-  pixiv 이용 조건 원문(vroid.pixiv.help 문서 4402394424089 / 4402614652569)은 이 개발 환경에서 열어 보지 못했어요.
-  2차 기록에 따르면 무료·상업 이용 가능·출처 표기 불필요, 단 CC0로 재표기 금지·이유 없는 유료 재배포 금지·캐릭터 제작 서비스 구축 금지·pixiv 추천처럼 보이게 하는 사용 금지.
-  파일: github.com/V-Sekai-archive/datasource-anim-female-doll-retargeting 경유. 웹용으로 텍스처만 줄였어요(tools/slim-vrm.py, 512px).
-  표시: three-vrm 3.5.5 (pixiv, MIT)
-
-마을 주민(두 발 동물) — assets/villagers/pug.glb, cow.glb
-  Ultimate Animated Character Pack — Quaternius (quaternius.com), CC0 (github.com/AbrahamBrookes/hey-you-steal-that-bling 경유)
-  원본: Pug, Cow. 피부 재질 색은 원본에 거의 검게 저장돼 있어 게임에서 바로잡아요.
-마을 동물(시바·여우) — assets/villagers/shiba.glb, fox.glb
-  Ultimate Animated Animals — Quaternius (quaternius.com), CC0 (github.com/xxfrigorizxx/The-Legacy-Of-Seroka 경유, License.txt CC0 포함)
-마을 사람 주민 나비·토리 — 애니풍 플레이어와 같은 VRoid 샘플 B·C (위 '애니풍 플레이어 캐릭터' 조건)
+※ 포근 마을 샌드박스 캐릭터 셋(2026-11-28): 사람(플레이어·직업 주민·촌장·경비)은 위 KayKit Adventurers 다섯 캐릭터의 부위를 섞어 만들어요(src/js/12-chibi.js).
+  기존 게임의 VRoid 샘플(assets/vrm)·마네킹(assets/human)·주민 모델(assets/villagers)은 이 게임에서 쓰지 않아 지웠어요.
 
 귀여운 2D 화면 — assets/2d/ (타일셋·캐릭터·몬스터·동물·그림자)
   Ninja Adventure Asset Pack — Pixel-boy & AAA (pixel-boy.itch.io/ninja-adventure-asset-pack), CC0 1.0

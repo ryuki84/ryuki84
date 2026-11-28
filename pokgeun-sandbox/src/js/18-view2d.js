@@ -15,8 +15,8 @@ const V2BIO = ["water", "sand", "grass", "dgrass", "psand", "snow", "mud", "mud"
 const V2TREE = { 1: "treeR", 2: "treeR", 3: "pine", 4: "palm", 5: "snowp", 6: "dead", 7: "pine", 8: "treeR", 9: "treeR", 10: "dead" };
 const V2MON = { "🐀": "Slime", "🦇": "Butterfly", "🕷️": "Mushroom", "💀": "Spirit", "🧟": "Cyclope", "👹": "Beast", "🐲": "Dragon", "😈": "Beast2", spiky: "Slime2", hornet: "ButterflyBlue", mushking: "Mushroom2", skullghost: "Spirit2", skullorc: "Cyclope2" };
 const V2DINO = ["Lizard", "Mole", "Reptile2", "Reptile", "Lizard2"];
-const V2VIL = { "🐶": ["Dog", 1], "🐮": ["Cow", 1], "🐱": ["Villager", 0], "🐰": ["OldMan", 0], "🐔": ["Pig", 1], "🐻": ["Dog2", 1] };
-const v2Player = () => ["Woman", "Princess", "Boy", "Knight"][lookOf(S.look).av] || "Boy";
+const V2VIL = { "🌾": ["Villager", 0], "🪚": ["OldMan", 0], "🔨": ["Monk", 0], "💰": ["Noble", 0], "🍳": ["Woman", 0], "🧭": ["Boy", 0], "🐶": ["Dog", 1], "🐮": ["Cow", 1], "🐱": ["Villager", 0], "🐰": ["OldMan", 0], "🐔": ["Pig", 1], "🐻": ["Dog2", 1] };
+const v2Player = () => ["Knight", "Monk", "Noble", "Princess", "Boy"][cbOf(S.cb).head] || "Boy";
 function load2D() {
   if (!VIEW2D || V2.started) return; V2.started = true; const jobs = [], add = (k, src) => jobs.push(new Promise(res => { const im = new Image(); im.onload = () => { V2.img[k] = im; res(); }; im.onerror = () => { console.warn("2D 그림을 못 불러왔어요:", src); res(); }; im.src = src; }));
   for (const [k, f] of [["floor", "TilesetFloor"], ["nature", "TilesetNature"], ["house", "TilesetHouse"], ["water", "TilesetWater"], ["desert", "TilesetDesert"], ["shadow", "shadow"]]) add(k, `assets/2d/${f}.png`);
@@ -107,7 +107,7 @@ function draw2D() {
     const bld = (key, r, ox2 = 0) => { const by = vy + r.y + r.h + .2; push(by, () => v2obj(c, key, vx + r.x + r.w / 2 + ox2, by)); };
     bld("house", HOUSE); bld("shop", SHOP); bld("cave", CAVE); if (FEAT.arena) bld("dojo", ARENA); { const r = WILDG; const by = vy + r.y + r.h; push(by, () => v2obj(c, "torii", vx + r.x + r.w / 2, by)); }
     for (const v of villagers) { const [nm, an] = V2VIL[v.e] || ["Villager", 0]; const o = v; o.vdx = v.vx; o.vdy = v.vy; o.vmv = v.talk <= 0 && !!(v.vx || v.vy); o.vemote = v.talk > 0; push((vpy + v.y + 8) / T, () => { v2sprite(c, nm, an ? "a" : "c", vpx + v.x, vpy + v.y + 8, o); }); if (local && Math.hypot(v.x - P.x, v.y - P.y) < 80) labelT(v.name, vx + v.x / T, vy + (v.y + 8) / T, 1.6, "#fff3d6"); }
-    for (const cr of critters) { const o = cr; o.vdx = cr.vx; o.vdy = cr.vy; o.vmv = !!(cr.vx || cr.vy); o.vfast = Math.hypot(cr.vx, cr.vy) > 40; push((vpy + cr.y + 8) / T, () => v2sprite(c, cr.k === "v/fox" ? "Cat" : "Dog2", "a", vpx + cr.x, vpy + cr.y + 8, o, .8)); }
+    for (const cr of critters) { const o = cr; o.vdx = cr.vx; o.vdy = cr.vy; o.vmv = !!(cr.vx || cr.vy); o.vfast = Math.hypot(cr.vx, cr.vy) > 40; push((vpy + cr.y + 8) / T, () => v2sprite(c, { "p/cat": "Cat", "p/cow": "Cow", "p/pig": "Pig", "p/dog": "Dog" }[cr.k] || "Dog2", "a", vpx + cr.x, vpy + cr.y + 8, o, .8)); }
   }
   if (Hr && !home && !mapd) { const by = Hr.y + RH + .2; push(by, () => v2obj(c, "house", Hr.x + RW / 2, by, 1.2)); }
   // 월드 물체

@@ -1,8 +1,8 @@
 /* ----- 3인칭 카메라 ----- */
 let lookYaw = .3, lookManT = -99, camYaw = 0, camManT = -99, TPV_ON = true, camZoom = 1; try { camZoom = clamp(+localStorage.getItem("pokgeun-zoom") || 1, .55, 1.7); } catch (e) {} try { TPV_ON = localStorage.getItem("pokgeun-tpv") !== "0"; } catch (e) {}
 const TPV = () => TPV_ON && started && !lookMode() && (scene === "out" || (scene === "home" && WORLD && WORLD.vreg) || (scene === "dun" && dun && (dun.kind === "world" || dun.kind === "wild") && !dun.arena));
-const lookSig = () => { const L = lookOf(S.look), q = S.eq; return [KAY.ready, MAN.ready, VRMS.cur ? VRMS.cur.k : "", JSON.stringify(L), q.armor ? q.armor.id : 0, q.ring ? q.ring.id : 0, q.weapon ? q.weapon.e : 0, q.armor ? q.armor.e + q.armor.rar : 0].join(","); };
-const mkPlayer = o => { const armed = o === PK.d, vk = vrmKey(); if (vk) loadVRM(vk); const e = vk && VRMS.cur && VRMS.cur.k === vk ? mkVrmEnt(armed) : MAN.ready ? mkMan(S.look, S.eq, armed) : KAY.ready ? mkKay(S.look, S.eq, armed) : mkHeroFromLook(S.look, 0, S.eq); e.sig = lookSig() + (armed ? "A" : ""); return e; };
+const lookSig = () => { const L = cbOf(S.cb), q = S.eq; return [KAY.ready, JSON.stringify(L), q.armor ? q.armor.id : 0, q.ring ? q.ring.id : 0, q.weapon ? q.weapon.e : 0, q.armor ? q.armor.e + q.armor.rar : 0].join(","); };
+const mkPlayer = o => { const armed = o === PK.d; const e = KAY.ready ? mkChibi(S.cb, S.eq, armed) : mkHeroFromLook(S.look, 0, S.eq); e.sig = lookSig() + (armed ? "A" : ""); return e; };
 let curPE = null;
 function refreshLook(e) {
   curPE = e; const armed = e.key0 === PK.d, sig = lookSig() + (armed ? "A" : "");
@@ -15,22 +15,22 @@ function swapInto(e, n) {
   for (const k of Object.keys(e)) if (!["g", "par", "key0", "seen", "sig", "osig", "evk"].includes(k)) delete e[k];
   for (const k of Object.keys(n)) if (k !== "g") e[k] = n[k]; e.wk = undefined; e.wm = null; e.fl = false;
 }
-const netLook = () => { if (NET.on) NET.send({ t: "look", look: lookOf(S.look) }); };
+const netLook = () => { if (NET.on) NET.send({ t: "look", look: netLookOf() }); };
+const netLookOf = () => ({ ...cbOf(S.cb), cbk: 1 });   // 멀티플레이: 치비 외형을 보내요(서버 cleanLook 허용 키)
 const lookMode = () => modal && gearTab === "look" && !$("gear").hidden;
-function bodyLook() {
-  const L = lookOf(S.look), hex = v => "#" + v.toString(16).padStart(6, "0");
-  const sw = (k, arr, hexes) => `<div style="display:flex;gap:7px;flex-wrap:wrap;margin:4px 0 8px">${arr.map((v, i) => `<button style="margin:0;${hexes ? "width:36px;height:36px;padding:0;border-radius:50%;background:" + (hexes[i] < 0 ? "linear-gradient(135deg,#fff,#ccc)" : hex(hexes[i])) : "padding:4px 10px"};outline:${L[k] === i ? "3px solid #ff8f5e" : "1px solid rgba(0,0,0,.18)"};outline-offset:2px" data-look="${k}:${i}">${hexes ? (hexes[i] < 0 ? "<small style=\"font-size:10px\">없음</small>" : "") : v}</button>`).join("")}</div>`;
-  const head = `<h2>🧑 외형</h2><div><small>바로 적용돼요. 멀티플레이에서도 다른 사람에게 보여요.</small></div>`, gear = `<div><small>⚔️ 무기(검·도끼·망치)와 🛡️ 방패는 던전·오픈월드에서 손에 들려요. 💍 반지는 손에서 빛나요.</small></div>`;
-  if (MAN.ready) { const chips = (k, arr) => sw(k, arr), sec = (t, body) => `<div class="lsec"><h3>${t}</h3>${body}</div>`;
-    const avs = sec(`✨ 캐릭터 · ${VRMN[L.av]}`, chips("av", VRMN) + (L.av < 3 ? `<div><small>${VRMS.loading ? "⏳ 애니 캐릭터를 불러오는 중이에요…" : VRMS.failed[VRMK[L.av]] ? "⚠️ 애니 캐릭터를 불러오지 못해 마네킹으로 보여요." : "애니 캐릭터는 생김새가 정해져 있어요. 머리·옷 꾸미기는 '커스텀(마네킹)'에서 할 수 있어요."}</small></div>` : ""));
-    if (L.av < 3) return head + avs + gear;
-    return head + avs + `<div class="lrow"><button data-lookrand>🎲 무작위</button><small>${TOUCHY ? "위쪽 캐릭터를 끌어서 돌려 보세요" : "왼쪽 캐릭터를 드래그해서 돌려 보세요"}</small></div>` +
-      sec(`🧍 체형 · ${LOOK.bd[L.bd]}`, chips("bd", LOOK.bd)) + sec("🎨 피부색", sw("sk", LOOK.skin, LOOK.skin)) +
-      sec(`💇 머리 모양 · ${LOOK.hs[L.h]}`, chips("h", LOOK.hs)) + sec("머리 색", sw("hc", LOOK.hair, LOOK.hair)) + sec("👁️ 눈 색", sw("ey", LOOK.eye, LOOK.eye)) + sec(`🧔 수염 · ${LOOK.br[L.br]}`, chips("br", LOOK.br)) +
-      sec(`👕 상의 · ${LOOK.ot[L.ot]}`, chips("ot", LOOK.ot) + sw("tp", LOOK.out, LOOK.out)) + sec("👖 하의 색", sw("pc", LOOK.pants, LOOK.pants)) + sec("🥾 신발 색", sw("bc", LOOK.boots, LOOK.boots)) +
-      sec(`🎩 모자 · ${LOOK.hats[L.hat]}`, chips("hat", LOOK.hats)) + sec("🧣 망토", sw("cc", [0, ...LOOK.out], [-1, ...LOOK.out])) + `<div><small>🥋 갑옷을 입으면 상의가 금속색으로, 🛡️ 방패는 왼손에 들려요.</small></div>${gear}`; }
-  if (KAY.ready) return head + `<h3>캐릭터 · ${KCLS[L.c][1]}</h3>${sw("c", KCLS.map(c => c[1]))}<h3>모자 · 투구</h3>${sw("hat", ["쓰기", "벗기"])}<h3>망토 색</h3>${sw("cc", [0, ...LOOK.out], [-1, ...LOOK.out])}${gear}`;
-  return head + (KAY.failed ? "" : `<div><small>⏳ 3D 캐릭터를 불러오는 중이에요…</small></div>`) + `<h3>머리 모양 · ${LOOK.hs[L.h]}</h3>${sw("h", LOOK.hs.map((n, i) => i + 1))}<h3>머리 색</h3>${sw("hc", LOOK.hair, LOOK.hair)}<h3>피부색</h3>${sw("sk", LOOK.skin, LOOK.skin)}<h3>눈 색</h3>${sw("ey", LOOK.eye, LOOK.eye)}<h3>옷 색</h3>${sw("tp", LOOK.out, LOOK.out)}${gear}`;
+function bodyLook() {   // 치비 캐릭터 꾸미기: 기본 3종 + 부위 섞기 + 망토·모자 색
+  const L = cbOf(S.cb), hex = v => "#" + v.toString(16).padStart(6, "0");
+  const chips = (k, names) => `<div style="display:flex;gap:7px;flex-wrap:wrap;margin:4px 0 8px">${names.map((n, i) => `<button style="margin:0;padding:4px 10px;outline:${L[k] === i ? "3px solid #ff8f5e" : "1px solid rgba(0,0,0,.18)"};outline-offset:2px" data-cb="${k}:${i}">${n}</button>`).join("")}</div>`;
+  const cols = k => `<div style="display:flex;gap:7px;flex-wrap:wrap;margin:4px 0 8px">${CB_COL.map((c, i) => `<button style="margin:0;width:34px;height:34px;padding:0;border-radius:50%;background:${c < 0 ? "linear-gradient(135deg,#fff,#ccc)" : hex(c)};outline:${L[k] === i ? "3px solid #ff8f5e" : "1px solid rgba(0,0,0,.18)"};outline-offset:2px" data-cb="${k}:${i}" title="${c < 0 ? "원래 색" : ""}">${c < 0 ? "<small style=\"font-size:10px\">원래</small>" : ""}</button>`).join("")}</div>`;
+  const sec = (t, body) => `<div class="lsec"><h3>${t}</h3>${body}</div>`;
+  const head = `<h2>🧑 외형</h2><div><small>바로 적용돼요. 부위를 섞어서 나만의 캐릭터를 만들어 보세요.</small></div>`;
+  if (!KAY.ready) return head + (KAY.failed ? "<div><small>⚠️ 캐릭터 모델을 불러오지 못했어요.</small></div>" : "<div><small>⏳ 캐릭터를 불러오는 중이에요…</small></div>");
+  return head + `<div class="lrow"><button data-cbrand>🎲 무작위</button><small>${TOUCHY ? "위쪽 캐릭터를 끌어서 돌려 보세요" : "왼쪽 캐릭터를 드래그해서 돌려 보세요"}</small></div>` +
+    sec("✨ 기본 캐릭터", `<div style="display:flex;gap:7px;flex-wrap:wrap;margin:4px 0 8px">${CB_PRESET.map((p, i) => `<button style="margin:0;padding:4px 10px" data-cbpre="${i}">${p.n}</button>`).join("")}</div>`) +
+    sec(`🙂 얼굴 · ${CB_HEAD[L.head]}`, chips("head", CB_HEAD)) + sec(`👕 옷 · ${CB_BODY[L.body]}`, chips("body", CB_BODY)) + sec(`👖 바지 · ${CB_BODY[L.legs]}`, chips("legs", CB_BODY)) +
+    sec(`🎩 모자 · ${CB_HAT[L.hat][0]}`, chips("hat", CB_HAT.map(h => h[0])) + (L.hat ? cols("hc") : "")) +
+    sec(`🧣 망토 · ${CB_CAPE[L.cape][0]}`, chips("cape", CB_CAPE.map(c => c[0])) + (L.cape ? cols("cc") : "")) +
+    `<div><small>⚔️ 무기와 🛡️ 방패는 던전·오픈월드에서 손에 들려요.</small></div>`;
 }
 function weaponModel(e) {
   const g = new THREE.Group();

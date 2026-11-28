@@ -15,9 +15,10 @@ async function client(b, nick, vp = { width: 960, height: 640 }) {
   await B.p.evaluate(() => { const g = window.__game; g.player.x += 64; });
   await sl(1500); await A.p.waitForFunction(() => __game.KAY.ready, null, { timeout: 300000 }); await B.p.waitForFunction(() => __game.KAY.ready, null, { timeout: 300000 });
   await A.p.evaluate(() => __game.togglePanel('look')); await sl(400);
-  for (const k of ['av:3', 'ot:2', 'bd:3', 'hat:4']) { await A.p.evaluate(k => document.querySelector(`[data-look="${k}"]`).click(), k); await sl(100); }
+  for (const k of ['head:1', 'body:2', 'hat:2']) { await A.p.evaluate(k => document.querySelector(`[data-cb="${k}"]`).click(), k); await sl(100); }
   await sl(1800);
-  r.bSeesA = await B.p.evaluate(() => [...window.__game.NET.others.values()].map(o => o.look)); await A.p.keyboard.press('Escape'); await sl(300); await B.p.screenshot({ path: D + 'mp_kay_b.png' }); r.wx = await B.p.evaluate(() => { const W = __game.WX; return { type: W.type, eff: W.eff, flash: W.flash, storm: W.storm, others: [...__game.NET.others.values()].length }; });
+  r.bSeesA = await B.p.evaluate(() => [...window.__game.NET.others.values()].map(o => o.look));
+  r.bChibi = await B.p.waitForFunction(() => [...__game.NET.others.values()].every(o => { const e = __game.ENT.get(o); return e && e.cbk; }), null, { timeout: 120000 }).then(() => true).catch(() => false); await A.p.keyboard.press('Escape'); await sl(300); await B.p.screenshot({ path: D + 'mp_kay_b.png' }); r.wx = await B.p.evaluate(() => { const W = __game.WX; return { type: W.type, eff: W.eff, flash: W.flash, storm: W.storm, others: [...__game.NET.others.values()].length }; });
   r.badInput = await A.p.evaluate(() => { window.__game.NET.send({ t: 'look', look: { h: 99, ot: -4, bd: 'x', br: 3, evil: 1 } }); return 1; });
   await sl(1500);
   r.sanitized = await B.p.evaluate(() => [...window.__game.NET.others.values()].map(o => o.look));

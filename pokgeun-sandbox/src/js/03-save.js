@@ -48,6 +48,7 @@ S.lv = S.lv || 1; S.xp = S.xp || 0; S.potions = S.potions ?? 2; S.bag = S.bag ||
 S.eq = S.eq || { weapon: { id: 1, slot: "weapon", e: "🗡️", n: "나무 칼", rar: 0, ilvl: 1, st: { dmg: 3 }, price: 10 }, armor: null, ring: null };
 if (!S.st) { S.st = { str: 0, dex: 0, vit: 0 }; S.sk = { whirl: 1, fire: 0, tough: 0, tamer: 0 }; S.pts = (S.lv - 1) * 5; S.sp = S.lv - 1; }
 S.look = S.look || { h: 0, hc: 0, sk: 1, ey: 0, tp: 0 };
+S.cb = S.cb && typeof S.cb === "object" ? S.cb : { head: 3, body: 3, legs: 3, hat: 0, cape: 3, cc: 0, hc: 0 };   // 치비 캐릭터 외형(12-chibi.js cbOf)
 S.mat = S.mat || { wood: 0, stone: 0, fiber: 0, berry: 0, meat: 0, hide: 0, bone: 0 }; S.pets = S.pets || []; S.petA = S.petA ?? -1;
 S.mat.ore = S.mat.ore || 0; S.arena = S.arena || { best: 0, kills: 0, runs: 0, style: "sword", own: ["sword"], up: { atk: 0, hp: 0, xp: 0 }, rank: [], start: 1 }; S.idleT = S.idleT || Date.now(); S.daily = S.daily || null; S.story = S.story || { stage: 0, p: {}, notified: false, demon: 0, known: false }; S.fame = S.fame || 0; S.wedits = S.wedits || {}; S.wreg = S.wreg || {}; S.wp = S.wp || {}; S.wopen = S.wopen || {}; S.wcl = S.wcl || {}; S.quests = S.quests || []; S.qoffer = S.qoffer || null; S.crops = S.crops || {};
 const trees = S.trees;
@@ -64,7 +65,8 @@ let clock = new Date().getHours() + new Date().getMinutes() / 60;
 let vtime = 0, saveT = 0;
 
 const player = { x: 8.5 * T, y: 8.5 * T, dx: 0, dy: 1, tool: 0, hp: 100, atkCd: 0, qCd: 0, eCd: 0, fCd: 0, dash: 0, inv: 0, flash: 0, rCd: 0, mounted: false };
-const SPAWNS = [[11, 9], [13, 8], [5, 11], [12, 14]];
+const SPAWNS = [[11, 9], [13, 8], [5, 11], [12, 14], [9, 6], [4, 15]];
 // 마을을 돌아다니는 동물(말은 안 걸어요): Quaternius Ultimate Animated Animals(CC0)
-const critters = [{ k: "v/shiba", n: "시바", x: (SPAWNS[1][0] + 2.5) * T, y: (SPAWNS[1][1] + 1.5) * T, vx: 0, vy: 0, t: 0 }, { k: "v/fox", n: "여우", x: (SPAWNS[3][0] - 2.5) * T, y: (SPAWNS[3][1] + 1.5) * T, vx: 0, vy: 0, t: 1 }];
+// 마을 동물(Kenney Cube Pets, CC0): 강아지·고양이 + 가축(소·돼지·병아리)
+const critters = [["p/dog", "강아지", 1, 2.5], ["p/cat", "고양이", 3, -2.5], ["p/cow", "소", 2, 2.5], ["p/pig", "돼지", 5, -2], ["p/chick", "병아리", 4, 2]].map(([k, n, si, dx], i) => ({ k, n, x: (SPAWNS[si][0] + dx) * T, y: (SPAWNS[si][1] + 1.5) * T, vx: 0, vy: 0, t: i }));
 const villagers = VILLAGERS.map((v, i) => ({ ...v, vilLocal: true, x: (SPAWNS[i][0] + .5) * T, y: (SPAWNS[i][1] + .5) * T, vx: 0, vy: 0, t: 0, talk: 0, line: 0 }));

@@ -106,8 +106,8 @@ function enterDemon(poi) {
 
 /* ----- 모델: 국왕 · 근위병 · 성 · 마왕성 · 대마왕 ----- */
 // 국왕·경비병: 플레이어와 같은 사람 모델(Quaternius UAL 마네킹)에 옷·왕관·투구·무기를 입혀요. 모델이 없으면 예전 코드 모델
-function mkKingM() { if (!MAN.ready) return mkKing(); const e = mkMan({ tp: 1, ot: 3, hat: 4, br: 2, hc: 6, sk: 1, pc: 5, bc: 3, bd: 3, cc: 2 }, null, false); e.g.scale.multiplyScalar(1.08); e.npc = "king"; return e; }
-function mkGuardM() { if (!MAN.ready) return mkGuard(); const e = mkMan({ tp: 0, ot: 0, hat: 1, h: 5, br: 1, hc: 0, sk: 1, pc: 0, bc: 1 }, { weapon: { e: "🗡️" }, armor: { e: "🛡️", rar: 1 } }, true); e.npc = "guard"; return e; }
+function mkKingM() { if (KAY.ready) { const e = mkChibi(CB_NPC.chief, null, false); e.npc = "king"; e.walk = "Walking_A"; return e; } if (!MAN.ready) return mkKing(); const e = mkMan({ tp: 1, ot: 3, hat: 4, br: 2, hc: 6, sk: 1, pc: 5, bc: 3, bd: 3, cc: 2 }, null, false); e.g.scale.multiplyScalar(1.08); e.npc = "king"; return e; }
+function mkGuardM() { if (KAY.ready) { const e = mkChibi(CB_NPC.guard, null, false); e.npc = "guard"; e.walk = "Walking_A"; return e; } if (!MAN.ready) return mkGuard(); const e = mkMan({ tp: 0, ot: 0, hat: 1, h: 5, br: 1, hc: 0, sk: 1, pc: 0, bc: 1 }, { weapon: { e: "🗡️" }, armor: { e: "🛡️", rar: 1 } }, true); e.npc = "guard"; return e; }
 function mkKing() {
   return uq(() => {
     const e = mkHuman({ shirt: 0xa8202a, pants: 0x5a1018, skin: 0xf2c79a, hair: 0xe8e4d8, belt: 0xf5d142, boots: 0x3a1a10, hs: 0 }), b = e.body;

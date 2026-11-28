@@ -29,7 +29,7 @@ function netMsg(m) {
 }
 function netConnect() {
   if (!NET.url || NET.ws) return; let ws; try { ws = new WebSocket(NET.url); } catch (e) { return; } NET.ws = ws;
-  ws.onopen = () => { let nm = ""; try { nm = ($("nick").value || localStorage.getItem("pokgeun-nick") || "").trim(); localStorage.setItem("pokgeun-nick", nm); } catch (e) {} NET.send({ t: "join", name: nm, look: lookOf(S.look) }); };
+  ws.onopen = () => { let nm = ""; try { nm = ($("nick").value || localStorage.getItem("pokgeun-nick") || "").trim(); localStorage.setItem("pokgeun-nick", nm); } catch (e) {} NET.send({ t: "join", name: nm, look: netLookOf() }); };
   ws.onmessage = ev => { let m; try { m = JSON.parse(ev.data); } catch (e) { return; } netMsg(m); };
   ws.onclose = () => { const was = NET.on; NET.ws = null; NET.on = false; NET.others.clear(); NET.away = true; useEdits(S.wedits); NET.retryT = 4; $("online").hidden = true; if (was) { addChat("", "서버 연결이 끊겼어요. 다시 연결하는 중…", true); say("🌐 서버 연결이 끊겼어요 (혼자 하기 모드로 전환)", 3000); } };
   ws.onerror = () => {};
@@ -65,7 +65,7 @@ function enterWorld(pos, msg) {
   if (wsolid(Math.floor(P.x / T), Math.floor((P.y + 8) / T))) { for (let r = 1; r < 8; r++) { let ok = false; for (let a = 0; a < 8 && !ok; a++) { const x = Math.floor(P.x / T + Math.cos(a * .785) * r), y = Math.floor((P.y + 8) / T + Math.sin(a * .785) * r); if (!wsolid(x, y)) { P.x = (x + .5) * T; P.y = (y + .5) * T - 8; ok = true; } } if (ok) break; } }
   W.towns.forEach((t, i) => townVil(t, i));
   { const c = W.towns[0], mkv = (nm, model, ox, oy, lines, e) => { const x = (c.x + ox + .5) * T, y = (c.y + oy + .5) * T - 8; dun.vil.push({ name: nm, e, model, fixed: true, lines, x, y, hx: x, hy: y, vx: 0, vy: 0, t: 0, talk: 0, line: 0 }); };
-    mkv("국왕 폰드", "king", 0, -8, FEAT.story ? [] : ["허허, 포근 왕국에 온 걸 환영하오.", "백성들이 집을 짓고 밭을 가꾸는 모습이 보기 좋구려.", "멀리 나가면 귀한 재료가 많다 하오. 조심히 다녀오시게."], "👑"); mkv("근위병", "guard", -2, -8, GUARD_LINES, "🛡️"); mkv("근위병", "guard", 2, -8, GUARD_LINES, "🛡️"); mkv("성문 경비병", "guard", -7, -3, GUARD_LINES2, "🛡️"); mkv("성문 경비병", "guard", 7, -3, GUARD_LINES2, "🛡️");
+    mkv(FEAT.story ? "국왕 폰드" : "촌장 폰드", "king", 0, -8, FEAT.story ? [] : ["허허, 포근 마을에 온 걸 환영하오.", "백성들이 집을 짓고 밭을 가꾸는 모습이 보기 좋구려.", "멀리 나가면 귀한 재료가 많다 하오. 조심히 다녀오시게."], "👑"); mkv("근위병", "guard", -2, -8, GUARD_LINES, "🛡️"); mkv("근위병", "guard", 2, -8, GUARD_LINES, "🛡️"); mkv("성문 경비병", "guard", -7, -3, GUARD_LINES2, "🛡️"); mkv("성문 경비병", "guard", 7, -3, GUARD_LINES2, "🛡️");
     if (!S.wp[c.id + "w"]) S.wp[c.id + "w"] = 1; }
   dun.pet = activePet() ? { x: P.x - 20, y: P.y, cd: 0 } : null; S.wpos = { x: P.x, y: P.y }; WDUN = dun; storyCheck(); hud();
   say(msg || "🌍 오픈월드 — 어디로든 갈 수 있어요. 마을·동굴·이동석을 찾아보세요! (B 건설 · N 지도 · J 의뢰)", 4500);

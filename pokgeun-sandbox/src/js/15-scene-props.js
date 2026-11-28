@@ -102,8 +102,8 @@ const mkBobber = () => { const g = new THREE.Group(); Sp(g, .08, 0xe8505a, 0, 0,
 const ENT = new WeakMap(), LIVE = new Set(), PK = { v: {}, h: {}, d: {} };
 // 모델 파일이 늦게 도착하면, 먼저 만들어 둔 코드 모델(e.proc)을 버리고 새로 만들어요
 function dropEnt(o) { const e = ENT.get(o); if (!e) return; e.par.remove(e.g); e.g.traverse(m => { if (m.isMesh && m.material && !Array.isArray(m.material) && m.material.userData.own) m.material.dispose(); if (m.isMesh && m.userData.ownGeo) m.geometry.dispose(); }); LIVE.delete(e); ENT.delete(o); }
-function entM(o, make, parent) { if (o.vrm && o.vilLocal && !(VRMV[o.name] && VRMV[o.name].inst)) vilVRM(o);   // 준비되면 불러오기 시작
-  const rd = o.vrm && o.vilLocal ? !!(VRMV[o.name] && VRMV[o.name].inst) : o.model ? MAN.ready : MONM.ready, e = ENT.get(o); if (e && e.proc && rd) dropEnt(o); const n = ent(o, make, parent); if (!rd && !(o.vrm && o.vilLocal ? n.vrm : n.mon || n.man)) n.proc = true; return n; }
+function entM(o, make, parent) {   // 모델 파일이 늦게 오면 임시 모델(proc)을 버리고 다시 만들어요
+  const rd = o.cb || o.model ? KAY.ready : MONM.ready, e = ENT.get(o); if (e && e.proc && rd) dropEnt(o); const n = ent(o, make, parent); if (!rd && !(n.mon || n.cbk)) n.proc = true; return n; }
 function ent(o, make, parent) {
   let e = ENT.get(o);
   if (!e) { e = make(o); e.par = parent; e.key0 = o; parent.add(e.g); ENT.set(o, e); LIVE.add(e); }

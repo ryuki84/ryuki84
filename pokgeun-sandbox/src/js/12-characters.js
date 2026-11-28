@@ -80,7 +80,7 @@ KOUT.onBeforeCompile = sh => { sh.vertexShader = sh.vertexShader.replace("#inclu
 KOUT.customProgramCacheKey = () => "kout";
 function loadKay() {
   if (KAY.started || !R3) return; KAY.started = true;
-  const L = new THREE.GLTFLoader(), WS = [...Object.values(KW), ...KSH];
+  const L = new THREE.GLTFLoader(), WS = [...Object.values(KW), ...KSH, "staff", "wand", "dagger", "crossbow_1handed"];
   const raw = sc => { sc.traverse(o => { if (o.isMesh && o.material && o.material.map) o.material.map.colorSpace = REAL ? THREE.SRGBColorSpace : THREE.NoColorSpace; }); return sc; };
   Promise.all([...KCLS.map(c => L.loadAsync(`assets/chars/${c[0]}.${KEXT}`)), L.loadAsync(`assets/anims.${KEXT}`), ...WS.map(w => L.loadAsync(`assets/weapons/${w}.${KEXT}`))]).then(r => {
     KCLS.forEach((c, i) => { KAY.src[c[0]] = raw(r[i].scene); });
@@ -220,6 +220,7 @@ function vilVRM(v) {
   return slot.inst || null;
 }
 function mkVilEnt(v) {
+  if (v.cb) { if (!KAY.ready) return mkHeroFromLook({ sk: 1, tp: 2 }, 0, null); const e = mkChibi(v.cb, null, false); e.walk = "Walking_A"; return e; }
   const c = vilVRM(v); if (!c) return mkVilModel(v.e);
   const g = new THREE.Group(); g.add(c.body); c.mixer.stopAllAction();
   return { g, body: c.body, root: c.vrm.scene, la: new THREE.Group(), ra: new THREE.Group(), legs: [], h: 2.0, kay: true, man: true, vrm: c.vrm, armed: false, mixer: c.mixer, act: c.act, base: null, baseA: null, one: null, walk: "Walk_Loop", seed: Math.random() * 10 };

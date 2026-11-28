@@ -9,7 +9,7 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 player.hp = pstats().maxhp;
-resize(); hud(); loadKay(); loadMan(); loadDinos(); loadMonsters(); load2D();
+resize(); hud(); loadKay(); loadDinos(); loadMonsters(); load2D();
 if (SAVE.from.startsWith(SAVE_KEY + ".bak")) setTimeout(() => say("⚠️ 저장 파일이 손상돼서 가장 최근 백업으로 불러왔어요. (깨진 원본은 따로 보관했어요)", 7000), 1200); $("clock").textContent = clockText(); setMute(muted);
 $("snd").onclick = () => { setMute(!muted); sfx("ui"); };
 const STY_N = { toon: "파스텔 툰", cel: "원신풍", pbr: "부드러운 3D", real: "듀랑고풍" };
