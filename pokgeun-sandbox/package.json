@@ -1,0 +1,27 @@
+{
+  "name": "pokgeun-sandbox",
+  "version": "0.1.0",
+  "private": true,
+  "description": "포근 마을 샌드박스 — 채집·제작·건설·생활 중심 브라우저 3D 게임 (GDD v2.0)",
+  "scripts": {
+    "start": "node server/server.js",
+    "build": "node tools/build.mjs",
+    "pretest": "node tools/build.mjs --check",
+    "test": "node tests/run.js",
+    "test:quick": "node tests/run.js --quick",
+    "postinstall": "npm install --prefix server --no-audit --no-fund",
+    "build:artifact": "node tools/build.mjs && node tools/build-artifact.mjs"
+  },
+  "devDependencies": {
+    "@gltf-transform/core": "^4.5.1",
+    "@gltf-transform/extensions": "^4.5.1",
+    "@gltf-transform/functions": "^4.5.1",
+    "@pixiv/three-vrm": "^3.5.5",
+    "meshoptimizer": "^0.22.0",
+    "playwright": "1.63.0",
+    "three": "0.187.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
