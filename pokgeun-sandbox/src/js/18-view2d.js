@@ -95,6 +95,7 @@ function draw2D() {
     else if (cc === CELL.WALL || cc === CELL.SWALL || cc === CELL.PILLAR || cc === CELL.STRUCT) push(by, () => v2obj(c, "rockG", cxm, by, 1.1));
     else if (cc === CELL.FARM) { const st = cropStage(ty * WN + tx); if (st >= 0) push(by, () => { c.font = `${TS * .7}px sans-serif`; c.textAlign = "center"; c.fillText(st >= 2 ? "🍅" : "🌱", (cxm * T - V2.cx) * k + Wd / 2, (by * T - V2.cy) * k + Ht / 2 - TS * .2); }); }
     else if (cc === CELL.FIRE) push(by, () => { c.font = `${TS * .8}px sans-serif`; c.textAlign = "center"; c.fillText("🔥", (cxm * T - V2.cx) * k + Wd / 2, (by * T - V2.cy) * k + Ht / 2 - TS * .15); });
+    else if (cc >= 40 && CODE_FURN(cc)) push(by, () => { c.font = `${TS * .75}px sans-serif`; c.textAlign = "center"; c.fillText(FURN[CODE_FURN(cc)].e, (cxm * T - V2.cx) * k + Wd / 2, (by * T - V2.cy) * k + Ht / 2 - TS * .15); });
     else if (cc === CELL.BENCH) push(by, () => { c.font = `${TS * .8}px sans-serif`; c.textAlign = "center"; c.fillText("🧰", (cxm * T - V2.cx) * k + Wd / 2, (by * T - V2.cy) * k + Ht / 2 - TS * .15); });
     else if (cc === CELL.BED) push(by, () => { c.font = `${TS * .8}px sans-serif`; c.textAlign = "center"; c.fillText("🛏️", (cxm * T - V2.cx) * k + Wd / 2, (by * T - V2.cy) * k + Ht / 2 - TS * .15); });
   }

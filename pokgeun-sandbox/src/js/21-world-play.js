@@ -186,7 +186,7 @@ function farmAct(tx, ty) {
   else if (st < 2) say("🌿 아직 자라는 중이에요.", 1500);
   else { delete S.crops[k]; sfx("coin"); markDirty(tx, ty); matAdd("berry", 3 + ri(2)); matAdd("fiber", 1); burst((tx + .5) * T, (ty + .5) * T, 10, ["#e8508a", "#6dbb4f"], 70, .5, 120, .6); say("🧺 수확했어요!", 1500); }
 }
-const PIECE_OWN = new Set([12, 13, 14, 15, 18, 21, 22]);
+const PIECE_OWN = new Set([12, 13, 14, 15, 18, 21, 22]);   // 밖에 놓은 가구(40+)는 21-build-presets.js가 따로 집어요
 function canAfford(cost) { return Object.entries(cost).every(([k, v]) => (S.mat[k] || 0) >= v); }
 function buildPlace(tx, ty) {
   const b = buildSel; if (!b) return;

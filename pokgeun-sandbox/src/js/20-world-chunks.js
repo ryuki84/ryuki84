@@ -55,7 +55,7 @@ function buildChunk(cx, cy) {
   for (let y = y0; y < y0 + CHK; y++) for (let x = x0; x < x0 + CHK; x++) {
     if (x >= WN || y >= WN || localCell(x, y)) continue;
     const b = wb(x, y), c = wc(x, y), H = hgt(x, y); let col = biomeCol(b, x, y);
-    if (c === CELL.FLOOR) col = new THREE.Color(0xc2945e).offsetHSL(0, 0, (rn(x, y, 2) - .5) * .06); else if (c === CELL.FARM) col = new THREE.Color(0x6a4a2a);
+    if (c === CELL.FLOOR || (c >= 40 && S.wfloor && S.wfloor[y * WN + x])) col = new THREE.Color(0xc2945e).offsetHSL(0, 0, (rn(x, y, 2) - .5) * .06); else if (c === CELL.FARM) col = new THREE.Color(0x6a4a2a);
     else if (REAL && b !== 0) col = [vcol(x, y), vcol(x, y + 1), vcol(x + 1, y + 1), vcol(x + 1, y)];
     top.quad([x, H, y], [x, H, y + 1], [x + 1, H, y + 1], [x + 1, H, y], col, [0, 1, 0], [[x * .5, y * .5], [x * .5, (y + 1) * .5], [(x + 1) * .5, (y + 1) * .5], [(x + 1) * .5, y * .5]], GRD ? [vw(x, y), vw(x, y + 1), vw(x + 1, y + 1), vw(x + 1, y)] : undefined);
     if (b === 0) { const lw = (xx, yy) => wb(xx, yy) !== 0, f = (X, Y) => lw(X - 1, Y - 1) || lw(X, Y - 1) || lw(X - 1, Y) || lw(X, Y) ? FOAM1 : FOAM0; water.quad([x, -.12, y], [x, -.12, y + 1], [x + 1, -.12, y + 1], [x + 1, -.12, y], [f(x, y), f(x, y + 1), f(x + 1, y + 1), f(x + 1, y)], [0, 1, 0]); }
@@ -72,6 +72,7 @@ function buildChunk(cx, cy) {
     else if (c === 0 && (b === 2 || b === 3 || b === 8) && rn(x, y, 4) < .4) pushI("tuft", x + rn(x, y, 5) * .8 - .4, y + rn(x, y, 9) * .8 - .4, H, .8 + rn(x, y, 10) * .5);
     else if (c === CELL.FIRE) { const m = mkCampfire(); m.position.set(x + .5, H, y + .5); grp.add(m); ch.flames.push(m.userData.flame); ch.lit.push({ x: x + .5, z: y + .5, c: 0xffa040, r: 7, h: 1, i: 1.4 }); }
     else if (c === CELL.BED) { const m = mkFurn("bed"); m.position.set(x + .5, H, y + .5); grp.add(m); }
+    else if (c >= 40 && CODE_FURN(c)) { const id = CODE_FURN(c), m = mkFurn(id); m.position.set(x + .5, H + (FURN[id].wall ? .3 : 0), y + .5); m.rotation.y = Math.round(rn(x, y, 7) * 4) * HALF; grp.add(m); }
     else if (c === CELL.BENCH) { const m = mkWorkbench(); m.position.set(x + .5, H, y + .5); m.rotation.y = rn(x, y, 3) > .5 ? 0 : HALF; grp.add(m); }
     else if (c === CELL.FARM) { const st = cropStage(y * WN + x), m = mkFarm(st); m.position.set(x + .5, H, y + .5); grp.add(m); ch.crops.push({ k: y * WN + x, st }); }
   }

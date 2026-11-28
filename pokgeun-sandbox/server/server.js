@@ -7,7 +7,7 @@
 const http = require("http"), fs = require("fs"), path = require("path"), { WebSocketServer } = require("ws");
 const PORT = +process.env.PORT || 3000, N = 1048576, MAXP = +process.env.MAX_PLAYERS || 64;
 const ROOT = path.join(__dirname, ".."), DATA = process.env.DATA_DIR || path.join(__dirname, "data"), FILE = path.join(DATA, "world-edits.json");
-const ALLOWED = new Set([0, 12, 13, 14, 15, 18, 21]);          // 0 = 채집/철거, 나머지는 건설 조각 코드
+const ALLOWED = new Set([0, 12, 13, 14, 15, 18, 21, 22, ...Array.from({ length: 20 }, (_, i) => 40 + i)]);   // 0 = 채집/철거, 건설 조각(22 작업대), 40~59 = 밖에 놓은 가구
 const COLORS = [0x3d6ed0, 0xd9534f, 0x4a9a4a, 0xf0a23c, 0x8a5ad0, 0x2fb0b0, 0xe8508a, 0x6a7a8a];
 fs.mkdirSync(DATA, { recursive: true });
 let edits = {}; try { edits = JSON.parse(fs.readFileSync(FILE, "utf8")); } catch (e) {}

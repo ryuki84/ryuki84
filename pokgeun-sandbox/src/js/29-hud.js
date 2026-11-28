@@ -16,6 +16,7 @@ function ctxWorld() {
   const v = dun.vil.find(v => Math.hypot(v.x - fx, v.y + 8 - fy) < 40); if (v) return `💬 ${v.name}${v.job ? " (" + v.job + ")" : ""}와 이야기`;
   const poi = interAt(tx, ty); if (poi && POI_ACT[poi.type] && (poi.type !== "demon" || FEAT.demon)) return poi.type === "chest" && S.wopen[poi.id] ? "📦 빈 상자" : POI_ACT[poi.type];
   const c = wc(tx, ty);
+  { const fid = CODE_FURN(c); if (fid) return `${FURN[fid].e} ${FURN[fid].n} (집기: 🗑️·X)`; }
   if (c === CELL.BENCH) return "🧰 작업대 쓰기"; if (c === CELL.BED) return "🛏️ 침대에서 쉬기"; if (c === CELL.FIRE) return "🔥 모닥불 쬐기";
   if (c === CELL.FARM) { const st = cropStage(ty * WN + tx); return st < 0 ? "🌱 씨앗 심기" : st < 2 ? "🌿 자라는 중" : "🧺 수확하기"; }
   if (dun.mons.some(m => !(m.wild && !m.hostile) && Math.hypot(m.x - P.x, m.y - P.y) < 72)) return "⚔️ 공격";
@@ -52,7 +53,7 @@ const SUBS = {
   wild: [["🍙", "먹기", "eat"], ["💨", "구르기", "KeyE"], ["🧪", "물약", "KeyF"], ["🍖", "먹이", "KeyV"], ["🐎", "탈것", "KeyG"]],
   world: [["🍙", "먹기", "eat"], ["💨", "구르기", "KeyE"], ["🧪", "물약", "KeyF"], ["🏗️", "건설", "build"], ["⋯", "더보기", "more"]],
   more: [["🌀", "회전", "KeyQ"], ["🔥", "화염", "KeyR"], ["🍖", "먹이", "KeyV"], ["🐎", "탈것", "KeyG"]],
-  building: [["🗑️", "철거", "KeyX"], ["✅", "건설 끝", "KeyB"]],
+  building: [["🔄", "돌리기", "rot"], ["🗑️", "철거", "KeyX"], ["✅", "건설 끝", "KeyB"]],
 };
 let subMore = false;
 function subKey() { const s = document.body.dataset.scene; if (s === "world" && buildSel) return "building"; return s; }
@@ -66,7 +67,7 @@ function renderSubs() {
 ACT.addEventListener("pointerdown", e => {
   const b = e.target.closest("button"); if (!b || !started) return; e.preventDefault(); sfx("ui");
   if (b.dataset.k) { try { b.setPointerCapture(e.pointerId); } catch (_) {} b.classList.add("down"); press(b.dataset.k); const up = () => { b.classList.remove("down"); release(b.dataset.k); b.removeEventListener("pointerup", up); b.removeEventListener("pointercancel", up); }; b.addEventListener("pointerup", up); b.addEventListener("pointercancel", up); return; }
-  const a = b.dataset.a; if (a === "more") { subMore = !subMore; renderSubs(); } else if (a === "inv") document.body.classList.toggle("showinv"); else if (a === "build") togglePanel("build"); else if (a === "eat") eatBest();
+  const a = b.dataset.a; if (a === "more") { subMore = !subMore; renderSubs(); } else if (a === "inv") document.body.classList.toggle("showinv"); else if (a === "build") togglePanel("build"); else if (a === "eat") eatBest(); else if (a === "rot") { bRot = (bRot + 1) % 4; }
 });
 function renderAct() {
   const h = started && !modal ? ctxHint() : "", ab = $("abtn"), x = $("actx");
@@ -118,4 +119,5 @@ function hudTick(dt) {
   if (!M2) return; renderHst(); renderAct(); placeMiniTap();
 }
 { let lt = performance.now(); (function loop(now) { const dt = clamp((now - lt) / 1000, 0, .1); lt = now; hudTick(dt); requestAnimationFrame(loop); })(lt); }
-Object.assign(window.__game, { JOY, ctxWorld, areaName, AREA, M2, setCell: (...a) => setCell(...a), worldGather: () => worldGather(), save: () => save(), CRAFT2, craft2: id => craft2(id), eatBest: () => eatBest(), SV, survTick: dt => survTick(dt), dash: () => dash() });
+Object.assign(window.__game, { JOY, ctxWorld, areaName, AREA, M2, setCell: (...a) => setCell(...a), worldGather: () => worldGather(), save: () => save(), CRAFT2, craft2: id => craft2(id), eatBest: () => eatBest(), SV, survTick: dt => survTick(dt), dash: () => dash(), PRESETS, presetCells: p => presetCells(p), setBuildSel: v => { buildSel = v; }, FURN_CODE: id => FURN_CODE(id), worldRemove: () => worldRemove() });
+Object.defineProperties(window.__game, { bRot: { get: () => bRot, set: v => { bRot = v; } }, buildSel: { get: () => buildSel } });
