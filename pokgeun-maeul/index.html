@@ -157,6 +157,7 @@
   #help .hcards div { background:rgba(255,255,255,.6); border-radius:14px; padding:8px 10px; display:flex; flex-direction:column; gap:3px; }
   #help .hcards b { font-size:14px; } #help .hcards span { font-size:12px; line-height:1.55; }
   #help .goals { font-size:12px; opacity:.85; }
+  #gfxinfo { font-size:11px; opacity:.8; margin:4px 0 8px; } #gfxinfo button { font-size:11px; padding:3px 8px; margin-left:6px; }
   #help .news { font-size:12px; background:#fff1c9; border:2px solid #f2c46a; border-radius:10px; padding:6px 10px; margin:8px 0; line-height:1.5; }
   #joy { width:128px; height:128px; border-radius:50%; background:radial-gradient(circle, rgba(255,255,255,.55), rgba(255,255,255,.18)); border:2px solid rgba(74,59,42,.25); position:relative; touch-action:none; flex:none; }
   #joy i { position:absolute; left:50%; top:50%; width:54px; height:54px; margin:-27px 0 0 -27px; border-radius:50%; background:linear-gradient(180deg,#ffd2a0,#f2a65a); box-shadow:0 4px 10px rgba(0,0,0,.25); pointer-events:none; }
@@ -310,9 +311,10 @@
       <div><b>📋 메뉴</b><span>오른쪽 아이콘을 누르거나<br>단축키 (<kbd>H</kbd> 전체 보기)</span></div>
       <div><b>🧰 마을 도구</b><span><kbd>1</kbd>~<kbd>5</kbd> 손·채·낚싯대·삽·묘목</span></div>
     </div>
-    <p class="news">🆕 <b>최근 업데이트</b> · 왕도의 국왕·경비병이 사람 3D 모델로(왕관·투구·검·방패) · 마을 주민(콩이·나비·토리·꼬꼬)이 움직이는 3D 동물로 바뀌고, 말을 걸면 손을 흔들어요 · 몬스터 7종이 움직이는 3D 모델로 바뀌었어요 · ★정예 몬스터 5종(깊이 3+) · 몬스터 공격 전 ❗ 예고 · 타격 순간 멈칫(히트스톱) · ⚙️ 설정 → 💾 저장 관리(백업·내보내기)</p>
+    <p class="news">🆕 <b>최근 업데이트</b> · 예전에 툰으로 바뀐 기기도 실사(듀랑고풍) 그래픽을 다시 시도해요 · 왕도의 국왕·경비병이 사람 3D 모델로(왕관·투구·검·방패) · 마을 주민(콩이·나비·토리·꼬꼬)이 움직이는 3D 동물로 바뀌고, 말을 걸면 손을 흔들어요 · 몬스터 7종이 움직이는 3D 모델로 바뀌었어요 · ★정예 몬스터 5종(깊이 3+) · 몬스터 공격 전 ❗ 예고 · 타격 순간 멈칫(히트스톱) · ⚙️ 설정 → 💾 저장 관리(백업·내보내기)</p>
     <p class="goals">🏪 상점에서 팔고 사기 · 🕳️ 던전 · 🌍 오픈월드(건설·채집·의뢰) · 🏟️ 아레나 · 👑 국왕의 의뢰로 대마왕 토벌</p>
     <p id="nickrow" hidden>🌐 닉네임 <input id="nick" maxlength="12" placeholder="모험가" style="font:inherit;padding:3px 8px;border:2px solid var(--ink);border-radius:8px;width:9em"></p>
+    <p id="gfxinfo"></p>
     <button id="start">시작하기</button><button id="reset" style="background:#e8dcc0">새로 시작</button>
   </div>
   </div>
@@ -342,7 +344,12 @@ const THREE = { ...T3, EffectComposer, RenderPass, ShaderPass, UnrealBloomPass, 
 /* r128 → r187: 기존 색감 유지 — 색 관리 끄기 + 옛 방식 점광원 감쇠 */
 THREE.ColorManagement.enabled = false;
 /* 렌더링 스타일 비교용: ?style=cel (애니메 셀) / ?style=pbr (스타일라이즈드 PBR) / 기본 = 툰 */
-const RSTYLE = (() => { try { const h = (location.hash.match(/style=(\w+)/) || [])[1]; let v = new URLSearchParams(location.search).get("style") || h; if (!v) try { v = localStorage.getItem("pokgeun-safe"); } catch (e) {} return ["toon", "cel", "pbr", "real"].includes(v) ? v : "real"; } catch (e) { return "toon"; } })();
+// 렌더 버전: 바뀌면 예전에 "툰으로 대체"했던 기기도 실사를 한 번 다시 시도해요(예전에는 한 번 실패하면 영원히 툰이었어요)
+const RENDER_VER = "2026-11-28";
+let SAFE_FROM = "";   // 툰이 된 이유: "safe"(기기 검사 실패 기록) / "url"(주소 지정) / ""
+const RSTYLE = (() => { try { const h = (location.hash.match(/style=(\w+)/) || [])[1]; let v = new URLSearchParams(location.search).get("style") || h; if (v) SAFE_FROM = "url";
+  if (!v) try { const raw = localStorage.getItem("pokgeun-safe"); if (raw) { let o = null; try { o = JSON.parse(raw); } catch (e) {} if (o && o.v === RENDER_VER) { v = o.style; SAFE_FROM = "safe"; } else localStorage.removeItem("pokgeun-safe"); } } catch (e) {}
+  return ["toon", "cel", "pbr", "real"].includes(v) ? v : "real"; } catch (e) { return "toon"; } })();
 const REAL = RSTYLE === "real", PBRL = RSTYLE === "pbr" || REAL;
 THREE.ColorManagement.enabled = REAL;   // 듀랑고풍: 정확한 색 관리 + ACES 톤매핑
 const RX = REAL ? await Promise.all([import("three/addons/objects/Sky.js"), import("three/addons/postprocessing/OutputPass.js")]).catch(() => null) : null;
@@ -1389,6 +1396,8 @@ const QLEVELS = { high: { n: "높음", bloom: true, shadow: 4096, dpr: 2.5, mote
 let gfxLv = "high"; try { gfxLv = localStorage.getItem("pokgeun-gfx") || ""; } catch (e) {}
 if (!QLEVELS[gfxLv]) gfxLv = (window.matchMedia && matchMedia("(pointer:coarse)").matches) || innerWidth < 700 ? "mid" : "high";
 const QUAL = { ...QLEVELS[gfxLv] };
+{ const gi = document.getElementById("gfxinfo"); if (gi) { gi.innerHTML = `🎨 그래픽: <b>${RSTYLE === "real" ? "실사(듀랑고풍)" : "툰"}</b> · 화질 ${QLEVELS[gfxLv].n} · 버전 ${RENDER_VER}` + (RSTYLE !== "real" ? ` <button id="tryReal">🌄 실사 그래픽 다시 시도</button>` : "");
+  const tb = document.getElementById("tryReal"); if (tb) tb.onclick = () => { try { localStorage.removeItem("pokgeun-safe"); } catch (e) {} location.replace(location.pathname); }; } }
 let composer = null, bloomPass = null, gradePass = null, postTried = false;
 if (HAS3D) try {
   R3 = new THREE.WebGLRenderer({ canvas: cv, antialias: true }); R3.outputColorSpace = REAL ? THREE.SRGBColorSpace : THREE.LinearSRGBColorSpace; if (REAL) { R3.toneMapping = THREE.ACESFilmicToneMapping; R3.toneMappingExposure = .72; }
@@ -2383,7 +2392,7 @@ function skyTick() {
     const top = new THREE.Color(0x6aa8e0).lerp(new THREE.Color(0x182850), nd), hz = new THREE.Color(0xd8e4ec).lerp(new THREE.Color(0xf0a878), clamp(1 - Math.abs(el) * 4, 0, 1) * .5 * (1 - nd)).lerp(new THREE.Color(0x2a3a60), nd), gd = new THREE.Color(0x7a8a5a).lerp(new THREE.Color(0x182018), nd);
     gr.addColorStop(0, hx(top)); gr.addColorStop(.47, hx(hz)); gr.addColorStop(.53, hx(gd)); gr.addColorStop(1, hx(gd.clone().multiplyScalar(.7))); x.fillStyle = gr; x.fillRect(0, 0, 64, 32);
     const et = new THREE.CanvasTexture(c); et.mapping = THREE.EquirectangularReflectionMapping; et.colorSpace = THREE.SRGBColorSpace; const rt = E.pm.fromEquirectangular(et); et.dispose(); if (E.rt) E.rt.dispose(); E.rt = rt; S3.environment = E.noEnv ? null : rt.texture;
-    if (!probed) { probed = true; if (!pbrProbe(rt.texture)) { if (pbrProbe(null)) { E.noEnv = true; S3.environment = null; console.warn("환경광이 이 기기에서 깨져서 끕니다."); } else { try { localStorage.setItem("pokgeun-safe", "toon"); } catch (e) {} say("⚠️ 이 기기에서 실사 그래픽이 제대로 안 나와 툰 스타일로 바꿀게요.", 3000); setTimeout(() => { location.hash = "style=toon"; location.reload(); }, 1500); } } } }
+    if (!probed) { probed = true; if (!pbrProbe(rt.texture)) { if (pbrProbe(null)) { E.noEnv = true; S3.environment = null; console.warn("환경광이 이 기기에서 깨져서 끕니다."); } else { try { localStorage.setItem("pokgeun-safe", JSON.stringify({ style: "toon", v: RENDER_VER })); } catch (e) {} say("⚠️ 이 기기에서 실사 그래픽이 제대로 안 나와 툰 스타일로 바꿀게요.", 3000); setTimeout(() => { location.hash = "style=toon"; location.reload(); }, 1500); } } } }
   S3.environmentIntensity = (.38 - nd * .1) * (1 - wx * .3);
 }
 function legacyLights(on) {

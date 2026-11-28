@@ -8,8 +8,10 @@ const open = require('../lib/harness'); const D = open.OUT + '/';
   const r = {};
   r.scene = await p.evaluate(() => __game.scene());
   // 주민을 플레이어 앞에 모아 세워요
-  await p.evaluate(() => { const g = __game, P = g.player; g.setClock(13); g.setYaw(0); g.villagers.forEach((v, i) => { v.x = P.x + (i - 1.5) * 44; v.y = P.y - 80; v.vx = v.vy = 0; v.t = 99; }); });
+  await p.evaluate(() => { const g = __game, P = g.player; g.setClock(13); g.setYaw(0); g.villagers.forEach((v, i) => { v.x = P.x + (i - 1.5) * 44; v.y = P.y - 80; v.vx = v.vy = 0; v.t = 99; });
+    (function hold() { g.villagers.forEach((v, i) => { v.vx = v.vy = 0; v.x = P.x + (i - 1.5) * 44; v.y = P.y - 80; }); requestAnimationFrame(hold); })(); });   // 돌아다니지 않게 매 프레임 붙잡아요
   r.models = await until(() => __game.villagers.every(v => { const e = __game.ENT.get(v); return e && e.mon === __game.VILM[v.e]; }));
+  await until(() => __game.villagers.every(v => __game.ENT.get(v).cur === 'Idle'), null, 60000);
   r.list = await p.evaluate(() => __game.villagers.map(v => { const e = __game.ENT.get(v); return { n: v.name, e: v.e, mon: e && e.mon, cur: e && e.cur }; }));
   await p.waitForTimeout(1500); await p.screenshot({ timeout: 180000, path: D + 'villagers.png' });
   // 말 걸기 → 손 흔들기
