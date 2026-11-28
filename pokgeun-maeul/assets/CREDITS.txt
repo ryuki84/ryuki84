@@ -41,7 +41,10 @@
   이용 조건: 파일에 들어 있는 VRM 정보 기준 이용자 제한 없음(Everyone), 상업 이용 허용, 라이선스 Other(CC0 아님).
   pixiv 이용 조건 원문(vroid.pixiv.help 문서 4402394424089 / 4402614652569)은 이 개발 환경에서 열어 보지 못했어요.
   2차 기록에 따르면 무료·상업 이용 가능·출처 표기 불필요, 단 CC0로 재표기 금지·이유 없는 유료 재배포 금지·캐릭터 제작 서비스 구축 금지·pixiv 추천처럼 보이게 하는 사용 금지.
-  파일: github.com/V-Sekai-archive/datasource-anim-female-doll-retargeting 경유. 웹용으로 텍스처만 줄였어요(tools/slim-vrm.py, 512px).
+  파일: github.com/V-Sekai-archive/datasource-anim-female-doll-retargeting 경유.
+  추가: 千駄ヶ谷渋(shibu, AvatarSample_D — github.com/sswgame/LearningTemplate 경유), 千駄ヶ谷篠(shino)·桜田史利矢(fumiriya) — VRoid 프로젝트(github.com/virgilvox/keyholder 경유).
+  세 파일 모두 VRM 정보에 같은 조건(hub.vroid.com 라이선스: 누구나·상업 가능·수정·재배포 허용·표기 불필요) — CC0 아님.
+  웹용 가공(tools/slim-vrm.py): 텍스처 512px, 표정에 쓰지 않는 모프 타깃 삭제(샘플 A 15MB→2.9MB). shino·fumiriya는 원본이 더 작아 그대로.
   표시: three-vrm 3.5.5 (pixiv, MIT)
 
 마을 주민(두 발 동물) — assets/villagers/pug.glb, cow.glb

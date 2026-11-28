@@ -61,7 +61,7 @@ npm run build:artifact         # 아티팩트 게시용 사본 → dist/artifact
 | 엔티티 | `ent`, `entM`, `dropEnt`, `sweep`, `ENT`, `animE` | 객체 ↔ 3D 모델 연결. `entM`은 모델 파일이 늦게 오면 코드 모델(`proc`)을 버리고 다시 만들어요 |
 | 플레이어 | `mkPlayer`, `refreshLook`, `kayTick`, `kayPlay`, `MCLIP`, `MTRIM`, `pAnim/PEV` | 우선순위: 애니 캐릭터(VRM) → 마네킹(UAL) → KayKit → 코드 모델 |
 | 애니 캐릭터 | `VRMK`, `VRMS`, `VRMV`, `buildVRM`, `slimVRM`, `vrmRetarget`, `loadVRM`, `mkVrmEnt`, `vilVRM`, `mkVilEnt` | 고른 캐릭터만 로드, 마네킹 동작 19종을 VRM 뼈대로 옮겨 사용, 같은 재질 조각 합치기 |
-| 외형 | `lookOf`(av,h,hc,sk,…), `bodyLook`, `lookSig` | `av`: 0~2 애니 캐릭터, 3 커스텀(마네킹). 서버 `cleanLook`에도 `av` 허용 |
+| 외형 | `lookOf`(av,ah,ao,h,hc,sk,…), `bodyLook`, `lookSig`, `VRMAV`, `AHC`/`AOC`, `tintVRM` | `av`: 0~2·4~6 애니 캐릭터(6종), 3 커스텀(마네킹, 예전 저장 호환). `ah`·`ao` 애니 머리·옷 물들이기. 서버 `cleanLook`에도 허용 |
 | 몬스터 | `MONS`, `mkMon`, `mkMonT`, `MONM`, `MONK`, `MTGT`, `MONCLIP`, `mkMonG`, `monTick`, `MONFIX` | Quaternius Ultimate Monsters 7종 + 정예 5종, 6동작(대기·걷기·달리기·공격·피격·죽음) |
 | 정예 | `ELITE`, `eliteify`, `eliteAI`, `ELITE_P` | 깊이 3+에서 약 7%, 돌진·독침·포자 장판·순간이동·광역 내려찍기 |
 | 전투 | `attack`, `swingHit`, `HIT_AT`, `hitStop`, `hitMon`, `killMon`, `MON_WIND` | 휘두름 중 판정(0.14초), 히트스톱, 몬스터 공격 ❗ 예비 동작 0.4초 |
@@ -100,6 +100,7 @@ npm run build:artifact         # 아티팩트 게시용 사본 → dist/artifact
 | 2.5D(도트 캐릭터) 시험 | 사용자 "별로" → **폐기**(커밋 안 함), 3D 유지 |
 | 캐릭터 후보 비교 | Quaternius 소형 로우폴리·Universal Base Characters → 사용자 "둘 다 별로" |
 | 애니풍 플레이어 | VRoid 샘플 A·B·C + three-vrm(MToon). 동작 19종 재사용, 텍스처 축소(15→5MB) |
+| 캐릭터 다양화·로딩 개선 | 애니 캐릭터 6종(+시부·시노·후미리야), 머리·옷 물들이기(`ah`·`ao`), 안 쓰는 모프 삭제로 1명당 약 3MB, 페이지 열 때 미리 받기, 시작 버튼이 준비 대기(최대 12초), 애니 주민은 준비 전엔 숨김 |
 | 마을 앞 몬스터 | 스폰 금지 구역 축소, 근처에 약한 몬스터 |
 | 휴대폰 끊김 최적화 | 화면 밖 생략·나무 LOD·풀 근거리·휴대폰 시야/해상도/블룸/그림자 → 마을 삼각형 281만→107만, 월드 297만→130~150만 |
 | 주민 교체(섞어서) | 퍼그 콩이·소 음메(Quaternius 캐릭터 팩), 애니 나비·토리(VRoid B·C), 시바·여우 |

@@ -22,7 +22,7 @@ npm test -- arena maze   # 이름으로 골라 실행
 |---|---|
 | `tests/run.js` | 실행기: 시나리오 목록, 판정 조건, 서버 자동 실행, 결과 표 |
 | `tests/lib/harness.js` | 공통 도구: 정적 서버, three.js 로컬 공급(CDN 대신 `node_modules/three`), 폰트 요청 차단, 결과 출력 |
-| `tests/scenarios/*.js` | 시나리오 29개(아래 표) |
+| `tests/scenarios/*.js` | 시나리오 30개(아래 표) |
 
 | 시나리오 | 확인 내용 |
 |---|---|
@@ -43,6 +43,7 @@ npm test -- arena maze   # 이름으로 골라 실행
 | view_2d_scenes | 2D 화면: 동굴 던전·집 안·아레나 |
 | style_select | 설정 → 그래픽 스타일(듀랑고풍·원신풍·툰·부드러운 3D·귀여운 2D) 선택·유지 |
 | perf_budget | 휴대폰 조건 실사 모드 한 프레임 삼각형·드로우콜 예산 |
+| vrm_variety | 애니 캐릭터 6종·미리 받기·시작 즉시 표시·물들이기 |
 | vrm_player | 애니풍 플레이어(VRoid 샘플): 기본 적용·대기·달리기·무기 공격·캐릭터 바꾸기·마네킹 복귀 |
 | near_village | 마을 바로 바깥 약한 몬스터 등장, 마을·집 안 제외 |
 | artifact_copy | 아티팩트 게시 사본을 뷰어와 같은 보안 정책(data: 차단)으로 띄워 모델 로드 확인 |
