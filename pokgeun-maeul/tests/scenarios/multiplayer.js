@@ -18,6 +18,7 @@ async function client(b, nick, vp = { width: 960, height: 640 }) {
   for (const c of [A, B]) await c.p.evaluate(() => window.__game.enterWorld());
   await B.p.evaluate(() => { const g = window.__game; g.player.x += 64; g.player.dx = -1; g.player.dy = 0; });
   await sl(2500);
+  await Promise.all([A, B].map(c => c.p.waitForFunction(() => window.__game.NET.others.size >= 1, null, { timeout: 120000 }).catch(() => {})));   // 위치 동기화가 끝날 때까지
   r.seesEachOther = await Promise.all([A, B].map(c => c.p.evaluate(() => [...window.__game.NET.others.values()].map(o => ({ name: o.name, x: Math.round(o.x), y: Math.round(o.y) })))));
   // 채팅
   await A.p.keyboard.press('Enter'); await A.p.type('#chatin', '안녕하세요!'); await A.p.keyboard.press('Enter'); await sl(1200);
