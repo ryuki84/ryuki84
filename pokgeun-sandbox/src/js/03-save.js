@@ -1,6 +1,6 @@
 /* ---------- 상태 / 저장 ---------- */
 /* 저장: 버전 + 마이그레이션 + 자동 백업(최근 3개) + 실패 알림 + 내보내기·가져오기 */
-const SAVE_KEY = "pokgeun-sandbox", SAVE_VER = 3, BAK_KEYS = [1, 2, 3].map(i => SAVE_KEY + ".bak" + i), BAK_EVERY = 10 * 60 * 1000;
+const SAVE_KEY = "pokgeun-sandbox", SAVE_VER = 4, BAK_KEYS = [1, 2, 3].map(i => SAVE_KEY + ".bak" + i), BAK_EVERY = 10 * 60 * 1000;
 const SAVE = { from: "new", error: null, failT: -1e9, lastBak: 0, corrupt: false };
 const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
 const parseSave = raw => { if (!raw) return null; try { const o = JSON.parse(raw); return o && typeof o === "object" && !Array.isArray(o) ? o : null; } catch (e) { return null; } };
@@ -14,6 +14,7 @@ if (!S) S = { bells: 200, inv: { sapling: 1 }, trees: seedTrees, fin: { chair: 1
 function migrateSave(o) {   // 저장 형식 변경 이력 (버전이 없던 저장은 v1로 봐요)
   const v = o.sv | 0 || 1;
   if (v < 3) { if (typeof o.disc === "string" && o.disc.length > 2000) delete o.disc; }   // v3: 무한 월드 전환 — 예전 320칸 발견 지도 문자열은 쓰지 않아요
+  if (v < 4) { o.tools = o.tools || { axe: { t: 0, d: 0 }, pick: { t: 0, d: 0 } }; o.prof = o.prof || {}; if (o.mat) o.mat.plank = o.mat.plank || 0; }   // v4: 도구·숙련도·판자(GDD P1). 기존 재료·아이템은 그대로
   o.sv = SAVE_VER; return o;
 }
 migrateSave(S);
@@ -48,9 +49,10 @@ S.lv = S.lv || 1; S.xp = S.xp || 0; S.potions = S.potions ?? 2; S.bag = S.bag ||
 S.eq = S.eq || { weapon: { id: 1, slot: "weapon", e: "🗡️", n: "나무 칼", rar: 0, ilvl: 1, st: { dmg: 3 }, price: 10 }, armor: null, ring: null };
 if (!S.st) { S.st = { str: 0, dex: 0, vit: 0 }; S.sk = { whirl: 1, fire: 0, tough: 0, tamer: 0 }; S.pts = (S.lv - 1) * 5; S.sp = S.lv - 1; }
 S.look = S.look || { h: 0, hc: 0, sk: 1, ey: 0, tp: 0 };
+S.tools = S.tools && S.tools.axe && S.tools.pick ? S.tools : { axe: { t: 0, d: 0 }, pick: { t: 0, d: 0 } }; S.prof = S.prof || {};
 S.cb = S.cb && typeof S.cb === "object" ? S.cb : { head: 3, body: 3, legs: 3, hat: 0, cape: 3, cc: 0, hc: 0 };   // 치비 캐릭터 외형(12-chibi.js cbOf)
 S.mat = S.mat || { wood: 0, stone: 0, fiber: 0, berry: 0, meat: 0, hide: 0, bone: 0 }; S.pets = S.pets || []; S.petA = S.petA ?? -1;
-S.mat.ore = S.mat.ore || 0; S.arena = S.arena || { best: 0, kills: 0, runs: 0, style: "sword", own: ["sword"], up: { atk: 0, hp: 0, xp: 0 }, rank: [], start: 1 }; S.idleT = S.idleT || Date.now(); S.daily = S.daily || null; S.story = S.story || { stage: 0, p: {}, notified: false, demon: 0, known: false }; S.fame = S.fame || 0; S.wedits = S.wedits || {}; S.wreg = S.wreg || {}; S.wp = S.wp || {}; S.wopen = S.wopen || {}; S.wcl = S.wcl || {}; S.quests = S.quests || []; S.qoffer = S.qoffer || null; S.crops = S.crops || {};
+S.mat.ore = S.mat.ore || 0; S.mat.plank = S.mat.plank || 0; S.arena = S.arena || { best: 0, kills: 0, runs: 0, style: "sword", own: ["sword"], up: { atk: 0, hp: 0, xp: 0 }, rank: [], start: 1 }; S.idleT = S.idleT || Date.now(); S.daily = S.daily || null; S.story = S.story || { stage: 0, p: {}, notified: false, demon: 0, known: false }; S.fame = S.fame || 0; S.wedits = S.wedits || {}; S.wreg = S.wreg || {}; S.wp = S.wp || {}; S.wopen = S.wopen || {}; S.wcl = S.wcl || {}; S.quests = S.quests || []; S.qoffer = S.qoffer || null; S.crops = S.crops || {};
 const trees = S.trees;
 let scene = "out", furnSel = null, dun = null, WORLD = null, buildSel = null;
 (() => { const z = (x, y) => (x >= 25 && x <= 28 && y >= 1 && y <= 5) || (x >= 20 && x <= 24 && y >= 0 && y <= 5) || (x <= 3 && y >= 6 && y <= 12);

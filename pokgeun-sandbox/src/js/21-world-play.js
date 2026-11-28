@@ -130,12 +130,11 @@ function worldGather() {
   const P = player;
   for (const o of [26, 38]) {
     const tx = Math.floor((P.x + P.dx * o) / T), ty = Math.floor((P.y + 8 + P.dy * o) / T), c = wc(tx, ty);
-    if (c < 1 || c > 5) continue; const key = ty * WN + tx, hp = (dun.nhp[key] ?? (c === 3 ? 2 : c === 4 ? 5 : 3)) - 1, b = wb(tx, ty);
+    if (c < 1 || c > 5) continue; const hp0 = gatherHp(c); if (!hp0) { say("⛏️ 철광석은 곡괭이가 있어야 캘 수 있어요. 제작(C)에서 돌곡괭이를 만들어 보세요.", 2600); return; }
+    const key = ty * WN + tx, hp = (dun.nhp[key] ?? hp0) - 1, b = wb(tx, ty); toolUse(CELL_TOOL[c]);
     sfx("chop"); shake = Math.max(shake, 1); burst((tx + .5) * T, (ty + .5) * T - 8, 6, c === 2 || c === 4 ? ["#b8bcc8", "#8a8e9e"] : c === 1 ? ["#a87645", "#7d5433", "#3d8444"] : ["#6dbb4f", "#3d8444"], 80, .4, 160, 1);
     if (hp > 0) { dun.nhp[key] = hp; return; }
-    delete dun.nhp[key]; setCell(tx, ty, 0, true);
-    if (c === 1) { matAdd("wood", 2 + ri(2)); if (b === 5 && Math.random() < .2) matAdd("hide", 1); } else if (c === 2) { matAdd("stone", 2 + ri(2)); if (Math.random() < .15) matAdd("bone", 1); }
-    else if (c === 3) { matAdd("fiber", 1 + ri(2)); if (Math.random() < .6) matAdd("berry", 1 + ri(2)); } else if (c === 4) { matAdd("ore", 1 + ri(2)); matAdd("stone", 1); } else { matAdd("fiber", 2); if (Math.random() < .5) matAdd("berry", 1); }
+    delete dun.nhp[key]; setCell(tx, ty, 0, true); gatherYield(c, b);
     return;
   }
 }
@@ -169,6 +168,7 @@ function winteract(tx, ty) {
   }
   if (c === CELL.BED) { sleepAt({ x: (tx + .5) * T, y: (ty + 1.5) * T }, "내 침대"); return true; }
   if (c === CELL.FARM) { farmAct(tx, ty); return true; }
+  if (c === CELL.BENCH) { sfx("ui"); togglePanel("craft"); return true; }
   if (c === CELL.FIRE) { say("🔥 모닥불 — 가까이 있으면 체력이 천천히 회복돼요.", 2200); return true; }
   return false;
 }
@@ -186,7 +186,7 @@ function farmAct(tx, ty) {
   else if (st < 2) say("🌿 아직 자라는 중이에요.", 1500);
   else { delete S.crops[k]; sfx("coin"); markDirty(tx, ty); matAdd("berry", 3 + ri(2)); matAdd("fiber", 1); burst((tx + .5) * T, (ty + .5) * T, 10, ["#e8508a", "#6dbb4f"], 70, .5, 120, .6); say("🧺 수확했어요!", 1500); }
 }
-const PIECE_OWN = new Set([12, 13, 14, 15, 18, 21]);
+const PIECE_OWN = new Set([12, 13, 14, 15, 18, 21, 22]);
 function canAfford(cost) { return Object.entries(cost).every(([k, v]) => (S.mat[k] || 0) >= v); }
 function buildPlace(tx, ty) {
   const b = buildSel; if (!b) return;
@@ -196,7 +196,7 @@ function buildPlace(tx, ty) {
   if (SOLIDC[b.code] && ptx === tx && pty === ty) return say("서 있는 자리에는 지을 수 없어요.", 1400);
   if (SOLIDC[b.code] && dun.mons.some(m => Math.floor(m.x / T) === tx && Math.floor((m.y + 8) / T) === ty)) return say("몬스터가 있어요!", 1200);
   if (!canAfford(b.cost)) return say("재료가 부족해요. (I 키가 아니라 상단 주머니의 재료를 확인하세요)", 2000);
-  for (const k in b.cost) S.mat[k] -= b.cost[k]; setCell(tx, ty, b.code, false); sfx("place"); burst((tx + .5) * T, (ty + .5) * T, 8, ["#d9b07c", "#fff"], 60, .4, 160, .5); hud(); save();
+  for (const k in b.cost) S.mat[k] -= b.cost[k]; setCell(tx, ty, b.code, false); profAdd("build"); sfx("place"); burst((tx + .5) * T, (ty + .5) * T, 8, ["#d9b07c", "#fff"], 60, .4, 160, .5); hud(); save();
 }
 function worldRemove() {
   const P = player, tx = Math.floor((P.x + P.dx * 26) / T), ty = Math.floor((P.y + 8 + P.dy * 26) / T), c = wc(tx, ty);

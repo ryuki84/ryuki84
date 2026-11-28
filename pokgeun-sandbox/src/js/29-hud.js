@@ -16,7 +16,7 @@ function ctxWorld() {
   const v = dun.vil.find(v => Math.hypot(v.x - fx, v.y + 8 - fy) < 40); if (v) return `💬 ${v.name}${v.job ? " (" + v.job + ")" : ""}와 이야기`;
   const poi = interAt(tx, ty); if (poi && POI_ACT[poi.type] && (poi.type !== "demon" || FEAT.demon)) return poi.type === "chest" && S.wopen[poi.id] ? "📦 빈 상자" : POI_ACT[poi.type];
   const c = wc(tx, ty);
-  if (c === CELL.BED) return "🛏️ 침대에서 쉬기"; if (c === CELL.FIRE) return "🔥 모닥불 쬐기";
+  if (c === CELL.BENCH) return "🧰 작업대 쓰기"; if (c === CELL.BED) return "🛏️ 침대에서 쉬기"; if (c === CELL.FIRE) return "🔥 모닥불 쬐기";
   if (c === CELL.FARM) { const st = cropStage(ty * WN + tx); return st < 0 ? "🌱 씨앗 심기" : st < 2 ? "🌿 자라는 중" : "🧺 수확하기"; }
   if (dun.mons.some(m => !(m.wild && !m.hostile) && Math.hypot(m.x - P.x, m.y - P.y) < 72)) return "⚔️ 공격";
   for (const o of [26, 38]) { const gx = Math.floor((P.x + P.dx * o) / T), gy = Math.floor((P.y + 8 + P.dy * o) / T), g = wc(gx, gy); if (CELL_ACT[g]) return CELL_ACT[g]; }
@@ -118,4 +118,4 @@ function hudTick(dt) {
   if (!M2) return; renderHst(); renderAct(); placeMiniTap();
 }
 { let lt = performance.now(); (function loop(now) { const dt = clamp((now - lt) / 1000, 0, .1); lt = now; hudTick(dt); requestAnimationFrame(loop); })(lt); }
-Object.assign(window.__game, { JOY, ctxWorld, areaName, AREA, M2, setCell: (...a) => setCell(...a) });
+Object.assign(window.__game, { JOY, ctxWorld, areaName, AREA, M2, setCell: (...a) => setCell(...a), worldGather: () => worldGather(), save: () => save(), CRAFT2, craft2: id => craft2(id) });

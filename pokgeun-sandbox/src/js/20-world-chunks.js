@@ -35,6 +35,8 @@ function mkTent(c) { const g = new THREE.Group(); K(g, .85, 1.2, c, 0, .6, 0, 4,
 function mkChest(open) { const g = new THREE.Group(); B(g, .8, .4, .5, 0x8a5a34, 0, .2, 0); B(g, .82, .06, .52, 0xe8b84a, 0, .1, 0); const lid = new THREE.Group(); lid.position.set(0, .4, -.25); B(lid, .8, .2, .5, 0x9a6a3e, 0, .1, .25); B(lid, .1, .12, .06, 0xf5d142, 0, .05, .5); lid.rotation.x = open ? -1.1 : 0; g.add(lid); if (open) B(g, .6, .06, .3, 0xf5d142, 0, .42, 0); g.traverse(m => { if (m.isMesh) m.castShadow = true; }); return g; }
 function mkPillar(h) { const g = new THREE.Group(); C(g, .2, .24, h, 0xb8bcc8, 0, h / 2, 0, 7); B(g, .6, .12, .6, 0x8a8e9e, 0, .06, 0); if (h > 1.2) B(g, .55, .12, .55, 0x8a8e9e, 0, h + .05, 0); return g; }
 function mkCampfire() { const g = new THREE.Group(); for (let i = 0; i < 6; i++) { const a = i * 1.047; Sp(g, .1, 0x6c7080, Math.cos(a) * .32, .08, Math.sin(a) * .32, { s: [1, .7, 1] }); } B(g, .5, .08, .08, 0x5a3a22, 0, .1, 0, { r: [0, .6, 0] }); B(g, .5, .08, .08, 0x5a3a22, 0, .1, 0, { r: [0, -.6, 0] }); const f = flame(g, 0, .3, 0, 1.6); g.userData.flame = f; return g; }
+function mkWorkbench() { const g = new THREE.Group(), W1 = 0x7d5433, W2 = 0xb07a48; B(g, .92, .1, .6, W2, 0, .62, 0); for (const [x, z] of [[-.38, -.22], [.38, -.22], [-.38, .22], [.38, .22]]) B(g, .08, .58, .08, W1, x, .29, z); B(g, .8, .06, .48, W1, 0, .22, 0);
+  B(g, .26, .05, .1, 0x9aa0ac, -.18, .7, .05, { r: [0, .4, 0] }); B(g, .05, .05, .22, W1, .2, .7, -.05); B(g, .16, .08, .06, 0x6c7080, .2, .72, .07); B(g, .2, .14, .14, 0xc89a5a, .3, .74, -.15); return g; }
 function mkFarm(stage, kind) { const g = new THREE.Group(); B(g, .96, .1, .96, 0x6a4a2a, 0, .05, 0, { cs: false }); if (stage >= 0) for (const [x, z] of [[-.25, -.25], [.25, -.25], [-.25, .25], [.25, .25]]) { C(g, .02, .03, .12 + stage * .18, 0x4a9a4a, x, .12 + (.06 + stage * .09), z, 4); if (stage > 0) Sp(g, .08 + stage * .02, 0x6dbb4f, x, .22 + stage * .2, z, { s: [1.3, .6, 1.3] }); if (stage >= 2) Sp(g, .06, 0xe8508a, x + .05, .42, z); } return g; }
 
 /* ----- 청크 ----- */
@@ -70,6 +72,7 @@ function buildChunk(cx, cy) {
     else if (c === 0 && (b === 2 || b === 3 || b === 8) && rn(x, y, 4) < .4) pushI("tuft", x + rn(x, y, 5) * .8 - .4, y + rn(x, y, 9) * .8 - .4, H, .8 + rn(x, y, 10) * .5);
     else if (c === CELL.FIRE) { const m = mkCampfire(); m.position.set(x + .5, H, y + .5); grp.add(m); ch.flames.push(m.userData.flame); ch.lit.push({ x: x + .5, z: y + .5, c: 0xffa040, r: 7, h: 1, i: 1.4 }); }
     else if (c === CELL.BED) { const m = mkFurn("bed"); m.position.set(x + .5, H, y + .5); grp.add(m); }
+    else if (c === CELL.BENCH) { const m = mkWorkbench(); m.position.set(x + .5, H, y + .5); m.rotation.y = rn(x, y, 3) > .5 ? 0 : HALF; grp.add(m); }
     else if (c === CELL.FARM) { const st = cropStage(y * WN + x), m = mkFarm(st); m.position.set(x + .5, H, y + .5); grp.add(m); ch.crops.push({ k: y * WN + x, st }); }
   }
   grp.add(top.build(M_.top)); if (side.p.length) grp.add(side.build(M_.side)); if (water.p.length) { const m = water.build(M_.water, false); grp.add(m); ch.water = m; }

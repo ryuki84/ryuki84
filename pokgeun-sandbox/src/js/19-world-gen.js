@@ -5,8 +5,8 @@ const BIO_N = ["바다", "해변", "초원", "숲", "사막", "설원", "늪", "
 const BIO_E = ["🌊", "🏖️", "🌾", "🌲", "🏜️", "❄️", "🪷", "⛰️", "🏘️", "🛤️", "😈"];
 const BIO_C = [0xb9a56c, 0xead9a0, 0x78c455, 0x4f9a3e, 0xe6cf8a, 0xeaf2f8, 0x5f7f4a, 0x8f939f, 0x9ad070, 0xcfa870, 0x3d3248];
 const BIO_CS = BIO_C.map(c => "#" + c.toString(16).padStart(6, "0"));
-const CELL = { TREE: 1, ROCK: 2, BUSH: 3, ORE: 4, CACT: 5, STRUCT: 10, PILLAR: 11, WALL: 12, FLOOR: 13, FIRE: 14, BED: 15, CHEST: 16, BOARD: 17, FARM: 18, CLIFF: 20, SWALL: 21 };
-const SOLIDC = new Uint8Array(256); [1, 2, 4, 5, 10, 11, 12, 14, 15, 16, 17, 20, 21].forEach(c => SOLIDC[c] = 1);
+const CELL = { TREE: 1, ROCK: 2, BUSH: 3, ORE: 4, CACT: 5, STRUCT: 10, PILLAR: 11, WALL: 12, FLOOR: 13, FIRE: 14, BED: 15, CHEST: 16, BOARD: 17, FARM: 18, CLIFF: 20, SWALL: 21, BENCH: 22 };
+const SOLIDC = new Uint8Array(256); [1, 2, 4, 5, 10, 11, 12, 14, 15, 16, 17, 20, 21, 22].forEach(c => SOLIDC[c] = 1);
 const TOWN_NAMES = ["포근 왕국 왕도", "이끼 언덕", "바람 항구", "솔잎 마을", "붉은 모래촌", "눈꽃 마을", "달무리 나루", "구름 정거장", "노을 마을", "은행나무 촌", "금빛 들판", "고래 포구"];
 const BIOSPAWN = {
   1: { d: [["d", 0]], n: [["m", 0], ["m", 2]] },
@@ -20,8 +20,9 @@ const BIOSPAWN = {
   10: { d: [["m", 5], ["m", 3], ["m", 4]], n: [["m", 5], ["m", 3], ["m", 4]] },
 };
 const BUILD = [
-  { id: "wall", n: "나무 벽", e: "🧱", code: 12, cost: { wood: 2 } }, { id: "swall", n: "돌 벽", e: "🪨", code: 21, cost: { stone: 3 } },
-  { id: "floor", n: "나무 바닥", e: "🟫", code: 13, cost: { wood: 1 } }, { id: "fire", n: "모닥불", e: "🔥", code: 14, cost: { wood: 3, stone: 2 } },
+  { id: "bench", n: "작업대", e: "🧰", code: 22, cost: { wood: 6, stone: 2 } },
+  { id: "wall", n: "나무 벽", e: "🧱", code: 12, cost: { plank: 2 } }, { id: "swall", n: "돌 벽", e: "🪨", code: 21, cost: { stone: 3 } },
+  { id: "floor", n: "나무 바닥", e: "🟫", code: 13, cost: { plank: 1 } }, { id: "fire", n: "모닥불", e: "🔥", code: 14, cost: { wood: 3, stone: 2 } },
   { id: "bed", n: "침대 (리스폰)", e: "🛏️", code: 15, cost: { hide: 3, fiber: 4 } }, { id: "farm", n: "밭", e: "🌱", code: 18, cost: { fiber: 2 } },
 ];
 

@@ -25,7 +25,7 @@ async function client(b, nick, vp = { width: 960, height: 640 }) {
   r.chat = await B.p.evaluate(() => [...document.querySelectorAll('#chatlog div')].map(d => d.textContent));
   r.otherBubble = await B.p.evaluate(() => { const o = [...window.__game.NET.others.values()][0]; return o && { say: o.say, sayT: Math.round(o.sayT * 10) / 10 }; });
   // 공유 건설: A가 벽을 짓고 B가 본다 (마을 밖에서)
-  await A.p.evaluate(async () => { const g = window.__game, S = g.S, P = g.player, W = g.WORLD, t = { x: W.spawn.x + 40, y: W.spawn.y - 60 }; Object.assign(S.mat, { wood: 20 }); P.x = (t.x + 25.5) * 32; P.y = (t.y + 25.5) * 32 - 8; window.__bx = Math.floor(P.x / 32) + 1; window.__by = Math.floor((P.y + 8) / 32); P.dx = 1; P.dy = 0; g.setBuild(0); g.attack(); });
+  await A.p.evaluate(async () => { const g = window.__game, S = g.S, P = g.player, W = g.WORLD, t = { x: W.spawn.x + 40, y: W.spawn.y - 60 }; Object.assign(S.mat, { wood: 20, stone: 10, plank: 10 }); P.x = (t.x + 25.5) * 32; P.y = (t.y + 25.5) * 32 - 8; window.__bx = Math.floor(P.x / 32) + 1; window.__by = Math.floor((P.y + 8) / 32); P.dx = 1; P.dy = 0; g.setBuild(0); g.attack(); });
   await sl(800);
   const loc = await A.p.evaluate(() => ({ bx: window.__bx, by: window.__by, here: window.__game.wc(window.__bx, window.__by) }));
   r.shared = { a: loc.here, b: await B.p.evaluate(l => window.__game.wc(l.bx, l.by), loc), serverEdits: await (await fetch('http://localhost:' + require('../lib/harness').SERVER_PORT + '/health')).json() };

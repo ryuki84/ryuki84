@@ -157,14 +157,12 @@ function gatherNode() {
   for (const o of [26, 38]) {
     const tx = Math.floor((P.x + P.dx * o) / T), ty = Math.floor((P.y + 8 + P.dy * o) / T), c = dun.map[ty]?.[tx];
     if (c !== "T" && c !== "R" && c !== "B") continue;
-    const key = ty * 1000 + tx, hp = (dun.nhp[key] ?? (c === "B" ? 2 : 3)) - 1;
+    const cc = { T: 1, R: 2, B: 3 }[c], key = ty * 1000 + tx, hp = (dun.nhp[key] ?? gatherHp(cc)) - 1; toolUse(CELL_TOOL[cc]);
     dun.wob = { x: tx, y: ty, t: .25 }; sfx("chop");
     burst((tx + .5) * T, (ty + .4) * T, 6, c === "R" ? ["#b8bcc8", "#8a8e9e"] : c === "T" ? ["#a87645", "#7d5433", "#3d8444"] : ["#6dbb4f", "#3d8444"], 80, .4);
     if (hp > 0) { dun.nhp[key] = hp; return; }
     delete dun.nhp[key]; dun.map[ty][tx] = "."; dun.regrow.push({ x: tx, y: ty, c, t: 75 });
-    if (c === "T") matAdd("wood", 2 + ri(2));
-    else if (c === "R") { matAdd("stone", 2 + ri(2)); if (Math.random() < .15) matAdd("bone", 1); }
-    else { matAdd("fiber", 1 + ri(2)); if (Math.random() < .6) matAdd("berry", 1 + ri(2)); }
+    gatherYield(cc, 3);
     return;
   }
 }

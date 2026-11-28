@@ -7,7 +7,7 @@ const open = require('../lib/harness');
   // 1) 버전 정보가 없던 예전 저장 (v1) — 내용이 보존되고 최신 버전으로 올라가야 해요
   await p.evaluate(() => { localStorage.clear(); localStorage.setItem('pokgeun-sandbox', JSON.stringify({ bells: 777, lv: 5, xp: 3, inv: { apple: 2 }, fin: { chair: 1 }, room: [{ id: 'chair', x: 3, y: 4 }], disc: '0'.repeat(6400), trees: [] })); });
   await freeze(); await reload();
-  r.migrate = await p.evaluate(() => { const S = __game.S; return { sv: S.sv, bells: S.bells, lv: S.lv, room: S.room.length, apple: S.inv.apple, oldDisc: (S.disc || '').length > 2000, from: __game.saveApi.SAVE.from }; });
+  r.migrate = await p.evaluate(() => { const S = __game.S; return { sv: S.sv, bells: S.bells, lv: S.lv, room: S.room.length, apple: S.inv.apple, oldDisc: (S.disc || '').length > 2000, tools: !!(S.tools && S.tools.axe && S.tools.pick && S.prof), from: __game.saveApi.SAVE.from }; });
   // 2) 본 저장이 깨졌을 때 — 백업으로 불러오고 깨진 원본은 따로 보관
   await p.evaluate(() => { localStorage.setItem('pokgeun-sandbox.bak1', JSON.stringify({ bells: 555, lv: 4, inv: {}, sv: 3 })); localStorage.setItem('pokgeun-sandbox', '{"bells": 1, broken'); });
   await freeze(); await reload();

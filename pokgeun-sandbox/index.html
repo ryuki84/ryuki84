@@ -367,6 +367,22 @@
     body.m2 #help .news { font-size:11px; margin:6px 0; }
   }
 
+  /* ===== 제작 창 (GDD P1: 도구·작업대·가구) ===== */
+  .mchips { display:flex; flex-wrap:wrap; gap:5px; margin:4px 0 6px; }
+  .mchip { font-size:12px; padding:3px 8px; border-radius:999px; background:rgba(255,255,255,.65); border:1px solid rgba(74,59,42,.15); white-space:nowrap; font-variant-numeric:tabular-nums; }
+  .mchip.zero { opacity:.5; }
+  .tcards { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+  .tcard { display:grid; grid-template-columns:auto 1fr; grid-template-rows:auto auto auto; column-gap:8px; align-items:center; padding:8px 10px; border-radius:14px; background:rgba(255,255,255,.65); border:1px solid rgba(74,59,42,.15); }
+  .tcard b { grid-row:1/4; font-size:26px; } .tcard span { font-weight:800; font-size:13px; }
+  .tcard i { display:block; height:6px; border-radius:3px; background:linear-gradient(90deg,#6fcf6f var(--w),rgba(74,59,42,.15) 0); }
+  .tcard small { font-size:11px; opacity:.75; } .tcard.broken { border-color:#e07a5a; } .tcard.broken small { color:#c0392b; opacity:1; }
+  .benchst { margin:10px 0 4px; padding:8px 12px; border-radius:12px; font-size:12.5px; font-weight:700; background:rgba(242,166,90,.18); border:1px dashed rgba(242,140,60,.55); }
+  .benchst.on { background:rgba(120,210,120,.2); border:1px solid rgba(80,170,80,.5); }
+  .crow { display:grid; grid-template-columns:34px 1fr auto; gap:8px; align-items:center; padding:6px 0; border-bottom:1px solid rgba(74,59,42,.08); }
+  .crow .ci { font-size:24px; text-align:center; } .crow .cn { display:flex; flex-direction:column; min-width:0; } .crow .cn b { font-size:14px; } .crow .cn small { font-size:11.5px; opacity:.8; line-height:1.35; }
+  .crow button { margin:0 !important; padding:4px 12px !important; min-width:84px; font-size:13px; } .crow button.need { background:rgba(255,255,255,.75); }
+  details.oldc { margin-top:12px; } details.oldc summary { cursor:pointer; font-weight:800; padding:6px 0; }
+
 </style>
 </head>
 <body>
@@ -404,7 +420,7 @@
       <div><b>📋 메뉴</b><span class="tonly">오른쪽 위 ☰ (제작·건설·외형…)</span><span class="konly">오른쪽 아이콘 · <kbd>H</kbd> 단축키</span></div>
       <div><b>🏗️ 건설</b><span>마을 밖 넓은 세상에서<br>벽·바닥·모닥불·밭 짓기</span></div>
     </div>
-    <p class="news">🆕 <b>최근 업데이트</b> · 새 캐릭터: 동글동글 치비 친구들과 직업 주민 6명 · 외형에서 얼굴·옷·모자·망토 섞기 · 마을 동물(강아지·고양이·소·돼지·병아리) · 휴대폰 화면 새 단장: 어디서나 같은 버튼, 부드러운 조이스틱, 지역 이름 안내</p>
+    <p class="news">🆕 <b>최근 업데이트</b> · <b>도구와 작업대!</b> 돌도끼·돌곡괭이로 빨리 캐고, 작업대에서 판자·가구를 만들어 내 집을 꾸며요 · 하는 만큼 오르는 숙련도 · 새 캐릭터: 동글동글 치비 친구들과 직업 주민 6명 · 외형에서 얼굴·옷·모자·망토 섞기 · 마을 동물(강아지·고양이·소·돼지·병아리) · 휴대폰 화면 새 단장: 어디서나 같은 버튼, 부드러운 조이스틱, 지역 이름 안내</p>
     <p id="nickrow" hidden>🌐 닉네임 <input id="nick" maxlength="12" placeholder="모험가" style="font:inherit;padding:3px 8px;border:2px solid var(--ink);border-radius:8px;width:9em"></p>
     <p id="gfxinfo"></p>
     <div class="hfoot"><button id="start">시작하기</button><button id="reset" style="background:#e8dcc0">새로 시작</button></div>
@@ -619,7 +635,7 @@ scatter(6, (x, y) => { if (seedTrees.some(t => t.x === x && t.y === y) || flower
 
 /* ---------- 상태 / 저장 ---------- */
 /* 저장: 버전 + 마이그레이션 + 자동 백업(최근 3개) + 실패 알림 + 내보내기·가져오기 */
-const SAVE_KEY = "pokgeun-sandbox", SAVE_VER = 3, BAK_KEYS = [1, 2, 3].map(i => SAVE_KEY + ".bak" + i), BAK_EVERY = 10 * 60 * 1000;
+const SAVE_KEY = "pokgeun-sandbox", SAVE_VER = 4, BAK_KEYS = [1, 2, 3].map(i => SAVE_KEY + ".bak" + i), BAK_EVERY = 10 * 60 * 1000;
 const SAVE = { from: "new", error: null, failT: -1e9, lastBak: 0, corrupt: false };
 const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
 const parseSave = raw => { if (!raw) return null; try { const o = JSON.parse(raw); return o && typeof o === "object" && !Array.isArray(o) ? o : null; } catch (e) { return null; } };
@@ -633,6 +649,7 @@ if (!S) S = { bells: 200, inv: { sapling: 1 }, trees: seedTrees, fin: { chair: 1
 function migrateSave(o) {   // 저장 형식 변경 이력 (버전이 없던 저장은 v1로 봐요)
   const v = o.sv | 0 || 1;
   if (v < 3) { if (typeof o.disc === "string" && o.disc.length > 2000) delete o.disc; }   // v3: 무한 월드 전환 — 예전 320칸 발견 지도 문자열은 쓰지 않아요
+  if (v < 4) { o.tools = o.tools || { axe: { t: 0, d: 0 }, pick: { t: 0, d: 0 } }; o.prof = o.prof || {}; if (o.mat) o.mat.plank = o.mat.plank || 0; }   // v4: 도구·숙련도·판자(GDD P1). 기존 재료·아이템은 그대로
   o.sv = SAVE_VER; return o;
 }
 migrateSave(S);
@@ -667,9 +684,10 @@ S.lv = S.lv || 1; S.xp = S.xp || 0; S.potions = S.potions ?? 2; S.bag = S.bag ||
 S.eq = S.eq || { weapon: { id: 1, slot: "weapon", e: "🗡️", n: "나무 칼", rar: 0, ilvl: 1, st: { dmg: 3 }, price: 10 }, armor: null, ring: null };
 if (!S.st) { S.st = { str: 0, dex: 0, vit: 0 }; S.sk = { whirl: 1, fire: 0, tough: 0, tamer: 0 }; S.pts = (S.lv - 1) * 5; S.sp = S.lv - 1; }
 S.look = S.look || { h: 0, hc: 0, sk: 1, ey: 0, tp: 0 };
+S.tools = S.tools && S.tools.axe && S.tools.pick ? S.tools : { axe: { t: 0, d: 0 }, pick: { t: 0, d: 0 } }; S.prof = S.prof || {};
 S.cb = S.cb && typeof S.cb === "object" ? S.cb : { head: 3, body: 3, legs: 3, hat: 0, cape: 3, cc: 0, hc: 0 };   // 치비 캐릭터 외형(12-chibi.js cbOf)
 S.mat = S.mat || { wood: 0, stone: 0, fiber: 0, berry: 0, meat: 0, hide: 0, bone: 0 }; S.pets = S.pets || []; S.petA = S.petA ?? -1;
-S.mat.ore = S.mat.ore || 0; S.arena = S.arena || { best: 0, kills: 0, runs: 0, style: "sword", own: ["sword"], up: { atk: 0, hp: 0, xp: 0 }, rank: [], start: 1 }; S.idleT = S.idleT || Date.now(); S.daily = S.daily || null; S.story = S.story || { stage: 0, p: {}, notified: false, demon: 0, known: false }; S.fame = S.fame || 0; S.wedits = S.wedits || {}; S.wreg = S.wreg || {}; S.wp = S.wp || {}; S.wopen = S.wopen || {}; S.wcl = S.wcl || {}; S.quests = S.quests || []; S.qoffer = S.qoffer || null; S.crops = S.crops || {};
+S.mat.ore = S.mat.ore || 0; S.mat.plank = S.mat.plank || 0; S.arena = S.arena || { best: 0, kills: 0, runs: 0, style: "sword", own: ["sword"], up: { atk: 0, hp: 0, xp: 0 }, rank: [], start: 1 }; S.idleT = S.idleT || Date.now(); S.daily = S.daily || null; S.story = S.story || { stage: 0, p: {}, notified: false, demon: 0, known: false }; S.fame = S.fame || 0; S.wedits = S.wedits || {}; S.wreg = S.wreg || {}; S.wp = S.wp || {}; S.wopen = S.wopen || {}; S.wcl = S.wcl || {}; S.quests = S.quests || []; S.qoffer = S.qoffer || null; S.crops = S.crops || {};
 const trees = S.trees;
 let scene = "out", furnSel = null, dun = null, WORLD = null, buildSel = null;
 (() => { const z = (x, y) => (x >= 25 && x <= 28 && y >= 1 && y <= 5) || (x >= 20 && x <= 24 && y >= 0 && y <= 5) || (x <= 3 && y >= 6 && y <= 12);
@@ -1000,6 +1018,7 @@ $("gear").addEventListener("click", e => {
   if (d.cb) { const [k, v] = d.cb.split(":"); S.cb = { ...cbOf(S.cb), [k]: +v }; save(); netLook(); return renderGear(); }
   if (d.look) { const [k, v] = d.look.split(":"); S.look = { ...lookOf(S.look), [k]: +v }; save(); netLook(); return renderGear(); }
   if (d.tab) { gearTab = d.tab; return renderGear(); }
+  if (d.craft2) return craft2(d.craft2);
   if (d.craft !== undefined) return craft(+d.craft);
   if (t.id === "qreroll") { S.qoffer = genOffers(); return renderGear(); }
   if (d.build !== undefined) { if (!(scene === "dun" && dun.kind === "world")) return say("🏗️ 건설은 오픈월드에서만 할 수 있어요.", 1800); buildSel = BUILD[+d.build]; closeShop(); say(`${buildSel.e} ${buildSel.n} — 스페이스: 놓기 · X: 철거 · B: 끄기 · 1~6: 조각 변경`, 3500); return; }
@@ -1035,6 +1054,100 @@ function togglePanel(tab) {
   if (modal) return;
   gearTab = tab; modal = true; renderGear(); $("gear").hidden = false;
 }
+
+/* ===== GDD P1 (2026-11-28): 도구 · 작업대 · 생활 제작 · 숙련도 =====
+   채집 → 도구 제작 → 작업대 설치 → 판자·가구 제작 → 집 꾸미기 흐름(GDD 19.2 MVP 2~6단계).
+   도구는 따로 고르지 않아도 맞는 자원을 캘 때 자동으로 써요. 내구도는 가볍게(작업대에서 한 번에 고치기). */
+MAT.plank = ["🟫", "판자"];
+const TOOLDEF = {
+  axe: { n: "도끼", e: "🪓", tiers: [null, { n: "돌도끼", dur: 120 }, { n: "철도끼", dur: 260 }] },
+  pick: { n: "곡괭이", e: "⛏️", tiers: [null, { n: "돌곡괭이", dur: 120 }, { n: "철곡괭이", dur: 260 }] },
+};
+const CELL_TOOL = { 1: "axe", 5: "axe", 2: "pick", 4: "pick" };   // 덤불(3)은 맨손
+const toolOf = k => { const o = S.tools[k]; return o && o.t > 0 && o.d > 0 ? o.t : 0; };
+function toolUse(k) {
+  const o = k && S.tools[k]; if (!o || o.t <= 0 || o.d <= 0) return;
+  o.d--; const n = TOOLDEF[k].tiers[o.t].n;
+  if (o.d === 0) say(`🔧 ${n}이(가) 망가졌어요. 작업대에서 고칠 수 있어요.`, 3200); else if (o.d === 15) say(`🔧 ${n}이(가) 많이 닳았어요.`, 2000);
+}
+// 몇 번 두드려야 하는지: 맨손 4 · 돌 도구 2 · 철 도구 1 (철광석은 곡괭이가 있어야 해요)
+function gatherHp(c) { if (c === 3) return 2; const t = toolOf(CELL_TOOL[c]); if (c === 4) return t ? (t >= 2 ? 2 : 3) : 0; return [4, 2, 1][t]; }
+/* 숙련도: 실제로 한 활동만큼 올라요(GDD 4.2). 레벨마다 10% 확률로 한 개 더 */
+const PROF = { chop: ["🪓", "벌목"], mine: ["⛏️", "채굴"], gather: ["🌿", "채집"], craft: ["🔨", "제작"], build: ["🏗️", "건설"] };
+const profLv = k => Math.min(10, Math.floor(Math.sqrt((S.prof[k] || 0) / 4)));
+function profAdd(k, n = 1) { const a = profLv(k); S.prof[k] = (S.prof[k] || 0) + n; const b = profLv(k); if (b > a) { sfx("lvl"); say(`${PROF[k][0]} ${PROF[k][1]} 숙련도 ${b}! 더 잘하게 됐어요.`, 2600); } }
+const profBonus = k => Math.random() < profLv(k) * .1 ? 1 : 0;
+// 자원 칸을 다 캤을 때 얻는 것(월드·야생 공통). b = 바이옴
+function gatherYield(c, b) {
+  const t = toolOf(CELL_TOOL[c]);
+  if (c === 1) { matAdd("wood", 2 + ri(2) + t + profBonus("chop")); if (b === 5 && Math.random() < .2) matAdd("hide", 1); profAdd("chop"); }
+  else if (c === 2) { matAdd("stone", 2 + ri(2) + t + profBonus("mine")); if (Math.random() < .15) matAdd("bone", 1); profAdd("mine"); }
+  else if (c === 3) { matAdd("fiber", 1 + ri(2) + profBonus("gather")); if (Math.random() < .6) matAdd("berry", 1 + ri(2)); profAdd("gather"); }
+  else if (c === 4) { matAdd("ore", 1 + ri(2) + (t >= 2 ? 1 : 0) + profBonus("mine")); matAdd("stone", 1); profAdd("mine", 2); }
+  else { matAdd("fiber", 2 + profBonus("gather")); if (Math.random() < .5) matAdd("berry", 1); profAdd("gather"); }
+}
+/* 생활 제작법. bench: 작업대 근처에서만 */
+const CRAFT2 = [
+  { id: "stone_axe", g: "tool", e: "🪓", n: "돌도끼", cost: { wood: 3, stone: 2, fiber: 1 }, tool: ["axe", 1], d: "나무를 두 번 만에 베고 목재를 더 얻어요" },
+  { id: "stone_pick", g: "tool", e: "⛏️", n: "돌곡괭이", cost: { wood: 3, stone: 3, fiber: 1 }, tool: ["pick", 1], d: "바위를 빨리 캐고 철광석도 캘 수 있어요" },
+  { id: "iron_axe", g: "tool", bench: 1, e: "🪓", n: "철도끼", cost: { plank: 2, ore: 4 }, tool: ["axe", 2], d: "한 번에 쓰러뜨리고 목재를 많이" },
+  { id: "iron_pick", g: "tool", bench: 1, e: "⛏️", n: "철곡괭이", cost: { plank: 2, ore: 5 }, tool: ["pick", 2], d: "광석을 빨리, 더 많이" },
+  { id: "repair", g: "tool", bench: 1, e: "🔧", n: "도구 고치기", cost: { wood: 1, stone: 1 }, repair: true, d: "닳은 도구를 모두 새것처럼" },
+  { id: "plank", g: "mat", bench: 1, e: "🟫", n: "판자 ×2", cost: { wood: 2 }, give: { plank: 2 }, d: "나무 벽·바닥과 가구의 재료" },
+  { id: "plank10", g: "mat", bench: 1, e: "🟫", n: "판자 ×10", cost: { wood: 10 }, give: { plank: 10 }, d: "한 번에 많이" },
+  { id: "f_chair", g: "furn", bench: 1, e: "🪑", n: "의자", cost: { plank: 3 }, furn: "chair" },
+  { id: "f_bed", g: "furn", bench: 1, e: "🛏️", n: "침대", cost: { plank: 6, fiber: 4, hide: 2 }, furn: "bed" },
+  { id: "f_shelf", g: "furn", bench: 1, e: "📚", n: "책장", cost: { plank: 6 }, furn: "shelf" },
+  { id: "f_lamp", g: "furn", bench: 1, e: "💡", n: "램프", cost: { plank: 1, ore: 1, fiber: 1 }, furn: "lamp" },
+  { id: "f_plant", g: "furn", bench: 1, e: "🪴", n: "화분", cost: { stone: 2, fiber: 3 }, furn: "plant" },
+  { id: "f_frame", g: "furn", bench: 1, e: "🖼️", n: "액자", cost: { plank: 2, fiber: 1 }, furn: "frame" },
+  { id: "f_rugR", g: "furn", bench: 1, e: "🟥", n: "빨간 러그", cost: { fiber: 6, berry: 2 }, furn: "rugR" },
+  { id: "f_rugB", g: "furn", bench: 1, e: "🟦", n: "파란 러그", cost: { fiber: 6, berry: 2 }, furn: "rugB" },
+];
+// 작업대 근처(4칸 안, 월드)
+function nearBench(r = 4) {
+  if (!(scene === "dun" && dun && dun.kind === "world")) return false;
+  const px = Math.floor(player.x / T), py = Math.floor((player.y + 8) / T);
+  for (let y = py - r; y <= py + r; y++) for (let x = px - r; x <= px + r; x++) if (wc(x, y) === CELL.BENCH) return true;
+  return false;
+}
+const hasCost = c => Object.entries(c).every(([k, v]) => (S.mat[k] || 0) >= v);
+function craftState(r) {
+  if (r.bench && !nearBench()) return "bench";
+  if (r.tool) { const o = S.tools[r.tool[0]]; if (o.t > r.tool[1] || (o.t === r.tool[1] && o.d > 0)) return "have"; }
+  if (r.repair && !Object.entries(S.tools).some(([k, o]) => o.t > 0 && o.d < TOOLDEF[k].tiers[o.t].dur)) return "full";
+  return hasCost(r.cost) ? "ok" : "cost";
+}
+function craft2(id) {
+  const r = CRAFT2.find(r => r.id === id); if (!r) return; const st = craftState(r);
+  if (st === "bench") return say("🧰 작업대 가까이에서 만들 수 있어요. 건설(B)에서 작업대를 지어 보세요.", 2600);
+  if (st !== "ok") return;
+  for (const k in r.cost) S.mat[k] -= r.cost[k];
+  if (r.tool) { const [k, t] = r.tool; S.tools[k] = { t, d: TOOLDEF[k].tiers[t].dur }; say(`${r.e} ${r.n}을(를) 만들었어요! 맞는 자원을 캘 때 자동으로 써요.`, 2600); }
+  else if (r.repair) { for (const k in S.tools) { const o = S.tools[k]; if (o.t > 0) o.d = TOOLDEF[k].tiers[o.t].dur; } say("🔧 도구를 모두 고쳤어요.", 1800); }
+  else if (r.give) { for (const k in r.give) S.mat[k] = (S.mat[k] || 0) + r.give[k]; say(`${r.e} ${r.n} 완성!`, 1500); }
+  else if (r.furn) { S.fin[r.furn] = (S.fin[r.furn] || 0) + 1; say(`${r.e} ${r.n}을(를) 만들었어요! 내 집에서 놓을 수 있어요.`, 2600); }
+  sfx("gear"); profAdd("craft"); hud(); save(); renderGear();
+}
+function bodyCraft2() {
+  const chips = Object.entries(MAT).map(([k, [e, n]]) => `<span class="mchip${S.mat[k] ? "" : " zero"}">${e} ${n} <b>${S.mat[k] || 0}</b></span>`).join("");
+  const tl = Object.entries(TOOLDEF).map(([k, d]) => { const o = S.tools[k], tr = d.tiers[o.t]; return `<div class="tcard${o.t && !o.d ? " broken" : ""}"><b>${d.e}</b><span>${tr ? tr.n : d.n + " 없음"}</span>${tr ? `<i style="--w:${(o.d / tr.dur * 100).toFixed(0)}%"></i><small>${o.d ? `${o.d}/${tr.dur}` : "망가짐 · 작업대에서 고치기"}</small>` : `<small>맨손으로 느리게</small>`}</div>`; }).join("");
+  const pf = Object.entries(PROF).map(([k, [e, n]]) => `<span class="mchip">${e} ${n} <b>Lv.${profLv(k)}</b></span>`).join("");
+  const bench = nearBench(), row = r => {
+    const st = craftState(r), cost = Object.entries(r.cost).map(([k, v]) => `<span style="color:${(S.mat[k] || 0) >= v ? "inherit" : "#c0392b"}">${MAT[k][0]}${v}</span>`).join(" ");
+    const lab = { ok: "만들기", cost: "재료 부족", bench: "작업대 필요", have: "가지고 있음", full: "고칠 것 없음" }[st];
+    return `<div class="crow"><span class="ci">${r.e}</span><span class="cn"><b>${r.n}</b>${r.d ? `<small>${r.d}</small>` : ""}<small>${cost}</small></span><button data-craft2="${r.id}" ${st === "ok" || st === "bench" ? "" : "disabled"} class="${st === "bench" ? "need" : ""}">${lab}</button></div>`;
+  };
+  const sec = (g, t) => `<h3>${t}</h3>` + CRAFT2.filter(r => r.g === g).map(row).join("");
+  const old = RECIPES.map((r, i) => { const ok = hasCost(r.cost), cost = Object.entries(r.cost).map(([k, v]) => `<span style="color:${(S.mat[k] || 0) >= v ? "inherit" : "#c0392b"}">${MAT[k][0]}${v}</span>`).join(" ");
+    return `<div class="crow"><span class="ci">${r.e}</span><span class="cn"><b>${r.n}</b><small>${cost}</small></span><button data-craft="${i}" ${ok ? "" : "disabled"}>만들기</button></div>`; }).join("");
+  return `<h2>🔨 제작</h2><div class="mchips">${chips}</div><h3>🧰 내 도구</h3><div class="tcards">${tl}</div>
+    <div class="benchst ${bench ? "on" : ""}">${bench ? "🧰 작업대 옆이에요 — 모든 제작법을 쓸 수 있어요" : "🧰 작업대 없음 — 건설(B)에서 작업대(목재 6·돌 2)를 지으면 판자·가구를 만들 수 있어요"}</div>
+    ${sec("tool", "🪓 도구")}${sec("mat", "🟫 재료")}${sec("furn", "🛋️ 가구 (내 집에 놓기)")}
+    <h3>📈 숙련도</h3><div class="mchips">${pf}</div>
+    <details class="oldc"><summary>⚔️ 모험 장비</summary>${old}</details>`;
+}
+bodyCraft = bodyCraft2;
 
 /* ---------- RPG: 던전 · 야생 지대 ---------- */
 function matRow() { const s = Object.entries(MAT).filter(([k]) => S.mat[k] > 0).map(([k, [e]]) => `${e}${S.mat[k]}`).join(" "); return s ? `<div>${s}</div>` : ""; }
@@ -1195,14 +1308,12 @@ function gatherNode() {
   for (const o of [26, 38]) {
     const tx = Math.floor((P.x + P.dx * o) / T), ty = Math.floor((P.y + 8 + P.dy * o) / T), c = dun.map[ty]?.[tx];
     if (c !== "T" && c !== "R" && c !== "B") continue;
-    const key = ty * 1000 + tx, hp = (dun.nhp[key] ?? (c === "B" ? 2 : 3)) - 1;
+    const cc = { T: 1, R: 2, B: 3 }[c], key = ty * 1000 + tx, hp = (dun.nhp[key] ?? gatherHp(cc)) - 1; toolUse(CELL_TOOL[cc]);
     dun.wob = { x: tx, y: ty, t: .25 }; sfx("chop");
     burst((tx + .5) * T, (ty + .4) * T, 6, c === "R" ? ["#b8bcc8", "#8a8e9e"] : c === "T" ? ["#a87645", "#7d5433", "#3d8444"] : ["#6dbb4f", "#3d8444"], 80, .4);
     if (hp > 0) { dun.nhp[key] = hp; return; }
     delete dun.nhp[key]; dun.map[ty][tx] = "."; dun.regrow.push({ x: tx, y: ty, c, t: 75 });
-    if (c === "T") matAdd("wood", 2 + ri(2));
-    else if (c === "R") { matAdd("stone", 2 + ri(2)); if (Math.random() < .15) matAdd("bone", 1); }
-    else { matAdd("fiber", 1 + ri(2)); if (Math.random() < .6) matAdd("berry", 1 + ri(2)); }
+    gatherYield(cc, 3);
     return;
   }
 }
@@ -3012,6 +3123,7 @@ function draw2D() {
     else if (cc === CELL.WALL || cc === CELL.SWALL || cc === CELL.PILLAR || cc === CELL.STRUCT) push(by, () => v2obj(c, "rockG", cxm, by, 1.1));
     else if (cc === CELL.FARM) { const st = cropStage(ty * WN + tx); if (st >= 0) push(by, () => { c.font = `${TS * .7}px sans-serif`; c.textAlign = "center"; c.fillText(st >= 2 ? "🍅" : "🌱", (cxm * T - V2.cx) * k + Wd / 2, (by * T - V2.cy) * k + Ht / 2 - TS * .2); }); }
     else if (cc === CELL.FIRE) push(by, () => { c.font = `${TS * .8}px sans-serif`; c.textAlign = "center"; c.fillText("🔥", (cxm * T - V2.cx) * k + Wd / 2, (by * T - V2.cy) * k + Ht / 2 - TS * .15); });
+    else if (cc === CELL.BENCH) push(by, () => { c.font = `${TS * .8}px sans-serif`; c.textAlign = "center"; c.fillText("🧰", (cxm * T - V2.cx) * k + Wd / 2, (by * T - V2.cy) * k + Ht / 2 - TS * .15); });
     else if (cc === CELL.BED) push(by, () => { c.font = `${TS * .8}px sans-serif`; c.textAlign = "center"; c.fillText("🛏️", (cxm * T - V2.cx) * k + Wd / 2, (by * T - V2.cy) * k + Ht / 2 - TS * .15); });
   }
   // 마을(지역) 물체 — 월드에서도 이어 보여요
@@ -3079,8 +3191,8 @@ const BIO_N = ["바다", "해변", "초원", "숲", "사막", "설원", "늪", "
 const BIO_E = ["🌊", "🏖️", "🌾", "🌲", "🏜️", "❄️", "🪷", "⛰️", "🏘️", "🛤️", "😈"];
 const BIO_C = [0xb9a56c, 0xead9a0, 0x78c455, 0x4f9a3e, 0xe6cf8a, 0xeaf2f8, 0x5f7f4a, 0x8f939f, 0x9ad070, 0xcfa870, 0x3d3248];
 const BIO_CS = BIO_C.map(c => "#" + c.toString(16).padStart(6, "0"));
-const CELL = { TREE: 1, ROCK: 2, BUSH: 3, ORE: 4, CACT: 5, STRUCT: 10, PILLAR: 11, WALL: 12, FLOOR: 13, FIRE: 14, BED: 15, CHEST: 16, BOARD: 17, FARM: 18, CLIFF: 20, SWALL: 21 };
-const SOLIDC = new Uint8Array(256); [1, 2, 4, 5, 10, 11, 12, 14, 15, 16, 17, 20, 21].forEach(c => SOLIDC[c] = 1);
+const CELL = { TREE: 1, ROCK: 2, BUSH: 3, ORE: 4, CACT: 5, STRUCT: 10, PILLAR: 11, WALL: 12, FLOOR: 13, FIRE: 14, BED: 15, CHEST: 16, BOARD: 17, FARM: 18, CLIFF: 20, SWALL: 21, BENCH: 22 };
+const SOLIDC = new Uint8Array(256); [1, 2, 4, 5, 10, 11, 12, 14, 15, 16, 17, 20, 21, 22].forEach(c => SOLIDC[c] = 1);
 const TOWN_NAMES = ["포근 왕국 왕도", "이끼 언덕", "바람 항구", "솔잎 마을", "붉은 모래촌", "눈꽃 마을", "달무리 나루", "구름 정거장", "노을 마을", "은행나무 촌", "금빛 들판", "고래 포구"];
 const BIOSPAWN = {
   1: { d: [["d", 0]], n: [["m", 0], ["m", 2]] },
@@ -3094,8 +3206,9 @@ const BIOSPAWN = {
   10: { d: [["m", 5], ["m", 3], ["m", 4]], n: [["m", 5], ["m", 3], ["m", 4]] },
 };
 const BUILD = [
-  { id: "wall", n: "나무 벽", e: "🧱", code: 12, cost: { wood: 2 } }, { id: "swall", n: "돌 벽", e: "🪨", code: 21, cost: { stone: 3 } },
-  { id: "floor", n: "나무 바닥", e: "🟫", code: 13, cost: { wood: 1 } }, { id: "fire", n: "모닥불", e: "🔥", code: 14, cost: { wood: 3, stone: 2 } },
+  { id: "bench", n: "작업대", e: "🧰", code: 22, cost: { wood: 6, stone: 2 } },
+  { id: "wall", n: "나무 벽", e: "🧱", code: 12, cost: { plank: 2 } }, { id: "swall", n: "돌 벽", e: "🪨", code: 21, cost: { stone: 3 } },
+  { id: "floor", n: "나무 바닥", e: "🟫", code: 13, cost: { plank: 1 } }, { id: "fire", n: "모닥불", e: "🔥", code: 14, cost: { wood: 3, stone: 2 } },
   { id: "bed", n: "침대 (리스폰)", e: "🛏️", code: 15, cost: { hide: 3, fiber: 4 } }, { id: "farm", n: "밭", e: "🌱", code: 18, cost: { fiber: 2 } },
 ];
 
@@ -3308,6 +3421,8 @@ function mkTent(c) { const g = new THREE.Group(); K(g, .85, 1.2, c, 0, .6, 0, 4,
 function mkChest(open) { const g = new THREE.Group(); B(g, .8, .4, .5, 0x8a5a34, 0, .2, 0); B(g, .82, .06, .52, 0xe8b84a, 0, .1, 0); const lid = new THREE.Group(); lid.position.set(0, .4, -.25); B(lid, .8, .2, .5, 0x9a6a3e, 0, .1, .25); B(lid, .1, .12, .06, 0xf5d142, 0, .05, .5); lid.rotation.x = open ? -1.1 : 0; g.add(lid); if (open) B(g, .6, .06, .3, 0xf5d142, 0, .42, 0); g.traverse(m => { if (m.isMesh) m.castShadow = true; }); return g; }
 function mkPillar(h) { const g = new THREE.Group(); C(g, .2, .24, h, 0xb8bcc8, 0, h / 2, 0, 7); B(g, .6, .12, .6, 0x8a8e9e, 0, .06, 0); if (h > 1.2) B(g, .55, .12, .55, 0x8a8e9e, 0, h + .05, 0); return g; }
 function mkCampfire() { const g = new THREE.Group(); for (let i = 0; i < 6; i++) { const a = i * 1.047; Sp(g, .1, 0x6c7080, Math.cos(a) * .32, .08, Math.sin(a) * .32, { s: [1, .7, 1] }); } B(g, .5, .08, .08, 0x5a3a22, 0, .1, 0, { r: [0, .6, 0] }); B(g, .5, .08, .08, 0x5a3a22, 0, .1, 0, { r: [0, -.6, 0] }); const f = flame(g, 0, .3, 0, 1.6); g.userData.flame = f; return g; }
+function mkWorkbench() { const g = new THREE.Group(), W1 = 0x7d5433, W2 = 0xb07a48; B(g, .92, .1, .6, W2, 0, .62, 0); for (const [x, z] of [[-.38, -.22], [.38, -.22], [-.38, .22], [.38, .22]]) B(g, .08, .58, .08, W1, x, .29, z); B(g, .8, .06, .48, W1, 0, .22, 0);
+  B(g, .26, .05, .1, 0x9aa0ac, -.18, .7, .05, { r: [0, .4, 0] }); B(g, .05, .05, .22, W1, .2, .7, -.05); B(g, .16, .08, .06, 0x6c7080, .2, .72, .07); B(g, .2, .14, .14, 0xc89a5a, .3, .74, -.15); return g; }
 function mkFarm(stage, kind) { const g = new THREE.Group(); B(g, .96, .1, .96, 0x6a4a2a, 0, .05, 0, { cs: false }); if (stage >= 0) for (const [x, z] of [[-.25, -.25], [.25, -.25], [-.25, .25], [.25, .25]]) { C(g, .02, .03, .12 + stage * .18, 0x4a9a4a, x, .12 + (.06 + stage * .09), z, 4); if (stage > 0) Sp(g, .08 + stage * .02, 0x6dbb4f, x, .22 + stage * .2, z, { s: [1.3, .6, 1.3] }); if (stage >= 2) Sp(g, .06, 0xe8508a, x + .05, .42, z); } return g; }
 
 /* ----- 청크 ----- */
@@ -3343,6 +3458,7 @@ function buildChunk(cx, cy) {
     else if (c === 0 && (b === 2 || b === 3 || b === 8) && rn(x, y, 4) < .4) pushI("tuft", x + rn(x, y, 5) * .8 - .4, y + rn(x, y, 9) * .8 - .4, H, .8 + rn(x, y, 10) * .5);
     else if (c === CELL.FIRE) { const m = mkCampfire(); m.position.set(x + .5, H, y + .5); grp.add(m); ch.flames.push(m.userData.flame); ch.lit.push({ x: x + .5, z: y + .5, c: 0xffa040, r: 7, h: 1, i: 1.4 }); }
     else if (c === CELL.BED) { const m = mkFurn("bed"); m.position.set(x + .5, H, y + .5); grp.add(m); }
+    else if (c === CELL.BENCH) { const m = mkWorkbench(); m.position.set(x + .5, H, y + .5); m.rotation.y = rn(x, y, 3) > .5 ? 0 : HALF; grp.add(m); }
     else if (c === CELL.FARM) { const st = cropStage(y * WN + x), m = mkFarm(st); m.position.set(x + .5, H, y + .5); grp.add(m); ch.crops.push({ k: y * WN + x, st }); }
   }
   grp.add(top.build(M_.top)); if (side.p.length) grp.add(side.build(M_.side)); if (water.p.length) { const m = water.build(M_.water, false); grp.add(m); ch.water = m; }
@@ -3545,12 +3661,11 @@ function worldGather() {
   const P = player;
   for (const o of [26, 38]) {
     const tx = Math.floor((P.x + P.dx * o) / T), ty = Math.floor((P.y + 8 + P.dy * o) / T), c = wc(tx, ty);
-    if (c < 1 || c > 5) continue; const key = ty * WN + tx, hp = (dun.nhp[key] ?? (c === 3 ? 2 : c === 4 ? 5 : 3)) - 1, b = wb(tx, ty);
+    if (c < 1 || c > 5) continue; const hp0 = gatherHp(c); if (!hp0) { say("⛏️ 철광석은 곡괭이가 있어야 캘 수 있어요. 제작(C)에서 돌곡괭이를 만들어 보세요.", 2600); return; }
+    const key = ty * WN + tx, hp = (dun.nhp[key] ?? hp0) - 1, b = wb(tx, ty); toolUse(CELL_TOOL[c]);
     sfx("chop"); shake = Math.max(shake, 1); burst((tx + .5) * T, (ty + .5) * T - 8, 6, c === 2 || c === 4 ? ["#b8bcc8", "#8a8e9e"] : c === 1 ? ["#a87645", "#7d5433", "#3d8444"] : ["#6dbb4f", "#3d8444"], 80, .4, 160, 1);
     if (hp > 0) { dun.nhp[key] = hp; return; }
-    delete dun.nhp[key]; setCell(tx, ty, 0, true);
-    if (c === 1) { matAdd("wood", 2 + ri(2)); if (b === 5 && Math.random() < .2) matAdd("hide", 1); } else if (c === 2) { matAdd("stone", 2 + ri(2)); if (Math.random() < .15) matAdd("bone", 1); }
-    else if (c === 3) { matAdd("fiber", 1 + ri(2)); if (Math.random() < .6) matAdd("berry", 1 + ri(2)); } else if (c === 4) { matAdd("ore", 1 + ri(2)); matAdd("stone", 1); } else { matAdd("fiber", 2); if (Math.random() < .5) matAdd("berry", 1); }
+    delete dun.nhp[key]; setCell(tx, ty, 0, true); gatherYield(c, b);
     return;
   }
 }
@@ -3584,6 +3699,7 @@ function winteract(tx, ty) {
   }
   if (c === CELL.BED) { sleepAt({ x: (tx + .5) * T, y: (ty + 1.5) * T }, "내 침대"); return true; }
   if (c === CELL.FARM) { farmAct(tx, ty); return true; }
+  if (c === CELL.BENCH) { sfx("ui"); togglePanel("craft"); return true; }
   if (c === CELL.FIRE) { say("🔥 모닥불 — 가까이 있으면 체력이 천천히 회복돼요.", 2200); return true; }
   return false;
 }
@@ -3601,7 +3717,7 @@ function farmAct(tx, ty) {
   else if (st < 2) say("🌿 아직 자라는 중이에요.", 1500);
   else { delete S.crops[k]; sfx("coin"); markDirty(tx, ty); matAdd("berry", 3 + ri(2)); matAdd("fiber", 1); burst((tx + .5) * T, (ty + .5) * T, 10, ["#e8508a", "#6dbb4f"], 70, .5, 120, .6); say("🧺 수확했어요!", 1500); }
 }
-const PIECE_OWN = new Set([12, 13, 14, 15, 18, 21]);
+const PIECE_OWN = new Set([12, 13, 14, 15, 18, 21, 22]);
 function canAfford(cost) { return Object.entries(cost).every(([k, v]) => (S.mat[k] || 0) >= v); }
 function buildPlace(tx, ty) {
   const b = buildSel; if (!b) return;
@@ -3611,7 +3727,7 @@ function buildPlace(tx, ty) {
   if (SOLIDC[b.code] && ptx === tx && pty === ty) return say("서 있는 자리에는 지을 수 없어요.", 1400);
   if (SOLIDC[b.code] && dun.mons.some(m => Math.floor(m.x / T) === tx && Math.floor((m.y + 8) / T) === ty)) return say("몬스터가 있어요!", 1200);
   if (!canAfford(b.cost)) return say("재료가 부족해요. (I 키가 아니라 상단 주머니의 재료를 확인하세요)", 2000);
-  for (const k in b.cost) S.mat[k] -= b.cost[k]; setCell(tx, ty, b.code, false); sfx("place"); burst((tx + .5) * T, (ty + .5) * T, 8, ["#d9b07c", "#fff"], 60, .4, 160, .5); hud(); save();
+  for (const k in b.cost) S.mat[k] -= b.cost[k]; setCell(tx, ty, b.code, false); profAdd("build"); sfx("place"); burst((tx + .5) * T, (ty + .5) * T, 8, ["#d9b07c", "#fff"], 60, .4, 160, .5); hud(); save();
 }
 function worldRemove() {
   const P = player, tx = Math.floor((P.x + P.dx * 26) / T), ty = Math.floor((P.y + 8 + P.dy * 26) / T), c = wc(tx, ty);
@@ -4264,7 +4380,7 @@ function ctxWorld() {
   const v = dun.vil.find(v => Math.hypot(v.x - fx, v.y + 8 - fy) < 40); if (v) return `💬 ${v.name}${v.job ? " (" + v.job + ")" : ""}와 이야기`;
   const poi = interAt(tx, ty); if (poi && POI_ACT[poi.type] && (poi.type !== "demon" || FEAT.demon)) return poi.type === "chest" && S.wopen[poi.id] ? "📦 빈 상자" : POI_ACT[poi.type];
   const c = wc(tx, ty);
-  if (c === CELL.BED) return "🛏️ 침대에서 쉬기"; if (c === CELL.FIRE) return "🔥 모닥불 쬐기";
+  if (c === CELL.BENCH) return "🧰 작업대 쓰기"; if (c === CELL.BED) return "🛏️ 침대에서 쉬기"; if (c === CELL.FIRE) return "🔥 모닥불 쬐기";
   if (c === CELL.FARM) { const st = cropStage(ty * WN + tx); return st < 0 ? "🌱 씨앗 심기" : st < 2 ? "🌿 자라는 중" : "🧺 수확하기"; }
   if (dun.mons.some(m => !(m.wild && !m.hostile) && Math.hypot(m.x - P.x, m.y - P.y) < 72)) return "⚔️ 공격";
   for (const o of [26, 38]) { const gx = Math.floor((P.x + P.dx * o) / T), gy = Math.floor((P.y + 8 + P.dy * o) / T), g = wc(gx, gy); if (CELL_ACT[g]) return CELL_ACT[g]; }
@@ -4366,7 +4482,7 @@ function hudTick(dt) {
   if (!M2) return; renderHst(); renderAct(); placeMiniTap();
 }
 { let lt = performance.now(); (function loop(now) { const dt = clamp((now - lt) / 1000, 0, .1); lt = now; hudTick(dt); requestAnimationFrame(loop); })(lt); }
-Object.assign(window.__game, { JOY, ctxWorld, areaName, AREA, M2, setCell: (...a) => setCell(...a) });
+Object.assign(window.__game, { JOY, ctxWorld, areaName, AREA, M2, setCell: (...a) => setCell(...a), worldGather: () => worldGather(), save: () => save(), CRAFT2, craft2: id => craft2(id) });
 
 </script>
 </body>

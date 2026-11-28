@@ -103,6 +103,7 @@ $("gear").addEventListener("click", e => {
   if (d.cb) { const [k, v] = d.cb.split(":"); S.cb = { ...cbOf(S.cb), [k]: +v }; save(); netLook(); return renderGear(); }
   if (d.look) { const [k, v] = d.look.split(":"); S.look = { ...lookOf(S.look), [k]: +v }; save(); netLook(); return renderGear(); }
   if (d.tab) { gearTab = d.tab; return renderGear(); }
+  if (d.craft2) return craft2(d.craft2);
   if (d.craft !== undefined) return craft(+d.craft);
   if (t.id === "qreroll") { S.qoffer = genOffers(); return renderGear(); }
   if (d.build !== undefined) { if (!(scene === "dun" && dun.kind === "world")) return say("🏗️ 건설은 오픈월드에서만 할 수 있어요.", 1800); buildSel = BUILD[+d.build]; closeShop(); say(`${buildSel.e} ${buildSel.n} — 스페이스: 놓기 · X: 철거 · B: 끄기 · 1~6: 조각 변경`, 3500); return; }

@@ -357,3 +357,19 @@
     body.m2 #help .hcards div { padding:6px 8px; } body.m2 #help .hcards span { font-size:11px; line-height:1.4; }
     body.m2 #help .news { font-size:11px; margin:6px 0; }
   }
+
+  /* ===== 제작 창 (GDD P1: 도구·작업대·가구) ===== */
+  .mchips { display:flex; flex-wrap:wrap; gap:5px; margin:4px 0 6px; }
+  .mchip { font-size:12px; padding:3px 8px; border-radius:999px; background:rgba(255,255,255,.65); border:1px solid rgba(74,59,42,.15); white-space:nowrap; font-variant-numeric:tabular-nums; }
+  .mchip.zero { opacity:.5; }
+  .tcards { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+  .tcard { display:grid; grid-template-columns:auto 1fr; grid-template-rows:auto auto auto; column-gap:8px; align-items:center; padding:8px 10px; border-radius:14px; background:rgba(255,255,255,.65); border:1px solid rgba(74,59,42,.15); }
+  .tcard b { grid-row:1/4; font-size:26px; } .tcard span { font-weight:800; font-size:13px; }
+  .tcard i { display:block; height:6px; border-radius:3px; background:linear-gradient(90deg,#6fcf6f var(--w),rgba(74,59,42,.15) 0); }
+  .tcard small { font-size:11px; opacity:.75; } .tcard.broken { border-color:#e07a5a; } .tcard.broken small { color:#c0392b; opacity:1; }
+  .benchst { margin:10px 0 4px; padding:8px 12px; border-radius:12px; font-size:12.5px; font-weight:700; background:rgba(242,166,90,.18); border:1px dashed rgba(242,140,60,.55); }
+  .benchst.on { background:rgba(120,210,120,.2); border:1px solid rgba(80,170,80,.5); }
+  .crow { display:grid; grid-template-columns:34px 1fr auto; gap:8px; align-items:center; padding:6px 0; border-bottom:1px solid rgba(74,59,42,.08); }
+  .crow .ci { font-size:24px; text-align:center; } .crow .cn { display:flex; flex-direction:column; min-width:0; } .crow .cn b { font-size:14px; } .crow .cn small { font-size:11.5px; opacity:.8; line-height:1.35; }
+  .crow button { margin:0 !important; padding:4px 12px !important; min-width:84px; font-size:13px; } .crow button.need { background:rgba(255,255,255,.75); }
+  details.oldc { margin-top:12px; } details.oldc summary { cursor:pointer; font-weight:800; padding:6px 0; }
