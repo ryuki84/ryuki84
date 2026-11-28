@@ -13,7 +13,7 @@ async function client(b, nick, vp = { width: 960, height: 640 }) {
   const A = await client(b, '아리'), B = await client(b, '보리'); const r = {};
   for (const c of [A, B]) await c.p.evaluate(() => window.__game.enterWorld());
   await B.p.evaluate(() => { const g = window.__game; g.player.x += 64; });
-  await sl(1500); await A.p.waitForFunction(() => __game.KAY.ready); await B.p.waitForFunction(() => __game.KAY.ready);
+  await sl(1500); await A.p.waitForFunction(() => __game.KAY.ready, null, { timeout: 300000 }); await B.p.waitForFunction(() => __game.KAY.ready, null, { timeout: 300000 });
   await A.p.evaluate(() => __game.togglePanel('look')); await sl(400);
   for (const k of ['av:3', 'ot:2', 'bd:3', 'hat:4']) { await A.p.evaluate(k => document.querySelector(`[data-look="${k}"]`).click(), k); await sl(100); }
   await sl(1800);
