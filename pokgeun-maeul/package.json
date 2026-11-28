@@ -7,11 +7,16 @@
     "start": "node server/server.js",
     "test": "node tests/run.js",
     "test:quick": "node tests/run.js --quick",
-    "postinstall": "npm install --prefix server --no-audit --no-fund"
+    "postinstall": "npm install --prefix server --no-audit --no-fund",
+    "build:artifact": "node tools/build-artifact.mjs"
   },
   "devDependencies": {
+    "@gltf-transform/core": "^4.5.1",
+    "@gltf-transform/extensions": "^4.5.1",
     "playwright": "1.63.0",
     "three": "0.187.0"
   },
-  "engines": { "node": ">=18" }
+  "engines": {
+    "node": ">=18"
+  }
 }

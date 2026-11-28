@@ -341,6 +341,18 @@ import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js"
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import * as SkeletonUtils from "three/addons/utils/SkeletonUtils.js";
 const THREE = { ...T3, EffectComposer, RenderPass, ShaderPass, UnrealBloomPass, GLTFLoader, SkeletonUtils };
+// 아티팩트 뷰어는 보안 정책상 data: 주소 읽기를 막아요(blob:은 허용). glTF(JSON) 안에 data:로 넣어 둔 버퍼·이미지를
+// 먼저 blob: 주소로 바꿔서 읽어요. 이 처리가 없으면 아티팩트에서 3D 모델이 전부 실패하고 코드 모델로만 보여요.
+{ const load0 = GLTFLoader.prototype.load;
+  const toBlob = u => { const i = u.indexOf(","), head = u.slice(5, i), b64 = /;base64/.test(head), body = u.slice(i + 1), bin = b64 ? atob(body) : decodeURIComponent(body), a = new Uint8Array(bin.length); for (let k = 0; k < bin.length; k++) a[k] = bin.charCodeAt(k); return URL.createObjectURL(new Blob([a], { type: head.split(";")[0] || "application/octet-stream" })); };
+  GLTFLoader.prototype.load = function (url, onLoad, onProgress, onError) {
+    if (!/\.json(\?|$)/.test(url)) return load0.call(this, url, onLoad, onProgress, onError);
+    fetch(url).then(r => { if (!r.ok) throw new Error(r.status + " " + url); return r.json(); }).then(j => {
+      for (const b of j.buffers || []) if (b.uri && b.uri.startsWith("data:")) b.uri = toBlob(b.uri);
+      for (const im of j.images || []) if (im.uri && im.uri.startsWith("data:")) im.uri = toBlob(im.uri);
+      this.parse(JSON.stringify(j), url.slice(0, url.lastIndexOf("/") + 1), onLoad, onError);
+    }).catch(e => onError ? onError(e) : console.error(e));
+  }; }
 /* r128 → r187: 기존 색감 유지 — 색 관리 끄기 + 옛 방식 점광원 감쇠 */
 THREE.ColorManagement.enabled = false;
 /* 렌더링 스타일 비교용: ?style=cel (애니메 셀) / ?style=pbr (스타일라이즈드 PBR) / 기본 = 툰 */
