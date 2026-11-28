@@ -44,4 +44,11 @@
   파일: github.com/V-Sekai-archive/datasource-anim-female-doll-retargeting 경유. 웹용으로 텍스처만 줄였어요(tools/slim-vrm.py, 512px).
   표시: three-vrm 3.5.5 (pixiv, MIT)
 
+마을 주민(두 발 동물) — assets/villagers/pug.glb, cow.glb
+  Ultimate Animated Character Pack — Quaternius (quaternius.com), CC0 (github.com/AbrahamBrookes/hey-you-steal-that-bling 경유)
+  원본: Pug, Cow. 피부 재질 색은 원본에 거의 검게 저장돼 있어 게임에서 바로잡아요.
+마을 동물(시바·여우) — assets/villagers/shiba.glb, fox.glb
+  Ultimate Animated Animals — Quaternius (quaternius.com), CC0 (github.com/xxfrigorizxx/The-Legacy-Of-Seroka 경유, License.txt CC0 포함)
+마을 사람 주민 나비·토리 — 애니풍 플레이어와 같은 VRoid 샘플 B·C (위 '애니풍 플레이어 캐릭터' 조건)
+
 3D 엔진 — three.js r187 (mrdoob, MIT) / 글꼴 — Noto Sans KR (Google Fonts, SIL OFL 1.1)
