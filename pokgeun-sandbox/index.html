@@ -391,6 +391,9 @@ THREE.ShaderChunk.lights_pars_begin = THREE.ShaderChunk.lights_pars_begin.replac
 
 "use strict";
 /* ---------- 상수 / 데이터 ---------- */
+/* 포근 마을 샌드박스: 기존 게임에서 가져온 전투 중심 콘텐츠는 꺼 둬요(코드는 남겨 두고 나중에 지역 도전 콘텐츠로 재활용 검토).
+   arena: 서바이벌 아레나 · demon: 마왕성 · story: 왕국 메인 퀘스트(왕명) · elite: 정예 몬스터 */
+const FEAT = { arena: false, demon: false, story: false, elite: false };
 const T = 32, W = 30, H = 20, VW = W * T, VH = H * T;
 const HOUSE = { x: -60, y: -60, w: 3, h: 2 };   // 집은 마을 서쪽의 실제 건물(걸어 들어가는 집)로 옮김
 const SHOP  = { x: 13, y: 3, w: 3, h: 2 };
@@ -443,6 +446,7 @@ const ELITE = {
 const ELITE_BY = Object.fromEntries(Object.entries(ELITE).map(([k, v]) => [v.base, k]));
 const ELITE_P = .08;   // 정예 등장 확률(깊이 3 이상)
 function eliteify(m, force) {
+  if (!FEAT.elite && !force) return m;
   const k = ELITE_BY[m.e]; if (!k || m.boss || m.wild || m.demon || !(force || ((m.dpt || 1) >= 3 && Math.random() < ELITE_P))) return m;
   const E = ELITE[k]; m.elite = k; m.n = "★ " + E.n; m.hp = m.mhp = Math.round(m.mhp * 3); m.dmg = Math.round(m.dmg * 1.4); m.xp = Math.round(m.xp * 4); m.sk = 1.5 + Math.random(); return m;
 }
@@ -604,7 +608,7 @@ function solidTile(x, y) {
   if (scene === "dun" && dun.kind === "world") return wsolid(x, y);
   if (scene === "dun") { const c = dun.map[y]?.[x]; return c === undefined || c === "#" || c === "w" || c === "T" || c === "R"; }
   if (x < 0 || y < 0 || x >= W || y >= H) return WORLD && WORLD.vreg ? wsolid(x + WORLD.vreg.x, y + WORLD.vreg.y) : true;
-  return terrain[y][x] === "w" || inRect(HOUSE, x, y) || inRect(SHOP, x, y) || inRect(CAVE, x, y) || inRect(ARENA, x, y) || !!treeAt(x, y) || !!rockAt(x, y);
+  return terrain[y][x] === "w" || inRect(HOUSE, x, y) || inRect(SHOP, x, y) || inRect(CAVE, x, y) || (FEAT.arena && inRect(ARENA, x, y)) || !!treeAt(x, y) || !!rockAt(x, y);
 }
 function blocked(cx, cy, hw, hh) {
   for (const [ox, oy] of [[-hw, -hh], [hw, -hh], [-hw, hh], [hw, hh]])
@@ -713,7 +717,7 @@ function act() {
   const v = villagers.find(v => Math.hypot(v.x - px, v.y - py) < 30);
   if (v) return talk(v);
   if (inRect(SHOP, tx, ty)) return openShop();
-  if (inRect(ARENA, tx, ty)) return togglePanel("arena");
+  if (FEAT.arena && inRect(ARENA, tx, ty)) return togglePanel("arena");
   if (inRect(CAVE, tx, ty)) return enterDungeon(1);
   if (inRect(HOUSE, tx, ty)) return enterHome();
   const tool = player.tool; pAnim(tool === 2 ? "Throw" : tool === 3 ? "1H_Melee_Attack_Chop" : tool === 1 ? "1H_Melee_Attack_Slice_Horizontal" : tool === 4 ? "PickUp" : "Interact", .6);
@@ -886,7 +890,7 @@ function bodyCraft() {
   }).join("");
 }
 function renderGear() {
-  const tabs = [["equip", "⚔️ 장비 (I)"], ["char", "📜 캐릭터 (K)"], ["craft", "🔨 제작 (C)"], ["build", "🏗️ 건설 (B)"], ["quest", "📜 의뢰 (J)"], ["map", "🗺️ 지도 (N)"], ["king", "👑 왕국 (L)"], ["arena", "⚔️ 아레나 (Y)"], ["look", "🧑 외형 (O)"]].map(([k, l]) => `<button data-tab="${k}" style="margin:0 6px 8px 0;padding:3px 10px;${gearTab === k ? "background:#fff" : ""}">${l}</button>`).join("");
+  const tabs = [["equip", "⚔️ 장비 (I)"], ["char", "📜 캐릭터 (K)"], ["craft", "🔨 제작 (C)"], ["build", "🏗️ 건설 (B)"], ["quest", "📜 의뢰 (J)"], ["map", "🗺️ 지도 (N)"], ["king", "👑 왕국 (L)"], ["arena", "⚔️ 아레나 (Y)"], ["look", "🧑 외형 (O)"]].filter(([k]) => (k !== "king" || FEAT.story) && (k !== "arena" || FEAT.arena)).map(([k, l]) => `<button data-tab="${k}" style="margin:0 6px 8px 0;padding:3px 10px;${gearTab === k ? "background:#fff" : ""}">${l}</button>`).join("");
   $("gear").classList.toggle("side", gearTab === "look" && innerWidth >= 700); $("gear").classList.toggle("lookt", gearTab === "look");
   $("gear").innerHTML = `<div class="grip"></div>` + (gearTab === "perk" ? "" : `<button id="closeX" class="x" title="닫기 (Esc)">✕</button>`) + `<div class="gtabs">` + (["ending", "perk", "arenaend"].includes(gearTab) ? "" : tabs) + `</div>` + (gearTab === "char" ? bodyChar() : gearTab === "craft" ? bodyCraft() : gearTab === "build" ? bodyBuild() : gearTab === "quest" ? bodyQuest() : gearTab === "map" ? bodyMap() : gearTab === "king" ? bodyKing() : gearTab === "ending" ? bodyEnding() : gearTab === "arena" ? bodyArena() : gearTab === "look" ? bodyLook() : gearTab === "perk" ? bodyPerk() : gearTab === "arenaend" ? bodyArenaEnd() : bodyEquip()) + (gearTab === "perk" ? "" : `<button id="closeGear">닫기</button>`);
   if (gearTab === "map") drawWorldMap();
@@ -1295,8 +1299,8 @@ function press(code) {
   else if (code === "Enter") openChat();
   else if (code === "KeyB") { if (buildSel) { buildSel = null; say("건설 모드를 껐어요.", 1200); } else togglePanel("build"); }
   else if (code === "KeyJ") togglePanel("quest");
-  else if (code === "KeyL") togglePanel("king");
-  else if (code === "KeyY") togglePanel("arena");
+  else if (code === "KeyL") { if (FEAT.story) togglePanel("king"); }
+  else if (code === "KeyY") { if (FEAT.arena) togglePanel("arena"); }
   else if (code === "KeyP") toggleView();
   else if (code === "KeyH") toggleKeys();
   else if (code === "KeyO") togglePanel("look");
@@ -2550,7 +2554,7 @@ function buildVillage() {
   VBUILT = true; const g = G.village;
   g.add(G.vterr = terrainGroup(W, H, (x, y) => terrain[y] && terrain[y][x], "village"));
   const put = (m, r, ox = 0) => { m.position.set(r.x + r.w / 2 + ox, 0, r.y + r.h / 2 + .1); g.add(m); return m; };
-  put(mkHouse(), HOUSE); put(mkShop(), SHOP); put(mkCave(), CAVE); put(mkGate(), WILDG, .0); put(mkArena(), ARENA);
+  put(mkHouse(), HOUSE); put(mkShop(), SHOP); put(mkCave(), CAVE); put(mkGate(), WILDG, .0); if (FEAT.arena) put(mkArena(), ARENA);
   G.gateX = WILDG.x + WILDG.w / 2; G.gateZ = WILDG.y + WILDG.h / 2 + .1;
 }
 function drawVillageEnts(act) {
@@ -2591,7 +2595,7 @@ function drawVillage() {
   }
   if (night) { for (const wx of [-.9, .9]) light(HOUSE.x + HOUSE.w / 2 + wx, HOUSE.y + HOUSE.h / 2 + 1.1, 4.5, 0xffd870, .8, 1.3); light(SHOP.x + SHOP.w / 2, SHOP.y + SHOP.h / 2 + 1.2, 5, 0xffd870, 1, 1.4); light(G.gateX - .75, G.gateZ, 4, 0xffa534, 2, 1.3); light(G.gateX + .75, G.gateZ, 4, 0xffa534, 2, 1.3); }
   PL0.x = P.x / T; PL0.z = pz; PL0.r = night ? 6 : 3; PL0.i = night ? 1.5 : .0; PL0.h = 1.8; PL0.c = 0xffd9a0;
-  labelT("내 집", HOUSE.x + HOUSE.w / 2, HOUSE.y + HOUSE.h + .3, .3); labelT("다람쥐 상점", SHOP.x + SHOP.w / 2, SHOP.y + SHOP.h + .3, .3); labelT("던전 입구", CAVE.x + CAVE.w / 2, CAVE.y + CAVE.h + .35, .3); labelT("🏠 내 집 ←", G.gateX, G.gateZ + .3, .3); labelT("🏰 왕도 ↑", 15, -.6, .3); labelT("서바이벌 아레나", ARENA.x + 1.5, ARENA.y + ARENA.h + .3, .3);
+  labelT("내 집", HOUSE.x + HOUSE.w / 2, HOUSE.y + HOUSE.h + .3, .3); labelT("다람쥐 상점", SHOP.x + SHOP.w / 2, SHOP.y + SHOP.h + .3, .3); labelT("던전 입구", CAVE.x + CAVE.w / 2, CAVE.y + CAVE.h + .35, .3); labelT("🏠 내 집 ←", G.gateX, G.gateZ + .3, .3); labelT("🏰 왕도 ↑", 15, -.6, .3); if (FEAT.arena) labelT("서바이벌 아레나", ARENA.x + 1.5, ARENA.y + ARENA.h + .3, .3);
   if (started && !modal) { const { tx, ty } = target(); cursorAt(tx, ty, terrain[ty] && terrain[ty][tx] === "w" ? -.1 : .03); } else G.cursor.visible = false;
   follow(P.x / T, pz, W, H, D); finish(D); overlay();
 }
@@ -2864,7 +2868,7 @@ function draw2D() {
     for (const f of flowers) if (!(f.back > 0)) { const by = vy + f.y + 1; push(by - .5, () => v2obj(c, "flower", vx + f.x + .5, by - .1)); }
     for (const it of ground) { const by = vy + it.y + 1; push(by, () => { c.fillStyle = FRC[it.k] ? "#" + FRC[it.k].toString(16).padStart(6, "0") : "#e8505a"; c.beginPath(); c.arc(((vx + it.x + .5) * T - V2.cx) * k + Wd / 2, ((by - .45) * T - V2.cy) * k + Ht / 2 - Math.abs(Math.sin(vtime * 4 + it.x)) * TS * .12, TS * .14, 0, 6.28); c.fill(); }); }
     const bld = (key, r, ox2 = 0) => { const by = vy + r.y + r.h + .2; push(by, () => v2obj(c, key, vx + r.x + r.w / 2 + ox2, by)); };
-    bld("house", HOUSE); bld("shop", SHOP); bld("cave", CAVE); bld("dojo", ARENA); { const r = WILDG; const by = vy + r.y + r.h; push(by, () => v2obj(c, "torii", vx + r.x + r.w / 2, by)); }
+    bld("house", HOUSE); bld("shop", SHOP); bld("cave", CAVE); if (FEAT.arena) bld("dojo", ARENA); { const r = WILDG; const by = vy + r.y + r.h; push(by, () => v2obj(c, "torii", vx + r.x + r.w / 2, by)); }
     for (const v of villagers) { const [nm, an] = V2VIL[v.e] || ["Villager", 0]; const o = v; o.vdx = v.vx; o.vdy = v.vy; o.vmv = v.talk <= 0 && !!(v.vx || v.vy); o.vemote = v.talk > 0; push((vpy + v.y + 8) / T, () => { v2sprite(c, nm, an ? "a" : "c", vpx + v.x, vpy + v.y + 8, o); }); if (local && Math.hypot(v.x - P.x, v.y - P.y) < 80) labelT(v.name, vx + v.x / T, vy + (v.y + 8) / T, 1.6, "#fff3d6"); }
     for (const cr of critters) { const o = cr; o.vdx = cr.vx; o.vdy = cr.vy; o.vmv = !!(cr.vx || cr.vy); o.vfast = Math.hypot(cr.vx, cr.vy) > 40; push((vpy + cr.y + 8) / T, () => v2sprite(c, cr.k === "v/fox" ? "Cat" : "Dog2", "a", vpx + cr.x, vpy + cr.y + 8, o, .8)); }
   }
@@ -3082,7 +3086,7 @@ function genWorld() {
   { const p = add({ id: "portal", type: "portal", name: "포근 마을 포털", x: sx + 6, y: sy + 3, w: 1, h: 1, town: cap, tier: 0 }); struct(p.x, p.y, 1, 1, p, CELL.PILLAR); }
   spec.push({ k: "rect", x: HOX - 3, y: VOY - 3, w: VOX + 33 - (HOX - 3), h: 26, b: BIO.PLAINS }, { k: "rect", x: sx - 1, y: sy + 10, w: 2, h: VOY - sy - 10, b: BIO.ROAD });
   // 마왕성: 왕도에서 북쪽으로 멀리
-  { const dx = sx + 30, dy = sy - 175; spec.push({ k: "disc", x: dx, y: dy, r: 26, b: BIO.DEMON, force: true }, { k: "trees", x: dx, y: dy, r: 24 });
+  if (FEAT.demon) { const dx = sx + 30, dy = sy - 175; spec.push({ k: "disc", x: dx, y: dy, r: 26, b: BIO.DEMON, force: true }, { k: "trees", x: dx, y: dy, r: 24 });
     const d = add({ id: "demon", type: "demon", name: "마왕성", x: dx - 4, y: dy - 6, w: 9, h: 4, tier: 4 }); struct(d.x, d.y, 9, 4, d); W.guard.push(d); W.demon = d; d.dist = Math.hypot(d.x - sx, d.y - sy);
     const wp = add({ id: "demonwp", type: "shrine", name: "마왕성 입구 이동석", x: dx, y: dy + 5, w: 1, h: 1, tier: 4, wp: true, keepName: true }); struct(wp.x, wp.y, 1, 1, wp, CELL.PILLAR);
     for (let k = 0; k < 14; k++) { const y = sy - 12 - k * 12; spec.push({ k: "disc", x: sx + Math.round(k * 30 / 14), y, r: 3, b: null }); } }   // 마왕성으로 가는 길목은 막히지 않게
@@ -3322,7 +3326,7 @@ function enterWorld(pos, msg) {
   if (wsolid(Math.floor(P.x / T), Math.floor((P.y + 8) / T))) { for (let r = 1; r < 8; r++) { let ok = false; for (let a = 0; a < 8 && !ok; a++) { const x = Math.floor(P.x / T + Math.cos(a * .785) * r), y = Math.floor((P.y + 8) / T + Math.sin(a * .785) * r); if (!wsolid(x, y)) { P.x = (x + .5) * T; P.y = (y + .5) * T - 8; ok = true; } } if (ok) break; } }
   W.towns.forEach((t, i) => townVil(t, i));
   { const c = W.towns[0], mkv = (nm, model, ox, oy, lines, e) => { const x = (c.x + ox + .5) * T, y = (c.y + oy + .5) * T - 8; dun.vil.push({ name: nm, e, model, fixed: true, lines, x, y, hx: x, hy: y, vx: 0, vy: 0, t: 0, talk: 0, line: 0 }); };
-    mkv("국왕 폰드", "king", 0, -8, [], "👑"); mkv("근위병", "guard", -2, -8, GUARD_LINES, "🛡️"); mkv("근위병", "guard", 2, -8, GUARD_LINES, "🛡️"); mkv("성문 경비병", "guard", -7, -3, GUARD_LINES2, "🛡️"); mkv("성문 경비병", "guard", 7, -3, GUARD_LINES2, "🛡️");
+    mkv("국왕 폰드", "king", 0, -8, FEAT.story ? [] : ["허허, 포근 왕국에 온 걸 환영하오.", "백성들이 집을 짓고 밭을 가꾸는 모습이 보기 좋구려.", "멀리 나가면 귀한 재료가 많다 하오. 조심히 다녀오시게."], "👑"); mkv("근위병", "guard", -2, -8, GUARD_LINES, "🛡️"); mkv("근위병", "guard", 2, -8, GUARD_LINES, "🛡️"); mkv("성문 경비병", "guard", -7, -3, GUARD_LINES2, "🛡️"); mkv("성문 경비병", "guard", 7, -3, GUARD_LINES2, "🛡️");
     if (!S.wp[c.id + "w"]) S.wp[c.id + "w"] = 1; }
   dun.pet = activePet() ? { x: P.x - 20, y: P.y, cd: 0 } : null; S.wpos = { x: P.x, y: P.y }; WDUN = dun; storyCheck(); hud();
   say(msg || "🌍 오픈월드 — 어디로든 갈 수 있어요. 마을·동굴·이동석을 찾아보세요! (B 건설 · N 지도 · J 의뢰)", 4500);
@@ -3400,7 +3404,7 @@ function worldAct() {
   if (dun.kind !== "world") return false;   // 월드가 아닐 때(동굴 등) 호출되면 무시
   const P = player, fx_ = P.x + P.dx * 26, fy_ = P.y + 8 + P.dy * 26, tx = Math.floor(fx_ / T), ty = Math.floor(fy_ / T);
   if (fishing) { if (fishing.state === "bite") catchFish(); else say("너무 일렀어요… 찌가 움직일 때까지 기다려요."); fishing = null; return true; }
-  const v = dun.vil.find(v => Math.hypot(v.x - fx_, v.y + 8 - fy_) < 40); if (v) { if (v.model === "king") openKing(); else talk(v); return true; }
+  const v = dun.vil.find(v => Math.hypot(v.x - fx_, v.y + 8 - fy_) < 40); if (v) { if (v.model === "king" && FEAT.story) openKing(); else talk(v); return true; }
   if (buildSel) { buildPlace(tx, ty); return true; }
   if (winteract(tx, ty)) return true;
   if (wb(tx, ty) === 0 && !inTown(tx, ty)) { fishing = { tx, ty, state: "wait", t: 1.5 + R() * 3 }; sfx("splash"); burst((tx + .5) * T, (ty + .6) * T, 6, ["#a8dcf5", "#fff"], 40, .3, 160, .3); say("찌를 던졌어요…", 1200); return true; }
@@ -3420,7 +3424,7 @@ function winteract(tx, ty) {
     if (poi.type === "portal") { leaveDungeon(false, true); return true; }
     if (poi.type === "cave") { const depth = clamp(1 + Math.floor(Math.hypot(poi.x - WORLD.spawn.x, poi.y - WORLD.spawn.y) / 45), 1, 12), ret = { x: (poi.x + 1) * T, y: (poi.y + 3) * T }; S.wpos = ret; save(); enterDungeon(depth, false, undefined, ret); return true; }
     if (poi.type === "castle") { say("🏰 포근성 — 국왕 폐하는 앞뜰에서 기다리고 계세요. (L: 왕국)", 3000); return true; }
-    if (poi.type === "demon") { say("😈 마왕성에 들어갑니다… 모든 각오를 하세요!", 2500); enterDemon(poi); return true; }
+    if (poi.type === "demon" && FEAT.demon) { say("😈 마왕성에 들어갑니다… 모든 각오를 하세요!", 2500); enterDemon(poi); return true; }
     if (poi.type === "chest") { openChest(poi); return true; }
     return false;
   }
@@ -3496,7 +3500,7 @@ function turnIn(id) {
 }
 function questLine() {
   const out = [], st = STORY[S.story.stage];
-  if (st) { const idx = st.obj.findIndex((o, i) => (o.k === "lv" ? S.lv : S.story.p[i] || 0) < o.n), o = st.obj[idx < 0 ? 0 : idx], i = idx < 0 ? 0 : idx, have = o.k === "lv" ? Math.min(S.lv, o.n) : S.story.p[i] || 0;
+  if (st && FEAT.story) { const idx = st.obj.findIndex((o, i) => (o.k === "lv" ? S.lv : S.story.p[i] || 0) < o.n), o = st.obj[idx < 0 ? 0 : idx], i = idx < 0 ? 0 : idx, have = o.k === "lv" ? Math.min(S.lv, o.n) : S.story.p[i] || 0;
     out.push(storyReady() ? `📖 ${st.t}: 왕에게 보고하세요 ❗` : `📖 ${st.t}: ${o.label} (${have}/${o.n})`); }
   const q = S.quests[0]; if (q) out.push(`📜 ${q.label} (${q.have}/${q.need})`); return out.join("<br>");
 }
@@ -3540,7 +3544,7 @@ function drawWorldEnts(g, P, pz) {
     if (Math.abs(v.x / T - camT.x) > 22 || Math.abs((v.y + 8) / T - camT.z) > 16) continue;
     const e = entM(v, () => v.model === "king" ? mkKingM() : v.model === "guard" ? mkGuardM() : mkVilModel(v.e), g.dyn), mv = v.talk <= 0 && (v.vx || v.vy); e.emote = v.talk > 0 ? "Wave" : null;
     e.g.position.set(v.x / T, 0, (v.y + 8) / T); if (mv) face(e.g, v.vx, v.vy); else if (v.talk > 0 || (v.fixed && Math.hypot(v.x - P.x, v.y - P.y) < 6 * T)) face(e.g, P.x - v.x, P.y - v.y); else if (v.fixed) face(e.g, 0, 1); animE(e, mv, e.mon ? 5 : 8, .5);
-    if (v.model === "king") { labelT("👑 " + v.name, v.x / T, (v.y + 8) / T, 2.4, "#ffe27a"); if (S.story.stage < STORY.length) labelT(storyReady() ? "❗" : "❓", v.x / T, (v.y + 8) / T, 3.1, "#ffd34d"); } else if (Math.hypot(v.x - P.x, v.y - P.y) < 90) labelT(v.name, v.x / T, (v.y + 8) / T, 2, "#fff3d6");
+    if (v.model === "king") { labelT("👑 " + v.name, v.x / T, (v.y + 8) / T, 2.4, "#ffe27a"); if (FEAT.story && S.story.stage < STORY.length) labelT(storyReady() ? "❗" : "❓", v.x / T, (v.y + 8) / T, 3.1, "#ffd34d"); } else if (Math.hypot(v.x - P.x, v.y - P.y) < 90) labelT(v.name, v.x / T, (v.y + 8) / T, 2, "#fff3d6");
   }
   for (const o of NET.others.values()) {
     const e = ent(o, () => mkHeroFromLook(o.look, o.col || 0x3d6ed0), g.dyn); { const sg = KAY.ready + "" + MAN.ready + JSON.stringify(o.look || 0); if (e.osig !== undefined && e.osig !== sg) swapInto(e, mkHeroFromLook(o.look, o.col || 0x3d6ed0)); e.osig = sg; } e.g.position.set(o.x / T, 0, (o.y + 8) / T); face(e.g, o.dx || 0, o.dy || 1); animE(e, !!o.mv, 10, .75);
@@ -3589,7 +3593,7 @@ function sEvent(type, a, n = 1) {
   st.obj.forEach((o, i) => { if (o.k === "lv" || o.k === "talk") return; if (o.k === type || (type === "mat" && o.k === "mat:" + a)) { const v = S.story.p[i] || 0; if (v < o.n) { S.story.p[i] = Math.min(o.n, v + n); ch = true; } } });
   if (ch) storyCheck();
 }
-function storyReady() { const st = STORY[S.story.stage]; return !!st && st.obj.every((o, i) => o.k === "lv" ? S.lv >= o.n : (S.story.p[i] || 0) >= o.n); }
+function storyReady() { if (!FEAT.story) return false; const st = STORY[S.story.stage]; return !!st && st.obj.every((o, i) => o.k === "lv" ? S.lv >= o.n : (S.story.p[i] || 0) >= o.n); }
 function storyCheck() { const r = storyReady(); if (r && !S.story.notified) { S.story.notified = true; say("👑 왕명 완료! 왕도의 국왕에게 보고하세요.", 4500); sfx("gear"); } hud(); }
 const kingNpc = () => scene === "dun" && dun && dun.kind === "world" ? dun.vil.find(v => v.model === "king") : null;
 function nearKing() { const k = kingNpc(); return !!k && Math.hypot(k.x - player.x, k.y - player.y) < 8 * T; }
@@ -3950,7 +3954,7 @@ $("cfg").addEventListener("click", e => { const b = e.target.closest("[data-cfg]
       try { const u = new URL(location.href); u.searchParams.delete("style"); u.searchParams.delete("view"); u.hash = ""; history.replaceState(null, "", u); } catch (e) {} return setTimeout(() => location.reload(), 150); } $(id).click(); setTimeout(renderCfg, 60); });
 addEventListener("pointerdown", e => { if (!e.target.closest("#cfg, #cfgbtn")) $("cfg").hidden = true; });
 /* 메뉴 독: 단축키를 몰라도 클릭으로 */
-const DOCK = [["equip", "⚔️", "장비", "I"], ["char", "📜", "캐릭터", "K"], ["craft", "🔨", "제작", "C"], ["build", "🏗️", "건설", "B"], ["quest", "📋", "의뢰", "J"], ["map", "🗺️", "지도", "N"], ["king", "👑", "왕국", "L"], ["arena", "🏟️", "아레나", "Y"], ["look", "🧑", "외형", "O"], ["keys", "❓", "도움말", "H"]];
+const DOCK = [["equip", "⚔️", "장비", "I"], ["char", "📜", "캐릭터", "K"], ["craft", "🔨", "제작", "C"], ["build", "🏗️", "건설", "B"], ["quest", "📋", "의뢰", "J"], ["map", "🗺️", "지도", "N"], ["look", "🧑", "외형", "O"], ["keys", "❓", "도움말", "H"]];
 function renderDock() {
   const badge = { char: S.pts + S.sp > 0, king: typeof storyReady === "function" && (() => { try { return storyReady(); } catch (e) { return false; } })() };
   const sig = JSON.stringify(badge) + (!$("gear").hidden && gearTab); if (sig === renderDock.sig) return; renderDock.sig = sig;
@@ -3984,7 +3988,7 @@ function toggleKeys() {
     <section><h3>🕹️ 이동 · 카메라</h3>${row("WASD / 방향키", "이동 (카메라 기준)")}${row("마우스 드래그", "카메라 돌리기")}${row(", .", "카메라 왼쪽/오른쪽")}${row("P", "3인칭 ↔ 위에서 보기")}</section>
     <section><h3>✋ 행동</h3>${row("Space", "화면 아래 안내에 나온 행동")}${row("1~5", "마을 도구 (손·채·낚싯대·삽·묘목)")}${row("X", "집기 / 철거")}${row("Enter", "채팅")}</section>
     <section><h3>⚔️ 전투</h3>${row("Space", "공격 · 채집")}${row("Q", "회전베기")}${row("E", "구르기 (무적)")}${row("R", "화염구")}${row("F", "물약")}${row("V / G", "먹이주기 / 탈것")}</section>
-    <section><h3>📋 메뉴</h3>${row("I K C", "장비 · 캐릭터 · 제작")}${row("B J N", "건설 · 의뢰 · 지도")}${row("L Y O", "왕국 · 아레나 · 외형")}${row("Esc", "창 닫기")}</section></div>
+    <section><h3>📋 메뉴</h3>${row("I K C", "장비 · 캐릭터 · 제작")}${row("B J N", "건설 · 의뢰 · 지도")}${row("O", "외형")}${row("Esc", "창 닫기")}</section></div>
     <p class="tip">💡 오른쪽 아이콘 메뉴를 눌러도 돼요. 폰에서는 왼쪽 조이스틱으로 움직이고 오른쪽 버튼으로 행동해요.</p></div>`;
 }
 $("keys").addEventListener("click", e => { if (e.target.closest("[data-close]") || e.target === $("keys")) toggleKeys(); });
@@ -3995,7 +3999,7 @@ function ctxHint() {
     if (fishing) return fishing.state === "bite" ? "🎣 지금! 낚아채기" : "🎣 입질을 기다리는 중… (움직이면 취소)";
     const { px, py, tx, ty } = target(), v = villagers.find(v => Math.hypot(v.x - px, v.y - py) < 30);
     if (v) return `💬 ${v.name}와(과) 이야기하기`;
-    if (inRect(SHOP, tx, ty)) return "🏪 상점 열기"; if (inRect(ARENA, tx, ty)) return "🏟️ 아레나"; if (inRect(CAVE, tx, ty)) return "🕳️ 던전에 들어가기"; if (inRect(WILDG, tx, ty)) return "🌍 오픈월드로 떠나기"; if (inRect(HOUSE, tx, ty)) return "🏠 집에 들어가기";
+    if (inRect(SHOP, tx, ty)) return "🏪 상점 열기"; if (FEAT.arena && inRect(ARENA, tx, ty)) return "🏟️ 아레나"; if (inRect(CAVE, tx, ty)) return "🕳️ 던전에 들어가기"; if (inRect(WILDG, tx, ty)) return "🌍 오픈월드로 떠나기"; if (inRect(HOUSE, tx, ty)) return "🏠 집에 들어가기";
     const t = player.tool;
     if (t === 0) { const tr = treeAt(tx, ty); if (tr) return tr.age >= 60 ? (tr.fruit > 0 ? "🍎 나무를 흔들어 열매 따기" : "🌳 나무 흔들기") : "🌱 어린 나무 살펴보기"; return flowerAt(tx, ty) ? "🌷 꽃 꺾기" : ""; }
     if (t === 1) return "🦋 잠자리채 휘두르기"; if (t === 2) return terrain[ty] && terrain[ty][tx] === "w" ? "🎣 낚싯대 던지기" : "🎣 물을 바라보고 낚시"; if (t === 3) return "⛏️ 땅 파기"; if (t === 4) return (S.inv.sapling || 0) > 0 ? "🌱 묘목 심기" : "🌱 묘목이 없어요 (상점)";
@@ -4085,7 +4089,7 @@ for (const id of ["gear", "shop"]) { const el = $(id); let y0 = null;
   const up = e => { if (y0 === null) return; const dy = e.clientY - y0; y0 = null; el.style.transform = ""; if (dy > 70 && !(id === "gear" && gearTab === "perk")) closeShop(); };
   el.addEventListener("pointerup", up); el.addEventListener("pointercancel", up); }
 renderDock();
-window.__game = { RSTYLE, get V2() { return V2; }, VIEW2D, v2on, critters, get VRMV() { return VRMV; }, get NAT() { return NAT; }, get R3() { return R3; }, get VRMS() { return VRMS; }, spawnNearV: () => spawnNear(), VILM, get hitStop() { return hitStop; }, get MONM() { return MONM; }, ENT, MON_WIND, ELITE, eliteify, eliteAI, saveApi: { save, exportSave, importSave, listBackups, restoreBackup, backupNow, SAVE, SAVE_VER },  get DINOM() { return DINOM; }, wsolid, bioBase,  equipBag, unequip, homeTileAt, openShop, enterHome: () => enterHome(), get furnSel() { return furnSel; }, ctxHint, renderBar,  get sun() { return sun; }, get GRD() { return GRD; }, get S3() { return S3; }, setYaw: v => { camYaw = v; camManT = vtime + 999; }, get MAN() { return MAN; }, get KAY() { return KAY; }, get curPE() { return curPE; }, pAnim, WX, setWeather: t => { WX.type = t; WX.t = 9999; }, startArena, arenaTick, startWave, gemGain, choosePerk, finishArena, openPerk, autoFight, idleStored, dailyTouch, genArena, mkMonT, get PERKS() { return PERKS; }, get ARES() { return ARES; }, sEvent, storyReady, reportStory, openKing, nearKing, demonAI, finalizeDemon, enterDemon, onDemonDefeat, mkDemon, damageP, addFame, get STORY() { return STORY; }, NET, spawnNear, worldTick, killMon, setBuild: i => { buildSel = i == null ? null : BUILD[i]; }, farmAct, winteract, genOffers, turnIn, warpTo, worldAct, enterWorld, getWorld, get WORLD() { return WORLD; }, get dun() { return dun; }, wc, wb, setClock: v => { clock = v; }, fireball, feed, toggleMount, craft, togglePanel, enterDungeon, get dun() { return dun; }, pstats, genGear, attack, scene: () => scene, furnSelSet: v => { furnSel = v; renderFurn(); }, player, trees, S, keys, act, get fishing() { return fishing; }, bugs, villagers }; // 디버그/테스트용
+window.__game = { FEAT, RSTYLE, get V2() { return V2; }, VIEW2D, v2on, critters, get VRMV() { return VRMV; }, get NAT() { return NAT; }, get R3() { return R3; }, get VRMS() { return VRMS; }, spawnNearV: () => spawnNear(), VILM, get hitStop() { return hitStop; }, get MONM() { return MONM; }, ENT, MON_WIND, ELITE, eliteify, eliteAI, saveApi: { save, exportSave, importSave, listBackups, restoreBackup, backupNow, SAVE, SAVE_VER },  get DINOM() { return DINOM; }, wsolid, bioBase,  equipBag, unequip, homeTileAt, openShop, enterHome: () => enterHome(), get furnSel() { return furnSel; }, ctxHint, renderBar,  get sun() { return sun; }, get GRD() { return GRD; }, get S3() { return S3; }, setYaw: v => { camYaw = v; camManT = vtime + 999; }, get MAN() { return MAN; }, get KAY() { return KAY; }, get curPE() { return curPE; }, pAnim, WX, setWeather: t => { WX.type = t; WX.t = 9999; }, startArena, arenaTick, startWave, gemGain, choosePerk, finishArena, openPerk, autoFight, idleStored, dailyTouch, genArena, mkMonT, get PERKS() { return PERKS; }, get ARES() { return ARES; }, sEvent, storyReady, reportStory, openKing, nearKing, demonAI, finalizeDemon, enterDemon, onDemonDefeat, mkDemon, damageP, addFame, get STORY() { return STORY; }, NET, spawnNear, worldTick, killMon, setBuild: i => { buildSel = i == null ? null : BUILD[i]; }, farmAct, winteract, genOffers, turnIn, warpTo, worldAct, enterWorld, getWorld, get WORLD() { return WORLD; }, get dun() { return dun; }, wc, wb, setClock: v => { clock = v; }, fireball, feed, toggleMount, craft, togglePanel, enterDungeon, get dun() { return dun; }, pstats, genGear, attack, scene: () => scene, furnSelSet: v => { furnSel = v; renderFurn(); }, player, trees, S, keys, act, get fishing() { return fishing; }, bugs, villagers }; // 디버그/테스트용
 </script>
 </body>
 </html>

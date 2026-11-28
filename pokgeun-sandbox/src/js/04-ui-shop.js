@@ -12,7 +12,7 @@ function solidTile(x, y) {
   if (scene === "dun" && dun.kind === "world") return wsolid(x, y);
   if (scene === "dun") { const c = dun.map[y]?.[x]; return c === undefined || c === "#" || c === "w" || c === "T" || c === "R"; }
   if (x < 0 || y < 0 || x >= W || y >= H) return WORLD && WORLD.vreg ? wsolid(x + WORLD.vreg.x, y + WORLD.vreg.y) : true;
-  return terrain[y][x] === "w" || inRect(HOUSE, x, y) || inRect(SHOP, x, y) || inRect(CAVE, x, y) || inRect(ARENA, x, y) || !!treeAt(x, y) || !!rockAt(x, y);
+  return terrain[y][x] === "w" || inRect(HOUSE, x, y) || inRect(SHOP, x, y) || inRect(CAVE, x, y) || (FEAT.arena && inRect(ARENA, x, y)) || !!treeAt(x, y) || !!rockAt(x, y);
 }
 function blocked(cx, cy, hw, hh) {
   for (const [ox, oy] of [[-hw, -hh], [hw, -hh], [-hw, hh], [hw, hh]])

@@ -1,5 +1,8 @@
 # GDD 대비 현황 분석 (P0)
 
+> 기존 게임(`pokgeun-maeul`) 코드 기준으로 작성한 분석이에요. 샌드박스는 이 코드를 복사해 시작했으니 그대로 유효해요.
+> 이후 샌드박스에서는 아레나·마왕성·왕명 스토리·정예 몬스터를 `FEAT` 스위치로 꺼 뒀어요. 줄 번호는 분리 전 `index.html` 기준이고, 지금 코드는 `src/js/`에 있어요.
+
 - 작성일: 2026-11-28
 - 기준 코드: 커밋 `12cce9b`(브랜치 `ccr-a192749b-nh5md0`)를 `claude/chatgpt-share-link-k3f3we`로 가져온 상태
 - 기준 설계: `docs/GAME_DESIGN_DOCUMENT.md`(v2.0)

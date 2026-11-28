@@ -166,7 +166,7 @@ function genWorld() {
   { const p = add({ id: "portal", type: "portal", name: "포근 마을 포털", x: sx + 6, y: sy + 3, w: 1, h: 1, town: cap, tier: 0 }); struct(p.x, p.y, 1, 1, p, CELL.PILLAR); }
   spec.push({ k: "rect", x: HOX - 3, y: VOY - 3, w: VOX + 33 - (HOX - 3), h: 26, b: BIO.PLAINS }, { k: "rect", x: sx - 1, y: sy + 10, w: 2, h: VOY - sy - 10, b: BIO.ROAD });
   // 마왕성: 왕도에서 북쪽으로 멀리
-  { const dx = sx + 30, dy = sy - 175; spec.push({ k: "disc", x: dx, y: dy, r: 26, b: BIO.DEMON, force: true }, { k: "trees", x: dx, y: dy, r: 24 });
+  if (FEAT.demon) { const dx = sx + 30, dy = sy - 175; spec.push({ k: "disc", x: dx, y: dy, r: 26, b: BIO.DEMON, force: true }, { k: "trees", x: dx, y: dy, r: 24 });
     const d = add({ id: "demon", type: "demon", name: "마왕성", x: dx - 4, y: dy - 6, w: 9, h: 4, tier: 4 }); struct(d.x, d.y, 9, 4, d); W.guard.push(d); W.demon = d; d.dist = Math.hypot(d.x - sx, d.y - sy);
     const wp = add({ id: "demonwp", type: "shrine", name: "마왕성 입구 이동석", x: dx, y: dy + 5, w: 1, h: 1, tier: 4, wp: true, keepName: true }); struct(wp.x, wp.y, 1, 1, wp, CELL.PILLAR);
     for (let k = 0; k < 14; k++) { const y = sy - 12 - k * 12; spec.push({ k: "disc", x: sx + Math.round(k * 30 / 14), y, r: 3, b: null }); } }   // 마왕성으로 가는 길목은 막히지 않게

@@ -105,7 +105,7 @@ function draw2D() {
     for (const f of flowers) if (!(f.back > 0)) { const by = vy + f.y + 1; push(by - .5, () => v2obj(c, "flower", vx + f.x + .5, by - .1)); }
     for (const it of ground) { const by = vy + it.y + 1; push(by, () => { c.fillStyle = FRC[it.k] ? "#" + FRC[it.k].toString(16).padStart(6, "0") : "#e8505a"; c.beginPath(); c.arc(((vx + it.x + .5) * T - V2.cx) * k + Wd / 2, ((by - .45) * T - V2.cy) * k + Ht / 2 - Math.abs(Math.sin(vtime * 4 + it.x)) * TS * .12, TS * .14, 0, 6.28); c.fill(); }); }
     const bld = (key, r, ox2 = 0) => { const by = vy + r.y + r.h + .2; push(by, () => v2obj(c, key, vx + r.x + r.w / 2 + ox2, by)); };
-    bld("house", HOUSE); bld("shop", SHOP); bld("cave", CAVE); bld("dojo", ARENA); { const r = WILDG; const by = vy + r.y + r.h; push(by, () => v2obj(c, "torii", vx + r.x + r.w / 2, by)); }
+    bld("house", HOUSE); bld("shop", SHOP); bld("cave", CAVE); if (FEAT.arena) bld("dojo", ARENA); { const r = WILDG; const by = vy + r.y + r.h; push(by, () => v2obj(c, "torii", vx + r.x + r.w / 2, by)); }
     for (const v of villagers) { const [nm, an] = V2VIL[v.e] || ["Villager", 0]; const o = v; o.vdx = v.vx; o.vdy = v.vy; o.vmv = v.talk <= 0 && !!(v.vx || v.vy); o.vemote = v.talk > 0; push((vpy + v.y + 8) / T, () => { v2sprite(c, nm, an ? "a" : "c", vpx + v.x, vpy + v.y + 8, o); }); if (local && Math.hypot(v.x - P.x, v.y - P.y) < 80) labelT(v.name, vx + v.x / T, vy + (v.y + 8) / T, 1.6, "#fff3d6"); }
     for (const cr of critters) { const o = cr; o.vdx = cr.vx; o.vdy = cr.vy; o.vmv = !!(cr.vx || cr.vy); o.vfast = Math.hypot(cr.vx, cr.vy) > 40; push((vpy + cr.y + 8) / T, () => v2sprite(c, cr.k === "v/fox" ? "Cat" : "Dog2", "a", vpx + cr.x, vpy + cr.y + 8, o, .8)); }
   }

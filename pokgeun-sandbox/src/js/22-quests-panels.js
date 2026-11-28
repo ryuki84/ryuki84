@@ -27,7 +27,7 @@ function turnIn(id) {
 }
 function questLine() {
   const out = [], st = STORY[S.story.stage];
-  if (st) { const idx = st.obj.findIndex((o, i) => (o.k === "lv" ? S.lv : S.story.p[i] || 0) < o.n), o = st.obj[idx < 0 ? 0 : idx], i = idx < 0 ? 0 : idx, have = o.k === "lv" ? Math.min(S.lv, o.n) : S.story.p[i] || 0;
+  if (st && FEAT.story) { const idx = st.obj.findIndex((o, i) => (o.k === "lv" ? S.lv : S.story.p[i] || 0) < o.n), o = st.obj[idx < 0 ? 0 : idx], i = idx < 0 ? 0 : idx, have = o.k === "lv" ? Math.min(S.lv, o.n) : S.story.p[i] || 0;
     out.push(storyReady() ? `📖 ${st.t}: 왕에게 보고하세요 ❗` : `📖 ${st.t}: ${o.label} (${have}/${o.n})`); }
   const q = S.quests[0]; if (q) out.push(`📜 ${q.label} (${q.have}/${q.need})`); return out.join("<br>");
 }
@@ -71,7 +71,7 @@ function drawWorldEnts(g, P, pz) {
     if (Math.abs(v.x / T - camT.x) > 22 || Math.abs((v.y + 8) / T - camT.z) > 16) continue;
     const e = entM(v, () => v.model === "king" ? mkKingM() : v.model === "guard" ? mkGuardM() : mkVilModel(v.e), g.dyn), mv = v.talk <= 0 && (v.vx || v.vy); e.emote = v.talk > 0 ? "Wave" : null;
     e.g.position.set(v.x / T, 0, (v.y + 8) / T); if (mv) face(e.g, v.vx, v.vy); else if (v.talk > 0 || (v.fixed && Math.hypot(v.x - P.x, v.y - P.y) < 6 * T)) face(e.g, P.x - v.x, P.y - v.y); else if (v.fixed) face(e.g, 0, 1); animE(e, mv, e.mon ? 5 : 8, .5);
-    if (v.model === "king") { labelT("👑 " + v.name, v.x / T, (v.y + 8) / T, 2.4, "#ffe27a"); if (S.story.stage < STORY.length) labelT(storyReady() ? "❗" : "❓", v.x / T, (v.y + 8) / T, 3.1, "#ffd34d"); } else if (Math.hypot(v.x - P.x, v.y - P.y) < 90) labelT(v.name, v.x / T, (v.y + 8) / T, 2, "#fff3d6");
+    if (v.model === "king") { labelT("👑 " + v.name, v.x / T, (v.y + 8) / T, 2.4, "#ffe27a"); if (FEAT.story && S.story.stage < STORY.length) labelT(storyReady() ? "❗" : "❓", v.x / T, (v.y + 8) / T, 3.1, "#ffd34d"); } else if (Math.hypot(v.x - P.x, v.y - P.y) < 90) labelT(v.name, v.x / T, (v.y + 8) / T, 2, "#fff3d6");
   }
   for (const o of NET.others.values()) {
     const e = ent(o, () => mkHeroFromLook(o.look, o.col || 0x3d6ed0), g.dyn); { const sg = KAY.ready + "" + MAN.ready + JSON.stringify(o.look || 0); if (e.osig !== undefined && e.osig !== sg) swapInto(e, mkHeroFromLook(o.look, o.col || 0x3d6ed0)); e.osig = sg; } e.g.position.set(o.x / T, 0, (o.y + 8) / T); face(e.g, o.dx || 0, o.dy || 1); animE(e, !!o.mv, 10, .75);

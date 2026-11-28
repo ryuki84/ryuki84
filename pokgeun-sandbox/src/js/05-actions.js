@@ -29,7 +29,7 @@ function act() {
   const v = villagers.find(v => Math.hypot(v.x - px, v.y - py) < 30);
   if (v) return talk(v);
   if (inRect(SHOP, tx, ty)) return openShop();
-  if (inRect(ARENA, tx, ty)) return togglePanel("arena");
+  if (FEAT.arena && inRect(ARENA, tx, ty)) return togglePanel("arena");
   if (inRect(CAVE, tx, ty)) return enterDungeon(1);
   if (inRect(HOUSE, tx, ty)) return enterHome();
   const tool = player.tool; pAnim(tool === 2 ? "Throw" : tool === 3 ? "1H_Melee_Attack_Chop" : tool === 1 ? "1H_Melee_Attack_Slice_Horizontal" : tool === 4 ? "PickUp" : "Interact", .6);

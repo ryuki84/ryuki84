@@ -1,4 +1,7 @@
 /* ---------- 상수 / 데이터 ---------- */
+/* 포근 마을 샌드박스: 기존 게임에서 가져온 전투 중심 콘텐츠는 꺼 둬요(코드는 남겨 두고 나중에 지역 도전 콘텐츠로 재활용 검토).
+   arena: 서바이벌 아레나 · demon: 마왕성 · story: 왕국 메인 퀘스트(왕명) · elite: 정예 몬스터 */
+const FEAT = { arena: false, demon: false, story: false, elite: false };
 const T = 32, W = 30, H = 20, VW = W * T, VH = H * T;
 const HOUSE = { x: -60, y: -60, w: 3, h: 2 };   // 집은 마을 서쪽의 실제 건물(걸어 들어가는 집)로 옮김
 const SHOP  = { x: 13, y: 3, w: 3, h: 2 };
@@ -51,6 +54,7 @@ const ELITE = {
 const ELITE_BY = Object.fromEntries(Object.entries(ELITE).map(([k, v]) => [v.base, k]));
 const ELITE_P = .08;   // 정예 등장 확률(깊이 3 이상)
 function eliteify(m, force) {
+  if (!FEAT.elite && !force) return m;
   const k = ELITE_BY[m.e]; if (!k || m.boss || m.wild || m.demon || !(force || ((m.dpt || 1) >= 3 && Math.random() < ELITE_P))) return m;
   const E = ELITE[k]; m.elite = k; m.n = "★ " + E.n; m.hp = m.mhp = Math.round(m.mhp * 3); m.dmg = Math.round(m.dmg * 1.4); m.xp = Math.round(m.xp * 4); m.sk = 1.5 + Math.random(); return m;
 }

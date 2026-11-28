@@ -65,7 +65,7 @@ function enterWorld(pos, msg) {
   if (wsolid(Math.floor(P.x / T), Math.floor((P.y + 8) / T))) { for (let r = 1; r < 8; r++) { let ok = false; for (let a = 0; a < 8 && !ok; a++) { const x = Math.floor(P.x / T + Math.cos(a * .785) * r), y = Math.floor((P.y + 8) / T + Math.sin(a * .785) * r); if (!wsolid(x, y)) { P.x = (x + .5) * T; P.y = (y + .5) * T - 8; ok = true; } } if (ok) break; } }
   W.towns.forEach((t, i) => townVil(t, i));
   { const c = W.towns[0], mkv = (nm, model, ox, oy, lines, e) => { const x = (c.x + ox + .5) * T, y = (c.y + oy + .5) * T - 8; dun.vil.push({ name: nm, e, model, fixed: true, lines, x, y, hx: x, hy: y, vx: 0, vy: 0, t: 0, talk: 0, line: 0 }); };
-    mkv("국왕 폰드", "king", 0, -8, [], "👑"); mkv("근위병", "guard", -2, -8, GUARD_LINES, "🛡️"); mkv("근위병", "guard", 2, -8, GUARD_LINES, "🛡️"); mkv("성문 경비병", "guard", -7, -3, GUARD_LINES2, "🛡️"); mkv("성문 경비병", "guard", 7, -3, GUARD_LINES2, "🛡️");
+    mkv("국왕 폰드", "king", 0, -8, FEAT.story ? [] : ["허허, 포근 왕국에 온 걸 환영하오.", "백성들이 집을 짓고 밭을 가꾸는 모습이 보기 좋구려.", "멀리 나가면 귀한 재료가 많다 하오. 조심히 다녀오시게."], "👑"); mkv("근위병", "guard", -2, -8, GUARD_LINES, "🛡️"); mkv("근위병", "guard", 2, -8, GUARD_LINES, "🛡️"); mkv("성문 경비병", "guard", -7, -3, GUARD_LINES2, "🛡️"); mkv("성문 경비병", "guard", 7, -3, GUARD_LINES2, "🛡️");
     if (!S.wp[c.id + "w"]) S.wp[c.id + "w"] = 1; }
   dun.pet = activePet() ? { x: P.x - 20, y: P.y, cd: 0 } : null; S.wpos = { x: P.x, y: P.y }; WDUN = dun; storyCheck(); hud();
   say(msg || "🌍 오픈월드 — 어디로든 갈 수 있어요. 마을·동굴·이동석을 찾아보세요! (B 건설 · N 지도 · J 의뢰)", 4500);
@@ -143,7 +143,7 @@ function worldAct() {
   if (dun.kind !== "world") return false;   // 월드가 아닐 때(동굴 등) 호출되면 무시
   const P = player, fx_ = P.x + P.dx * 26, fy_ = P.y + 8 + P.dy * 26, tx = Math.floor(fx_ / T), ty = Math.floor(fy_ / T);
   if (fishing) { if (fishing.state === "bite") catchFish(); else say("너무 일렀어요… 찌가 움직일 때까지 기다려요."); fishing = null; return true; }
-  const v = dun.vil.find(v => Math.hypot(v.x - fx_, v.y + 8 - fy_) < 40); if (v) { if (v.model === "king") openKing(); else talk(v); return true; }
+  const v = dun.vil.find(v => Math.hypot(v.x - fx_, v.y + 8 - fy_) < 40); if (v) { if (v.model === "king" && FEAT.story) openKing(); else talk(v); return true; }
   if (buildSel) { buildPlace(tx, ty); return true; }
   if (winteract(tx, ty)) return true;
   if (wb(tx, ty) === 0 && !inTown(tx, ty)) { fishing = { tx, ty, state: "wait", t: 1.5 + R() * 3 }; sfx("splash"); burst((tx + .5) * T, (ty + .6) * T, 6, ["#a8dcf5", "#fff"], 40, .3, 160, .3); say("찌를 던졌어요…", 1200); return true; }
@@ -163,7 +163,7 @@ function winteract(tx, ty) {
     if (poi.type === "portal") { leaveDungeon(false, true); return true; }
     if (poi.type === "cave") { const depth = clamp(1 + Math.floor(Math.hypot(poi.x - WORLD.spawn.x, poi.y - WORLD.spawn.y) / 45), 1, 12), ret = { x: (poi.x + 1) * T, y: (poi.y + 3) * T }; S.wpos = ret; save(); enterDungeon(depth, false, undefined, ret); return true; }
     if (poi.type === "castle") { say("🏰 포근성 — 국왕 폐하는 앞뜰에서 기다리고 계세요. (L: 왕국)", 3000); return true; }
-    if (poi.type === "demon") { say("😈 마왕성에 들어갑니다… 모든 각오를 하세요!", 2500); enterDemon(poi); return true; }
+    if (poi.type === "demon" && FEAT.demon) { say("😈 마왕성에 들어갑니다… 모든 각오를 하세요!", 2500); enterDemon(poi); return true; }
     if (poi.type === "chest") { openChest(poi); return true; }
     return false;
   }

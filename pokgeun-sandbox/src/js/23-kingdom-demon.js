@@ -21,7 +21,7 @@ function sEvent(type, a, n = 1) {
   st.obj.forEach((o, i) => { if (o.k === "lv" || o.k === "talk") return; if (o.k === type || (type === "mat" && o.k === "mat:" + a)) { const v = S.story.p[i] || 0; if (v < o.n) { S.story.p[i] = Math.min(o.n, v + n); ch = true; } } });
   if (ch) storyCheck();
 }
-function storyReady() { const st = STORY[S.story.stage]; return !!st && st.obj.every((o, i) => o.k === "lv" ? S.lv >= o.n : (S.story.p[i] || 0) >= o.n); }
+function storyReady() { if (!FEAT.story) return false; const st = STORY[S.story.stage]; return !!st && st.obj.every((o, i) => o.k === "lv" ? S.lv >= o.n : (S.story.p[i] || 0) >= o.n); }
 function storyCheck() { const r = storyReady(); if (r && !S.story.notified) { S.story.notified = true; say("👑 왕명 완료! 왕도의 국왕에게 보고하세요.", 4500); sfx("gear"); } hud(); }
 const kingNpc = () => scene === "dun" && dun && dun.kind === "world" ? dun.vil.find(v => v.model === "king") : null;
 function nearKing() { const k = kingNpc(); return !!k && Math.hypot(k.x - player.x, k.y - player.y) < 8 * T; }

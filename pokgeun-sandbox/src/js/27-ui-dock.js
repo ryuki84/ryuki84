@@ -14,7 +14,7 @@ $("cfg").addEventListener("click", e => { const b = e.target.closest("[data-cfg]
       try { const u = new URL(location.href); u.searchParams.delete("style"); u.searchParams.delete("view"); u.hash = ""; history.replaceState(null, "", u); } catch (e) {} return setTimeout(() => location.reload(), 150); } $(id).click(); setTimeout(renderCfg, 60); });
 addEventListener("pointerdown", e => { if (!e.target.closest("#cfg, #cfgbtn")) $("cfg").hidden = true; });
 /* 메뉴 독: 단축키를 몰라도 클릭으로 */
-const DOCK = [["equip", "⚔️", "장비", "I"], ["char", "📜", "캐릭터", "K"], ["craft", "🔨", "제작", "C"], ["build", "🏗️", "건설", "B"], ["quest", "📋", "의뢰", "J"], ["map", "🗺️", "지도", "N"], ["king", "👑", "왕국", "L"], ["arena", "🏟️", "아레나", "Y"], ["look", "🧑", "외형", "O"], ["keys", "❓", "도움말", "H"]];
+const DOCK = [["equip", "⚔️", "장비", "I"], ["char", "📜", "캐릭터", "K"], ["craft", "🔨", "제작", "C"], ["build", "🏗️", "건설", "B"], ["quest", "📋", "의뢰", "J"], ["map", "🗺️", "지도", "N"], ["look", "🧑", "외형", "O"], ["keys", "❓", "도움말", "H"]];
 function renderDock() {
   const badge = { char: S.pts + S.sp > 0, king: typeof storyReady === "function" && (() => { try { return storyReady(); } catch (e) { return false; } })() };
   const sig = JSON.stringify(badge) + (!$("gear").hidden && gearTab); if (sig === renderDock.sig) return; renderDock.sig = sig;
@@ -48,7 +48,7 @@ function toggleKeys() {
     <section><h3>🕹️ 이동 · 카메라</h3>${row("WASD / 방향키", "이동 (카메라 기준)")}${row("마우스 드래그", "카메라 돌리기")}${row(", .", "카메라 왼쪽/오른쪽")}${row("P", "3인칭 ↔ 위에서 보기")}</section>
     <section><h3>✋ 행동</h3>${row("Space", "화면 아래 안내에 나온 행동")}${row("1~5", "마을 도구 (손·채·낚싯대·삽·묘목)")}${row("X", "집기 / 철거")}${row("Enter", "채팅")}</section>
     <section><h3>⚔️ 전투</h3>${row("Space", "공격 · 채집")}${row("Q", "회전베기")}${row("E", "구르기 (무적)")}${row("R", "화염구")}${row("F", "물약")}${row("V / G", "먹이주기 / 탈것")}</section>
-    <section><h3>📋 메뉴</h3>${row("I K C", "장비 · 캐릭터 · 제작")}${row("B J N", "건설 · 의뢰 · 지도")}${row("L Y O", "왕국 · 아레나 · 외형")}${row("Esc", "창 닫기")}</section></div>
+    <section><h3>📋 메뉴</h3>${row("I K C", "장비 · 캐릭터 · 제작")}${row("B J N", "건설 · 의뢰 · 지도")}${row("O", "외형")}${row("Esc", "창 닫기")}</section></div>
     <p class="tip">💡 오른쪽 아이콘 메뉴를 눌러도 돼요. 폰에서는 왼쪽 조이스틱으로 움직이고 오른쪽 버튼으로 행동해요.</p></div>`;
 }
 $("keys").addEventListener("click", e => { if (e.target.closest("[data-close]") || e.target === $("keys")) toggleKeys(); });
@@ -59,7 +59,7 @@ function ctxHint() {
     if (fishing) return fishing.state === "bite" ? "🎣 지금! 낚아채기" : "🎣 입질을 기다리는 중… (움직이면 취소)";
     const { px, py, tx, ty } = target(), v = villagers.find(v => Math.hypot(v.x - px, v.y - py) < 30);
     if (v) return `💬 ${v.name}와(과) 이야기하기`;
-    if (inRect(SHOP, tx, ty)) return "🏪 상점 열기"; if (inRect(ARENA, tx, ty)) return "🏟️ 아레나"; if (inRect(CAVE, tx, ty)) return "🕳️ 던전에 들어가기"; if (inRect(WILDG, tx, ty)) return "🌍 오픈월드로 떠나기"; if (inRect(HOUSE, tx, ty)) return "🏠 집에 들어가기";
+    if (inRect(SHOP, tx, ty)) return "🏪 상점 열기"; if (FEAT.arena && inRect(ARENA, tx, ty)) return "🏟️ 아레나"; if (inRect(CAVE, tx, ty)) return "🕳️ 던전에 들어가기"; if (inRect(WILDG, tx, ty)) return "🌍 오픈월드로 떠나기"; if (inRect(HOUSE, tx, ty)) return "🏠 집에 들어가기";
     const t = player.tool;
     if (t === 0) { const tr = treeAt(tx, ty); if (tr) return tr.age >= 60 ? (tr.fruit > 0 ? "🍎 나무를 흔들어 열매 따기" : "🌳 나무 흔들기") : "🌱 어린 나무 살펴보기"; return flowerAt(tx, ty) ? "🌷 꽃 꺾기" : ""; }
     if (t === 1) return "🦋 잠자리채 휘두르기"; if (t === 2) return terrain[ty] && terrain[ty][tx] === "w" ? "🎣 낚싯대 던지기" : "🎣 물을 바라보고 낚시"; if (t === 3) return "⛏️ 땅 파기"; if (t === 4) return (S.inv.sapling || 0) > 0 ? "🌱 묘목 심기" : "🌱 묘목이 없어요 (상점)";

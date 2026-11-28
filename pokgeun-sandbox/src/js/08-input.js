@@ -19,8 +19,8 @@ function press(code) {
   else if (code === "Enter") openChat();
   else if (code === "KeyB") { if (buildSel) { buildSel = null; say("건설 모드를 껐어요.", 1200); } else togglePanel("build"); }
   else if (code === "KeyJ") togglePanel("quest");
-  else if (code === "KeyL") togglePanel("king");
-  else if (code === "KeyY") togglePanel("arena");
+  else if (code === "KeyL") { if (FEAT.story) togglePanel("king"); }
+  else if (code === "KeyY") { if (FEAT.arena) togglePanel("arena"); }
   else if (code === "KeyP") toggleView();
   else if (code === "KeyH") toggleKeys();
   else if (code === "KeyO") togglePanel("look");
