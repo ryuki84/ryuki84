@@ -376,6 +376,8 @@ const NAT = REAL ? await (async () => {
     const TN = ["NormalTree_Bark", "NormalTree_Leaves", "PineTree_Bark", "PineTree_Leaves", "BirchTree_Bark", "BirchTree_Leaves", "PalmTree_Trunk", "PalmTree_Leaves", "Bush_Leaves", "Grass", "Flowers", "Rocks", "Rocks_Desert"];
     const MN = ["NormalTree_1", "NormalTree_2", "NormalTree_3", "PineTree_1", "PineTree_2", "PineTree_3", "BirchTree_1", "BirchTree_2", "PalmTree_1", "PalmTree_2", "DeadTree_1", "DeadTree_2", "Bush", "Bush_Flowers", "Bush_Large", "Bush_Large_Flowers", "Rock_1", "Rock_2", "Rock_3", "Rock_4", "Grass_Large", "Grass_Small", "Flower_1_Clump", "Flower_3_Clump", "Flower_4_Clump", "Plant_1", "Plant_2"];
     await Promise.all(TN.map(async n => { const t = await TL.loadAsync(base + "tex/" + n + ".webp"); t.colorSpace = REAL ? THREE.SRGBColorSpace : THREE.NoColorSpace; t.flipY = false; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 4; tex[n] = t; }));
+    const LODN = ["NormalTree_1", "NormalTree_2", "NormalTree_3", "PineTree_1", "PineTree_2", "PineTree_3", "BirchTree_1", "BirchTree_2", "DeadTree_1", "DeadTree_2"];   // 먼 나무용 간략 모델(tools/make-nature-lod.mjs)
+    MN.push(...LODN.map(n => "lod/" + n));
     const gl = await Promise.all(MN.map(n => L.loadAsync(base + n + "." + NEXT)));
     MN.forEach((n, i) => { const P = []; gl[i].scene.updateMatrixWorld(true); gl[i].scene.traverse(o => { if (o.isMesh) { const g = o.geometry.clone().applyMatrix4(o.matrixWorld); g.userData.shared = 1; P.push({ g, m: o.material.name }); } }); parts[n] = P; });
     return { tex, parts, mats };
@@ -1408,13 +1410,15 @@ const camT = { x: 15, z: 10 }; let camInit = false;
 const QLEVELS = { high: { n: "높음", bloom: true, shadow: 4096, dpr: 2.5, motes: 90 }, mid: { n: "보통", bloom: true, shadow: 2048, dpr: 2, motes: 50 }, low: { n: "낮음", bloom: false, shadow: 1024, dpr: 1.25, motes: 0 } };
 let gfxLv = "high"; try { gfxLv = localStorage.getItem("pokgeun-gfx") || ""; } catch (e) {}
 if (!QLEVELS[gfxLv]) gfxLv = (window.matchMedia && matchMedia("(pointer:coarse)").matches) || innerWidth < 700 ? "mid" : "high";
-const QUAL = { ...QLEVELS[gfxLv] };
+const QUAL = { ...QLEVELS[gfxLv] }, TOUCHDEV = !!(window.matchMedia && matchMedia("(pointer:coarse)").matches);
+const touchCap = () => { if (!TOUCHDEV) return; QUAL.dpr = Math.min(QUAL.dpr, gfxLv === "high" ? 2 : 1.5); if (gfxLv !== "high") QUAL.bloom = false; QUAL.shadow = Math.min(QUAL.shadow, gfxLv === "high" ? 2048 : 1024); };   // 휴대폰은 화면 픽셀이 많고 GPU가 약해서 낮춰요
+touchCap();
 { const gi = document.getElementById("gfxinfo"); if (gi) { gi.innerHTML = `🎨 그래픽: <b>${RSTYLE === "real" ? "실사(듀랑고풍)" : "툰"}</b> · 화질 ${QLEVELS[gfxLv].n} · 버전 ${RENDER_VER}` + (RSTYLE !== "real" ? ` <button id="tryReal">🌄 실사 그래픽 다시 시도</button>` : "");
   const tb = document.getElementById("tryReal"); if (tb) tb.onclick = () => { try { localStorage.removeItem("pokgeun-safe"); } catch (e) {} location.replace(location.pathname); }; } }
 let composer = null, bloomPass = null, gradePass = null, postTried = false;
 if (HAS3D) try {
   R3 = new THREE.WebGLRenderer({ canvas: cv, antialias: true }); R3.outputColorSpace = REAL ? THREE.SRGBColorSpace : THREE.LinearSRGBColorSpace; if (REAL) { R3.toneMapping = THREE.ACESFilmicToneMapping; R3.toneMappingExposure = .72; }
-  R3.shadowMap.enabled = true; R3.shadowMap.type = THREE.PCFShadowMap;
+  R3.shadowMap.enabled = true; R3.shadowMap.type = THREE.PCFShadowMap; R3.debug.checkShaderErrors = false;   // 셰이더 컴파일마다 기다리지 않게(새 모델이 처음 보일 때 끊김 줄이기)
   S3 = new THREE.Scene(); if (PBRX) { const pm = new THREE.PMREMGenerator(R3); const c = document.createElement("canvas"); c.width = 64; c.height = 32; const x = c.getContext("2d"), gr = x.createLinearGradient(0, 0, 0, 32); gr.addColorStop(0, "#9fd0ff"); gr.addColorStop(.48, "#e8f4ff"); gr.addColorStop(.52, "#a8c890"); gr.addColorStop(1, "#5a7a40"); x.fillStyle = gr; x.fillRect(0, 0, 64, 32); const et = new THREE.CanvasTexture(c); et.mapping = THREE.EquirectangularReflectionMapping; S3.environment = pm.fromEquirectangular(et).texture; S3.environmentIntensity = .35; } cam = new THREE.PerspectiveCamera(30, VW / VH, .5, 150);
   amb = new THREE.AmbientLight(0xffffff, .6); hemi = new THREE.HemisphereLight(0xcfe8ff, 0x6a5a3a, .35);
   sun = new THREE.DirectionalLight(0xfff2d6, .85); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
@@ -1443,7 +1447,7 @@ function initPost(w, h) {
   } catch (e) { composer = null; }
 }
 function applyQuality(k) {
-  gfxLv = k; Object.assign(QUAL, QLEVELS[k]); try { localStorage.setItem("pokgeun-gfx", k); } catch (e) {}
+  gfxLv = k; Object.assign(QUAL, QLEVELS[k]); touchCap(); try { localStorage.setItem("pokgeun-gfx", k); } catch (e) {}
   if (sun) { sun.castShadow = QUAL.shadow > 0; if (QUAL.shadow) { sun.shadow.mapSize.set(QUAL.shadow, QUAL.shadow); if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; } } }
   const el = document.getElementById("gfx"); if (el) el.textContent = "🎨 " + QUAL.n; if (typeof resize === "function" && ov) resize();
 }
@@ -1869,6 +1873,7 @@ function loadVRM(k) {
     if (hl) { hl.getWorldPosition(P); holdL.position.copy(P); holdL.rotation.set(0, HALF, 0); attachAt(body, hl, holdL); }
     if (VRMS.cur) VRMS.cur.mixer.stopAllAction();
     VRMS.cur = { k, vrm, body, mixer, act, holdR, holdL }; VRMS.loading = null;
+    if (R3.compileAsync && R3.extensions.has("KHR_parallel_shader_compile")) R3.compileAsync(body, cam, S3).catch(() => {});   // 처음 등장할 때 멈칫하지 않게 미리 컴파일(지원 기기만)
   }).catch(e => { VRMS.failed[k] = 1; VRMS.loading = null; console.warn("애니풍 캐릭터를 불러오지 못해 마네킹으로 표시해요.", e); });
 }
 function mkVrmEnt(armed) {
@@ -2476,6 +2481,7 @@ function finish(D, dim) {
   drawParts(); updateMotes(); sweep();
   const dk = darkness(); weatherTick(); const keep = wxApply(dk); RIM.value = (.16 + dk * .24) * (RSTYLE === "cel" ? 2.2 : PBRL ? .5 : 1); RIMC.value.setHex(0xbfe0ff).lerp(new THREE.Color(0x7f93ff), clamp(dk * 1.6, 0, 1)); WIND.value = vtime; WATERMAT.uniforms.uT.value = vtime; if (REAL) { WATERMAT.uniforms.uSky.value.copy(S3.background).convertLinearToSRGB(); WATERMAT.uniforms.uSun.value.copy(SUND); } WATERMAT.uniforms.uDay.value = GKIND === "home" ? 1 : 1 - clamp(dk / .55, 0, 1) * .72;
   if (G.cloud) { const on = !REAL && (GKIND === "village" || GKIND === "wild") && dk < .3, cm = G.cloud; cm.visible = on; if (on) { cm.position.set(camT.x, .1, camT.z); const t = cm.material.map; t.offset.set(camT.x / 90 + vtime * .004, -camT.z / 90 + vtime * .002); cm.material.opacity = clamp(1 - dk * 3, 0, 1) * .9; } }
+  if (sun && sun.castShadow) { const lite = LITE(); sun.shadow.autoUpdate = !lite; if (lite && (frameNo & 1) === 0) sun.shadow.needsUpdate = true; }   // 휴대폰: 그림자는 2프레임에 한 번 다시 그려요
   if (composer && gradePass) { bloomPass.enabled = QUAL.bloom; bloomPass.strength = REAL ? .3 + dk * .3 : .55 + dk * .5 + (RSTYLE === "cel" ? .15 : 0); const u = gradePass.uniforms; u.vig.value = GR.vig; u.sat.value = GR.sat * (RSTYLE === "cel" ? 1.12 : REAL ? 1.12 : 1); u.con.value = GR.con * (REAL ? 1.06 : 1); legacyLights(true); try { composer.render(DT); legacyLights(false); wxRestore(keep); return; } catch (e) { legacyLights(false); composer = null; } }
   legacyLights(true); R3.render(S3, cam); legacyLights(false); wxRestore(keep);
 }
@@ -2974,7 +2980,7 @@ function buildChunk(cx, cy) {
     else if (c === CELL.ROCK) pushI("rock", x, y, H, .8 + rn(x, y, 6) * .6); else if (c === CELL.BUSH) pushI("bush", x, y, H, .9 + rn(x, y, 6) * .3);
     else if (c === CELL.ORE) pushI("ore", x, y, H, 1); else if (c === CELL.CACT) pushI("cactus", x, y, H, .8 + rn(x, y, 6) * .5);
     else if (c === CELL.WALL) pushI("wall", x, y, H, 1); else if (c === CELL.SWALL) pushI("swall", x, y, H, 1);
-    else if (REAL && NAT && c === 0 && (b === 2 || b === 3 || b === 6 || b === 7 || b === 8)) { const k = b === 3 ? 3 : 2; for (let i = 0; i < k; i++) if (rn(x, y, 20 + i) < .7) pushI("tuft", x + rn(x, y, 30 + i) * .9 - .45, y + rn(x, y, 40 + i) * .9 - .45, H, .7 + rn(x, y, 50 + i) * .6); }
+    else if (REAL && NAT && c === 0 && (b === 2 || b === 3 || b === 6 || b === 7 || b === 8)) { const k = Math.max(1, Math.round((b === 3 ? 3 : 2) * GRASS_DENS())); for (let i = 0; i < k; i++) if (rn(x, y, 20 + i) < .7 * Math.min(1, GRASS_DENS() * 1.4)) pushI("tuft", x + rn(x, y, 30 + i) * .9 - .45, y + rn(x, y, 40 + i) * .9 - .45, H, .7 + rn(x, y, 50 + i) * .6); }
     else if (c === 0 && (b === 2 || b === 3 || b === 8) && rn(x, y, 4) < .4) pushI("tuft", x + rn(x, y, 5) * .8 - .4, y + rn(x, y, 9) * .8 - .4, H, .8 + rn(x, y, 10) * .5);
     else if (c === CELL.FIRE) { const m = mkCampfire(); m.position.set(x + .5, H, y + .5); grp.add(m); ch.flames.push(m.userData.flame); ch.lit.push({ x: x + .5, z: y + .5, c: 0xffa040, r: 7, h: 1, i: 1.4 }); }
     else if (c === CELL.BED) { const m = mkFurn("bed"); m.position.set(x + .5, H, y + .5); grp.add(m); }
@@ -2986,16 +2992,18 @@ function buildChunk(cx, cy) {
     if (REAL && NAT && NATV[nm]) {
       const vs = NATV[nm], by = {};
       for (const it of inst[nm]) { const v = vs[Math.floor(rn(Math.floor(it[0] * 3), Math.floor(it[1] * 3), 11) * vs.length)]; (by[v] ||= []).push(it); }
-      for (const v in by) for (const p of NAT.parts[v]) {
+      for (const v in by) for (const lod of NAT.parts["lod/" + v] ? [0, 1] : [0]) for (const p of NAT.parts[lod ? "lod/" + v : v]) {
         const L = by[v], desert = nm === "rock" && wb(Math.floor(L[0][0]), Math.floor(L[0][1])) === 4, im = new THREE.InstancedMesh(p.g, natMat(desert && p.m === "Rock" ? "RockD" : p.m), L.length);
         L.forEach(([x, y, h, sc], i) => { eu.set(0, rn(Math.floor(x * 3), Math.floor(y * 3), 8) * 6.283, 0); q.setFromEuler(eu); const k = sc * NATS[nm]; sv.set(k, k, k); pv.set(x + .5, h, y + .5); mm.compose(pv, q, sv); im.setMatrixAt(i, mm); });
-        im.castShadow = nm !== "tuft"; im.receiveShadow = true; im.frustumCulled = false; grp.add(im);
+        im.castShadow = nm !== "tuft" && !lod; im.receiveShadow = true; im.computeBoundingSphere(); grp.add(im);   // 화면(그림자 카메라 포함) 밖이면 그리지 않아요. 먼 간략 나무는 그림자 생략
+        if (NAT.parts["lod/" + v]) { (lod ? (ch.lo ||= []) : (ch.hi ||= [])).push(im); im.visible = !lod; }
+        if (nm === "tuft") { (ch.grass ||= []).push(im); im.visible = false; ch.gnear = false; }   // 풀은 가까운 구역에서만
       }
       continue;
     }
     const list = inst[nm], im = new THREE.InstancedMesh(baked(nm, MK[nm === "spine" || nm === "pine" || nm === "oak" || nm === "dead" || nm === "willow" ? nm : nm]), (RIGIDN.has(nm) ? M_.rigid : M_.inst), list.length);
     list.forEach(([x, y, h, sc], i) => { eu.set(0, rn(Math.floor(x), Math.floor(y), 8) * 6.283, 0); q.setFromEuler(eu); sv.set(sc, sc, sc); pv.set(x + .5, h, y + .5); if (nm === "tuft") pv.set(x + .5, h, y + .5); mm.compose(pv, q, sv); im.setMatrixAt(i, mm); });
-    im.castShadow = nm !== "tuft"; im.frustumCulled = false; grp.add(im);
+    im.castShadow = nm !== "tuft"; im.computeBoundingSphere(); grp.add(im);
   }
   for (const p of poisNear(x0, y0, x0 + CHK, y0 + CHK)) {
     if (p.x < x0 || p.x >= x0 + CHK || p.y < y0 || p.y >= y0 + CHK) continue;
@@ -3015,9 +3023,14 @@ function buildChunk(cx, cy) {
   return ch;
 }
 function disposeChunk(ch) { ch.grp.traverse(m => { if (m.geometry && !m.geometry.userData.shared) m.geometry.dispose(); }); }
-const WFOG = REAL ? new THREE.Fog(0xdcecf4, 24, 64) : new THREE.Fog(0x9fdcf5, 36, 70);
+let LOD_NEAR = 26;   // 이 거리(칸) 안의 구역 중심만 원본 나무(휴대폰은 아래에서 좁혀요)
+const GRASS_NEAR = 22;   // 풀은 이 거리 안의 구역만 그려요(멀면 바닥 색으로 충분)
+const GRASS_DENS = () => gfxLv === "low" ? .5 : TOUCHDEV || gfxLv === "mid" ? .6 : 1;   // 풀 밀도(휴대폰·보통 화질은 줄여요)
+const LITE = () => TOUCHDEV || gfxLv === "low";   // 휴대폰·낮은 화질: 보이는 거리를 줄여 그리는 양을 반쯤으로
+if (LITE()) LOD_NEAR = 13;
+const WFOG = REAL ? new THREE.Fog(0xdcecf4, LITE() ? 18 : 24, LITE() ? 46 : 64) : new THREE.Fog(0x9fdcf5, LITE() ? 26 : 36, LITE() ? 50 : 70);
 function drawWorldTerrain(ox = 0, oz = 0) {
-  const W = WORLD, P = player, pcx = Math.floor((P.x / T + ox) / CHK), pcy = Math.floor((P.y / T + oz) / CHK), R = 3, NC = WN / CHK;
+  const W = WORLD, P = player, pcx = Math.floor((P.x / T + ox) / CHK), pcy = Math.floor((P.y / T + oz) / CHK), R = LITE() ? 2 : 3, NC = WN / CHK;
   if (!G.wgrp) { G.wgrp = new THREE.Group(); S3.add(G.wgrp); const sea = new THREE.Mesh(new THREE.PlaneGeometry(900, 900), TOON({ color: 0x4a94d8, gradientMap: gradTex })); sea.rotation.x = -HALF; G.sea = sea; S3.add(sea); }
   G.wgrp.visible = true; G.wgrp.position.set(-ox, 0, -oz); G.sea.visible = true; G.sea.position.set(camT.x, -.2, camT.z);
   const need = []; for (let dy = -R; dy <= R; dy++) for (let dx = -R; dx <= R; dx++) { const cx = pcx + dx, cy = pcy + dy; if (cx >= 0 && cy >= 0 && cx < NC && cy < NC) need.push([dx * dx + dy * dy, cx, cy]); }
@@ -3030,6 +3043,9 @@ function drawWorldTerrain(ox = 0, oz = 0) {
   W.first = false; const night = darkness() > .2;
   for (const [key, ch] of W.chunks) {
     if (Math.abs(ch.cx - pcx) > R + 1 || Math.abs(ch.cy - pcy) > R + 1) { G.wgrp.remove(ch.grp); disposeChunk(ch); W.chunks.delete(key); continue; }
+    { const dx = ch.cx * CHK + CHK / 2 - ox - camT.x, dz = ch.cy * CHK + CHK / 2 - oz - camT.z; const d2 = dx * dx + dz * dz; ch.grp.visible = d2 < (WFOG.far + CHK) ** 2; if (!ch.grp.visible) continue;
+      const near = d2 < LOD_NEAR ** 2; if (ch.hi && ch.near !== near) { ch.near = near; ch.hi.forEach(m => m.visible = near); ch.lo.forEach(m => m.visible = !near); }
+      const gn = d2 < GRASS_NEAR ** 2; if (ch.grass && ch.gnear !== gn) { ch.gnear = gn; ch.grass.forEach(m => m.visible = gn); } }   // 가까운 구역만 원본 나무, 먼 구역은 간략 나무   // 안개 너머 구역은 그리지 않아요
     if (ch.water) ch.water.position.y = Math.sin(vtime * 1.6) * .02;
     ch.flames.forEach((f, i) => f.scale.setScalar(1.6 + Math.sin(vtime * 12 + i * 2) * .25)); ch.spins.forEach(s => s.rotation.y += DT * 1.5);
     for (const L of ch.lit) if ((!L.night || night) && Math.abs(L.x - ox - camT.x) < 18 && Math.abs(L.z - oz - camT.z) < 14) light(L.x - ox, L.z - oz, L.r, L.c, L.h, L.i);
@@ -3864,7 +3880,7 @@ for (const id of ["gear", "shop"]) { const el = $(id); let y0 = null;
   const up = e => { if (y0 === null) return; const dy = e.clientY - y0; y0 = null; el.style.transform = ""; if (dy > 70 && !(id === "gear" && gearTab === "perk")) closeShop(); };
   el.addEventListener("pointerup", up); el.addEventListener("pointercancel", up); }
 renderDock();
-window.__game = { get VRMS() { return VRMS; }, spawnNearV: () => spawnNear(), VILM, get hitStop() { return hitStop; }, get MONM() { return MONM; }, ENT, MON_WIND, ELITE, eliteify, eliteAI, saveApi: { save, exportSave, importSave, listBackups, restoreBackup, backupNow, SAVE, SAVE_VER },  get DINOM() { return DINOM; }, wsolid, bioBase,  equipBag, unequip, homeTileAt, openShop, enterHome: () => enterHome(), get furnSel() { return furnSel; }, ctxHint, renderBar,  get sun() { return sun; }, get GRD() { return GRD; }, get S3() { return S3; }, setYaw: v => { camYaw = v; camManT = vtime + 999; }, get MAN() { return MAN; }, get KAY() { return KAY; }, get curPE() { return curPE; }, pAnim, WX, setWeather: t => { WX.type = t; WX.t = 9999; }, startArena, arenaTick, startWave, gemGain, choosePerk, finishArena, openPerk, autoFight, idleStored, dailyTouch, genArena, mkMonT, get PERKS() { return PERKS; }, get ARES() { return ARES; }, sEvent, storyReady, reportStory, openKing, nearKing, demonAI, finalizeDemon, enterDemon, onDemonDefeat, mkDemon, damageP, addFame, get STORY() { return STORY; }, NET, spawnNear, worldTick, killMon, setBuild: i => { buildSel = i == null ? null : BUILD[i]; }, farmAct, winteract, genOffers, turnIn, warpTo, worldAct, enterWorld, getWorld, get WORLD() { return WORLD; }, get dun() { return dun; }, wc, wb, setClock: v => { clock = v; }, fireball, feed, toggleMount, craft, togglePanel, enterDungeon, get dun() { return dun; }, pstats, genGear, attack, scene: () => scene, furnSelSet: v => { furnSel = v; renderFurn(); }, player, trees, S, keys, act, get fishing() { return fishing; }, bugs, villagers }; // 디버그/테스트용
+window.__game = { get NAT() { return NAT; }, get R3() { return R3; }, get VRMS() { return VRMS; }, spawnNearV: () => spawnNear(), VILM, get hitStop() { return hitStop; }, get MONM() { return MONM; }, ENT, MON_WIND, ELITE, eliteify, eliteAI, saveApi: { save, exportSave, importSave, listBackups, restoreBackup, backupNow, SAVE, SAVE_VER },  get DINOM() { return DINOM; }, wsolid, bioBase,  equipBag, unequip, homeTileAt, openShop, enterHome: () => enterHome(), get furnSel() { return furnSel; }, ctxHint, renderBar,  get sun() { return sun; }, get GRD() { return GRD; }, get S3() { return S3; }, setYaw: v => { camYaw = v; camManT = vtime + 999; }, get MAN() { return MAN; }, get KAY() { return KAY; }, get curPE() { return curPE; }, pAnim, WX, setWeather: t => { WX.type = t; WX.t = 9999; }, startArena, arenaTick, startWave, gemGain, choosePerk, finishArena, openPerk, autoFight, idleStored, dailyTouch, genArena, mkMonT, get PERKS() { return PERKS; }, get ARES() { return ARES; }, sEvent, storyReady, reportStory, openKing, nearKing, demonAI, finalizeDemon, enterDemon, onDemonDefeat, mkDemon, damageP, addFame, get STORY() { return STORY; }, NET, spawnNear, worldTick, killMon, setBuild: i => { buildSel = i == null ? null : BUILD[i]; }, farmAct, winteract, genOffers, turnIn, warpTo, worldAct, enterWorld, getWorld, get WORLD() { return WORLD; }, get dun() { return dun; }, wc, wb, setClock: v => { clock = v; }, fireball, feed, toggleMount, craft, togglePanel, enterDungeon, get dun() { return dun; }, pstats, genGear, attack, scene: () => scene, furnSelSet: v => { furnSel = v; renderFurn(); }, player, trees, S, keys, act, get fishing() { return fishing; }, bugs, villagers }; // 디버그/테스트용
 </script>
 </body>
 </html>
