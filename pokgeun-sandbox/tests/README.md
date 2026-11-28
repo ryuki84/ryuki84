@@ -42,12 +42,12 @@ npm test -- save_system maze   # 이름으로 골라 실행
 | view_2d_scenes | 2D 화면: 동굴 던전·집 안·아레나 |
 | style_select | 설정 → 그래픽 스타일(듀랑고풍·원신풍·툰·부드러운 3D·귀여운 2D) 선택·유지 |
 | perf_budget | 휴대폰 조건 실사 모드 한 프레임 삼각형·드로우콜 예산 |
-| vrm_player | 애니풍 플레이어(VRoid 샘플): 기본 적용·대기·달리기·무기 공격·캐릭터 바꾸기·마네킹 복귀 |
+| chibi_player | 치비 플레이어(KayKit 부위 조합): 기본 적용·대기·달리기·무기 공격·부위 섞기·기본 캐릭터·무작위·저장 |
 | near_village | 마을 바로 바깥 약한 몬스터 등장, 마을·집 안 제외 |
 | artifact_copy | 아티팩트 게시 사본을 뷰어와 같은 보안 정책(data: 차단)으로 띄워 모델 로드 확인 |
 | render_mode | 툰 대체 기록 재시도·시작 화면 그래픽 정보·다시 시도 버튼 |
-| npc_models | 국왕·경비병 사람 모델(왕관·투구·검·방패) |
-| villager_models | 마을 주민 4명 3D 모델·대기·손 흔들기 |
+| npc_models | 촌장·경비병 치비 모델(마법 모자·지팡이 / 투구·검·방패) |
+| villager_models | 직업 주민 6명 치비 모델(서로 다른 부위 조합)·대기·말 걸기, 마을 동물(Cube Pets) |
 | combat_feel | 공격 타격 시점·히트스톱, 시작 화면 업데이트 안내 |
 | monster_models | 몬스터 7종 모델, 대기·걷기·달리기·공격·피격·죽음 동작, 공격 예비 동작(❗) |
 | multiplayer, multiplayer_look | 서버 접속·채팅·공유 편집·외형 동기화·비정상 값 정리 |

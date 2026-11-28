@@ -18,6 +18,14 @@
   - 코드는 남겨 뒀어요. 지역 보스·희귀 재료 도전 콘텐츠로 재활용할지, 지울지는 P0-8에서 결정
 - 테스트: `arena`·`demon_lord`·`elite_monsters` 제거, `sandbox_features` 추가
 
+## 캐릭터 셋 (2026-11-28 재설계)
+- 사람: KayKit Adventurers 5종(같은 뼈대)의 부위를 섞어 만들어요 → `src/js/12-chibi.js` `mkChibi(spec, eq, armed)`
+  - spec = `{ head, body, legs, hat, cape, cc, hc, prop, prop2 }` (`cbOf`로 범위 보정). 머리·몸·팔·다리는 뼈대에 다시 묶고(`SkinnedMesh.bind`), 모자·망토는 머리·가슴 뼈에 붙여요
+  - 플레이어 외형은 `S.cb`, 멀티플레이는 `netLookOf()`로 보내고 서버 `cleanLook`이 head·body·legs·cape·cbk 키를 허용
+  - 주민은 `VILLAGERS[].cb`, 촌장·경비는 `CB_NPC`
+- 동물: `assets/pets/`(Kenney Cube Pets) — `MTGT`의 `p/…` 키, 클립 이름은 소문자(idle·walk·run)라 `MONCLIP`에 대소문자 무시 추가
+- 몬스터·공룡은 Quaternius 그대로
+
 ## 꼭 지킬 것 (기존 게임에서 이어짐)
 - `src/js/00-boot.js`의 `GLTFLoader` `data:`→`blob:` 보정은 지우지 않기(아티팩트에서 모델 전부 실패)
 - 전체 회귀 중 `src/`·`index.html` 수정 금지, 테스트는 "상태가 바뀔 때까지 기다리기"로 작성
