@@ -373,3 +373,11 @@
   .crow .ci { font-size:24px; text-align:center; } .crow .cn { display:flex; flex-direction:column; min-width:0; } .crow .cn b { font-size:14px; } .crow .cn small { font-size:11.5px; opacity:.8; line-height:1.35; }
   .crow button { margin:0 !important; padding:4px 12px !important; min-width:84px; font-size:13px; } .crow button.need { background:rgba(255,255,255,.75); }
   details.oldc { margin-top:12px; } details.oldc summary { cursor:pointer; font-weight:800; padding:6px 0; }
+  /* 허기·스태미나 (GDD P3-1) */
+  #rpg .bar i.fd { background:linear-gradient(180deg,#ffd27a,#e8a23c); }
+  body.m2 #hst .sb { position:relative; height:13px; border-radius:7px; background:rgba(74,59,42,.14); overflow:hidden; }
+  body.m2 #hst .sb i { position:absolute; left:0; height:50%; transition:width .3s; }
+  body.m2 #hst .sb i.fd { top:0; background:linear-gradient(90deg,#f0b24a,#ffd27a); } body.m2 #hst .sb i.fd.low { background:#e8604a; animation:pulse 1s infinite; }
+  body.m2 #hst .sb i.st { bottom:0; background:linear-gradient(90deg,#4fb0e8,#8fd8ff); }
+  body.m2 #hst .sb span { position:absolute; inset:0; text-align:center; line-height:13px; font-size:9.5px; color:#3a2a1a; text-shadow:0 0 2px #fff,0 0 2px #fff; }
+  body.m2 #subs { grid-template-columns:repeat(2,46px); } body.m2 #subs button { width:46px; height:46px; }

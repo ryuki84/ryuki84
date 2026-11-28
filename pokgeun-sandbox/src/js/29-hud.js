@@ -29,7 +29,7 @@ function ctxWorld() {
 const HST = document.createElement("div"); HST.id = "hst"; $("stage").appendChild(HST);
 function renderHst() {
   const st = pstats(), hp = clamp(player.hp / st.maxhp, 0, 1);
-  const h = `<div class="hp${hp < .3 ? " low" : ""}"><i style="width:${(hp * 100).toFixed(1)}%"></i><span>❤️ ${Math.max(0, Math.ceil(player.hp))}/${st.maxhp}</span></div><div class="row"><span>${clockText()}</span><span>🔔 ${S.bells.toLocaleString()}</span><span class="lv">Lv.${S.lv}</span></div>`;
+  const h = `<div class="hp${hp < .3 ? " low" : ""}"><i style="width:${(hp * 100).toFixed(1)}%"></i><span>❤️ ${Math.max(0, Math.ceil(player.hp))}/${st.maxhp}</span></div><div class="sb"><i class="fd${S.surv.food < 30 ? " low" : ""}" style="width:${S.surv.food.toFixed(0)}%"></i><i class="st" style="width:${player.sta.toFixed(0)}%"></i><span>🍙 ${Math.round(S.surv.food)} · ⚡ ${Math.round(player.sta)}</span></div><div class="row"><span>${clockText()}</span><span>🔔 ${S.bells.toLocaleString()}</span><span class="lv">Lv.${S.lv}</span></div>`;
   if (h !== HST.__h) { HST.__h = h; HST.innerHTML = h; }
 }
 
@@ -46,11 +46,11 @@ const JZ = document.createElement("div"); JZ.id = "jzone"; JZ.innerHTML = '<div 
 /* ---- 행동 버튼 + 장면별 보조 버튼 ---- */
 const ACT = document.createElement("div"); ACT.id = "act2"; ACT.innerHTML = '<div id="actx" hidden></div><div id="subs"></div><button id="abtn" data-k="Space"><b>✋</b><small>행동</small></button>'; $("stage").appendChild(ACT);
 const SUBS = {
-  out: [["🎒", "주머니", "inv"]],
+  out: [["🎒", "주머니", "inv"], ["🍙", "먹기", "eat"]],
   home: [["✋", "집기", "KeyX"]],
-  dun: [["💨", "구르기", "KeyE"], ["🧪", "물약", "KeyF"], ["🌀", "회전", "KeyQ"], ["🔥", "화염", "KeyR"]],
-  wild: [["💨", "구르기", "KeyE"], ["🧪", "물약", "KeyF"], ["🍖", "먹이", "KeyV"], ["🐎", "탈것", "KeyG"], ["⋯", "더보기", "more"]],
-  world: [["💨", "구르기", "KeyE"], ["🧪", "물약", "KeyF"], ["🏗️", "건설", "build"], ["⋯", "더보기", "more"]],
+  dun: [["🍙", "먹기", "eat"], ["💨", "구르기", "KeyE"], ["🧪", "물약", "KeyF"], ["🌀", "회전", "KeyQ"]],
+  wild: [["🍙", "먹기", "eat"], ["💨", "구르기", "KeyE"], ["🧪", "물약", "KeyF"], ["🍖", "먹이", "KeyV"], ["🐎", "탈것", "KeyG"]],
+  world: [["🍙", "먹기", "eat"], ["💨", "구르기", "KeyE"], ["🧪", "물약", "KeyF"], ["🏗️", "건설", "build"], ["⋯", "더보기", "more"]],
   more: [["🌀", "회전", "KeyQ"], ["🔥", "화염", "KeyR"], ["🍖", "먹이", "KeyV"], ["🐎", "탈것", "KeyG"]],
   building: [["🗑️", "철거", "KeyX"], ["✅", "건설 끝", "KeyB"]],
 };
@@ -66,7 +66,7 @@ function renderSubs() {
 ACT.addEventListener("pointerdown", e => {
   const b = e.target.closest("button"); if (!b || !started) return; e.preventDefault(); sfx("ui");
   if (b.dataset.k) { try { b.setPointerCapture(e.pointerId); } catch (_) {} b.classList.add("down"); press(b.dataset.k); const up = () => { b.classList.remove("down"); release(b.dataset.k); b.removeEventListener("pointerup", up); b.removeEventListener("pointercancel", up); }; b.addEventListener("pointerup", up); b.addEventListener("pointercancel", up); return; }
-  const a = b.dataset.a; if (a === "more") { subMore = !subMore; renderSubs(); } else if (a === "inv") document.body.classList.toggle("showinv"); else if (a === "build") togglePanel("build");
+  const a = b.dataset.a; if (a === "more") { subMore = !subMore; renderSubs(); } else if (a === "inv") document.body.classList.toggle("showinv"); else if (a === "build") togglePanel("build"); else if (a === "eat") eatBest();
 });
 function renderAct() {
   const h = started && !modal ? ctxHint() : "", ab = $("abtn"), x = $("actx");
@@ -118,4 +118,4 @@ function hudTick(dt) {
   if (!M2) return; renderHst(); renderAct(); placeMiniTap();
 }
 { let lt = performance.now(); (function loop(now) { const dt = clamp((now - lt) / 1000, 0, .1); lt = now; hudTick(dt); requestAnimationFrame(loop); })(lt); }
-Object.assign(window.__game, { JOY, ctxWorld, areaName, AREA, M2, setCell: (...a) => setCell(...a), worldGather: () => worldGather(), save: () => save(), CRAFT2, craft2: id => craft2(id) });
+Object.assign(window.__game, { JOY, ctxWorld, areaName, AREA, M2, setCell: (...a) => setCell(...a), worldGather: () => worldGather(), save: () => save(), CRAFT2, craft2: id => craft2(id), eatBest: () => eatBest(), SV, survTick: dt => survTick(dt), dash: () => dash() });

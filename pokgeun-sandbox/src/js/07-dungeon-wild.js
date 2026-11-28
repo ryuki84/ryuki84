@@ -7,6 +7,7 @@ function renderRpg() {
   el.hidden = false;
   el.innerHTML = `<div class="bar"><i class="hp" style="width:${clamp(P.hp / st.maxhp * 100, 0, 100)}%"></i><span>❤️ ${Math.max(0, Math.ceil(P.hp))}/${st.maxhp}</span></div>
     <div class="bar"><i class="xp" style="width:${S.xp / xpNeed(S.lv) * 100}%"></i><span>Lv.${S.lv} · ${S.xp}/${xpNeed(S.lv)}</span></div>
+    <div class="bar"><i class="fd" style="width:${S.surv.food}%"></i><span>🍙 배부름 ${Math.round(S.surv.food)} · ⚡ ${Math.round(P.sta)} <small>(T 먹기)</small></span></div>
     <div class="sk"><b>스페이스</b> 공격${wild ? "·채집" : ""} · <b>Q</b> 회전 ${cd(P.qCd)}<br><b>E</b> 구르기 ${cd(P.eCd)} · <b>R</b> 화염구 ${skLv("fire") ? cd(P.rCd) : "미습득"}<br><b>F</b> 🧪×${S.potions}${wild ? " · <b>V</b> 먹이주기 · <b>G</b> 탈것" : ""}<br><b>I</b> 장비 · <b>K</b> 캐릭터 · <b>C</b> 제작${world ? " · <b>B</b> 건설 · <b>N</b> 지도 · <b>J</b> 의뢰" : ""}</div>
     <div>${dun.arena ? arenaInfo() : world ? worldInfo() : wild ? "🌴 야생 지대" : dun.demon ? `😈 마왕성 ${dun.depth - DEMON_BASE + 1}층` : `🕳️ 지하 ${dun.depth}층`} · 몬스터 ${dun.mons.length}마리${S.pts + S.sp > 0 ? " · ✨포인트!" : ""}</div>${questLine() ? `<div>${questLine()}</div>` : ""}${dun.demon ? bossBar() : ""}`;
 }

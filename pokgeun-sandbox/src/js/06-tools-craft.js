@@ -57,6 +57,8 @@ function nearBench(r = 4) {
 const hasCost = c => Object.entries(c).every(([k, v]) => (S.mat[k] || 0) >= v);
 function craftState(r) {
   if (r.bench && !nearBench()) return "bench";
+  if (r.fire && !nearFire()) return "fire";
+  if (r.fish && !FISHES.some(k => (S.inv[k] || 0) > 0)) return "cost";
   if (r.tool) { const o = S.tools[r.tool[0]]; if (o.t > r.tool[1] || (o.t === r.tool[1] && o.d > 0)) return "have"; }
   if (r.repair && !Object.entries(S.tools).some(([k, o]) => o.t > 0 && o.d < TOOLDEF[k].tiers[o.t].dur)) return "full";
   return hasCost(r.cost) ? "ok" : "cost";
@@ -64,7 +66,9 @@ function craftState(r) {
 function craft2(id) {
   const r = CRAFT2.find(r => r.id === id); if (!r) return; const st = craftState(r);
   if (st === "bench") return say("🧰 작업대 가까이에서 만들 수 있어요. 건설(B)에서 작업대를 지어 보세요.", 2600);
+  if (st === "fire") return say("🔥 모닥불 옆에서 요리할 수 있어요. 건설(B)에서 모닥불(목재 3·돌 2)을 지어 보세요.", 2600);
   if (st !== "ok") return;
+  if (r.fish) { const k = FISHES.find(k => (S.inv[k] || 0) > 0); S.inv[k]--; }
   for (const k in r.cost) S.mat[k] -= r.cost[k];
   if (r.tool) { const [k, t] = r.tool; S.tools[k] = { t, d: TOOLDEF[k].tiers[t].dur }; say(`${r.e} ${r.n}을(를) 만들었어요! 맞는 자원을 캘 때 자동으로 써요.`, 2600); }
   else if (r.repair) { for (const k in S.tools) { const o = S.tools[k]; if (o.t > 0) o.d = TOOLDEF[k].tiers[o.t].dur; } say("🔧 도구를 모두 고쳤어요.", 1800); }
@@ -77,16 +81,16 @@ function bodyCraft2() {
   const tl = Object.entries(TOOLDEF).map(([k, d]) => { const o = S.tools[k], tr = d.tiers[o.t]; return `<div class="tcard${o.t && !o.d ? " broken" : ""}"><b>${d.e}</b><span>${tr ? tr.n : d.n + " 없음"}</span>${tr ? `<i style="--w:${(o.d / tr.dur * 100).toFixed(0)}%"></i><small>${o.d ? `${o.d}/${tr.dur}` : "망가짐 · 작업대에서 고치기"}</small>` : `<small>맨손으로 느리게</small>`}</div>`; }).join("");
   const pf = Object.entries(PROF).map(([k, [e, n]]) => `<span class="mchip">${e} ${n} <b>Lv.${profLv(k)}</b></span>`).join("");
   const bench = nearBench(), row = r => {
-    const st = craftState(r), cost = Object.entries(r.cost).map(([k, v]) => `<span style="color:${(S.mat[k] || 0) >= v ? "inherit" : "#c0392b"}">${MAT[k][0]}${v}</span>`).join(" ");
-    const lab = { ok: "만들기", cost: "재료 부족", bench: "작업대 필요", have: "가지고 있음", full: "고칠 것 없음" }[st];
-    return `<div class="crow"><span class="ci">${r.e}</span><span class="cn"><b>${r.n}</b>${r.d ? `<small>${r.d}</small>` : ""}<small>${cost}</small></span><button data-craft2="${r.id}" ${st === "ok" || st === "bench" ? "" : "disabled"} class="${st === "bench" ? "need" : ""}">${lab}</button></div>`;
+    const st = craftState(r), cost = Object.entries(r.cost).map(([k, v]) => `<span style="color:${(S.mat[k] || 0) >= v ? "inherit" : "#c0392b"}">${MAT[k][0]}${v}</span>`).join(" ") + (r.fish ? `<span style="color:${FISHES.some(k => (S.inv[k] || 0) > 0) ? "inherit" : "#c0392b"}">🐟1</span>` : "");
+    const lab = { ok: r.g === "food" ? "요리하기" : "만들기", cost: "재료 부족", bench: "작업대 필요", fire: "모닥불 필요", have: "가지고 있음", full: "고칠 것 없음" }[st];
+    return `<div class="crow"><span class="ci">${r.e}</span><span class="cn"><b>${r.n}</b>${r.d ? `<small>${r.d}</small>` : ""}<small>${cost}</small></span><button data-craft2="${r.id}" ${st === "ok" || st === "bench" || st === "fire" ? "" : "disabled"} class="${st === "bench" || st === "fire" ? "need" : ""}">${lab}</button></div>`;
   };
   const sec = (g, t) => `<h3>${t}</h3>` + CRAFT2.filter(r => r.g === g).map(row).join("");
   const old = RECIPES.map((r, i) => { const ok = hasCost(r.cost), cost = Object.entries(r.cost).map(([k, v]) => `<span style="color:${(S.mat[k] || 0) >= v ? "inherit" : "#c0392b"}">${MAT[k][0]}${v}</span>`).join(" ");
     return `<div class="crow"><span class="ci">${r.e}</span><span class="cn"><b>${r.n}</b><small>${cost}</small></span><button data-craft="${i}" ${ok ? "" : "disabled"}>만들기</button></div>`; }).join("");
   return `<h2>🔨 제작</h2><div class="mchips">${chips}</div><h3>🧰 내 도구</h3><div class="tcards">${tl}</div>
     <div class="benchst ${bench ? "on" : ""}">${bench ? "🧰 작업대 옆이에요 — 모든 제작법을 쓸 수 있어요" : "🧰 작업대 없음 — 건설(B)에서 작업대(목재 6·돌 2)를 지으면 판자·가구를 만들 수 있어요"}</div>
-    ${sec("tool", "🪓 도구")}${sec("mat", "🟫 재료")}${sec("furn", "🛋️ 가구 (내 집에 놓기)")}
+    ${sec("tool", "🪓 도구")}${sec("mat", "🟫 재료")}${sec("furn", "🛋️ 가구 (내 집에 놓기)")}${sec("food", nearFire() ? "🍳 요리 — 🔥 모닥불 옆이에요" : "🍳 요리 (모닥불 옆에서)")}
     <h3>📈 숙련도</h3><div class="mchips">${pf}</div>
     <details class="oldc"><summary>⚔️ 모험 장비</summary>${old}</details>`;
 }
