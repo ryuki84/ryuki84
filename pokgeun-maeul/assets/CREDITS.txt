@@ -31,4 +31,8 @@
   정예(spikyslime, hornet, mushking, skullghost, skullorc): GreenSpikyBlob, Armabee_Evolved, Mushnub_Evolved, Ghost_Skull, Orc_Skull
   웹용 변환: glTF → glb(텍스처 내장), 리샘플·중복 제거(@gltf-transform).
 
+마을 주민 — assets/villagers/ (dog, cat, bunny, chicken)
+  Ultimate Monsters pack — Quaternius (quaternius.com), CC0 (github.com/mlflabs/brain 경유)
+  원본 이름: Blob/Dog, Blob/Cat, Big/Bunny, Blob/Chicken. 웹용 변환: glb, 리샘플·중복 제거.
+
 3D 엔진 — three.js r187 (mrdoob, MIT) / 글꼴 — Noto Sans KR (Google Fonts, SIL OFL 1.1)

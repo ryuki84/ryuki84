@@ -12,6 +12,7 @@
 | `assets/nature/*.glb` (27), `assets/nature/tex/*.webp` (13) | 나무·덤불·바위·풀·꽃 | Quaternius Ultimate Stylized Nature / github.com/walterpalladino/godot-quaternius-ultimate-stylized-nature | 원작 CC0. 변환 저장소는 MIT | 일부 확인 | 원작 CC0는 Quaternius 공식 페이지 기준이에요. FBX → glb 변환은 직접 했어요. |
 | `assets/dinos/*.glb` (4) | 티라노·랩터·트리케라톱스·파라사우롤로푸스 | Quaternius Ultimate Animated Dinosaurs / poly.pizza 배포본, github.com/scarbone98/deep-time 경유 | CC0 1.0 | 일부 확인 | 경유 저장소의 문서에 CC0로 적혀 있어요. 원 배포처(poly.pizza)는 직접 확인하지 못했어요(봇 차단으로 403). |
 | `assets/monsters/*.glb` (12) | 슬라임·말벌·버섯돌이·유령·오크·도깨비·대왕 용 + 정예 5종(가시 슬라임·장수말벌·버섯 대장·해골 유령·해골 오크). 대기·걷기·달리기·공격·피격·죽음 동작 | Quaternius Ultimate Monsters / github.com/mlflabs/brain (`assets/Ultimate Monsters`) 경유 | CC0 1.0 | 일부 확인 | quaternius.com 공식 페이지에 CC0로 표시돼 있어요. 경유 저장소의 License.txt 머리말은 다른 팩 이름으로 잘못 적혀 있어요. 작업 C에서 7종(1.7MB), 정예 작업에서 5종(1.2MB) 추가. |
+| `assets/villagers/*.glb` (4) | 마을 주민 강아지·고양이·토끼·닭. 대기·걷기·손 흔들기 등 | Quaternius Ultimate Monsters / github.com/mlflabs/brain 경유 | CC0 1.0 | 일부 확인 | 몬스터와 같은 팩이에요(약 0.8MB). |
 | `assets/ground/*.webp` (24) | 지형 6종과 디테일 질감 6종(색·노멀) | Poly Haven (polyhaven.com) | CC0 1.0 | 확인됨 (Poly Haven API 직접 다운로드) | |
 | 폰트 Noto Sans KR | UI 글꼴 | Google Fonts | SIL OFL 1.1 | 확인됨 (공개 라이선스) | CDN으로 불러와요. CREDITS에 기록했어요(작업 C). |
 | three.js r187 + addons | 3D 엔진 | mrdoob/three.js (jsDelivr CDN) | MIT | 확인됨 | CREDITS에 기록했어요(작업 C). |

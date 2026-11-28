@@ -310,7 +310,7 @@
       <div><b>📋 메뉴</b><span>오른쪽 아이콘을 누르거나<br>단축키 (<kbd>H</kbd> 전체 보기)</span></div>
       <div><b>🧰 마을 도구</b><span><kbd>1</kbd>~<kbd>5</kbd> 손·채·낚싯대·삽·묘목</span></div>
     </div>
-    <p class="news">🆕 <b>최근 업데이트</b> · 몬스터 7종이 움직이는 3D 모델로 바뀌었어요 · ★정예 몬스터 5종(깊이 3+) · 몬스터 공격 전 ❗ 예고 · 타격 순간 멈칫(히트스톱) · ⚙️ 설정 → 💾 저장 관리(백업·내보내기)</p>
+    <p class="news">🆕 <b>최근 업데이트</b> · 마을 주민(콩이·나비·토리·꼬꼬)이 움직이는 3D 동물로 바뀌고, 말을 걸면 손을 흔들어요 · 몬스터 7종이 움직이는 3D 모델로 바뀌었어요 · ★정예 몬스터 5종(깊이 3+) · 몬스터 공격 전 ❗ 예고 · 타격 순간 멈칫(히트스톱) · ⚙️ 설정 → 💾 저장 관리(백업·내보내기)</p>
     <p class="goals">🏪 상점에서 팔고 사기 · 🕳️ 던전 · 🌍 오픈월드(건설·채집·의뢰) · 🏟️ 아레나 · 👑 국왕의 의뢰로 대마왕 토벌</p>
     <p id="nickrow" hidden>🌐 닉네임 <input id="nick" maxlength="12" placeholder="모험가" style="font:inherit;padding:3px 8px;border:2px solid var(--ink);border-radius:8px;width:9em"></p>
     <button id="start">시작하기</button><button id="reset" style="background:#e8dcc0">새로 시작</button>
@@ -462,7 +462,7 @@ const VILLAGERS = [
   { name: "콩이", e: "🐶", lines: ["오늘도 산책하기 좋은 날이네요!", "저기 연못에서 큰 물고기를 봤어요.", "멍! 아, 말버릇이에요."] },
   { name: "나비", e: "🐱", lines: ["야옹~ 햇살이 따뜻해요.", "나무를 흔들면 열매가 떨어진대요.", "낮잠 자러 가야겠어요…"] },
   { name: "토리", e: "🐰", lines: ["깡총! 꽃이 정말 예쁘죠?", "묘목을 심으면 나무가 자라요.", "상점에 가면 벨을 벌 수 있어요."] },
-  { name: "곰돌", e: "🐻", lines: ["으음… 배고프다.", "화석은 비싸게 팔린대요.", "밤에는 반딧불이가 나와요."] },
+  { name: "꼬꼬", e: "🐔", lines: ["꼬꼬! 오늘 아침도 제가 제일 먼저 일어났어요.", "화석은 비싸게 팔린대요.", "밤에는 반딧불이가 나와요."] },
 ];
 
 /* ---------- 유틸 ---------- */
@@ -1898,7 +1898,7 @@ function weaponModel(e) {
   g.rotation.x = .9; g.position.set(0, -.38, .05); const w = new THREE.Group(); w.add(g); return w;
 }
 function mkAnimal(k) {
-  const P = { "🐶": { c: 0xd9a45c, d: 0x8a5a2c, w: 0xfff3d6 }, "🐱": { c: 0xf0a23c, d: 0xc9742a, w: 0xfff3d6 }, "🐰": { c: 0xf6f2ea, d: 0xf28cb0, w: 0xffffff }, "🐻": { c: 0x8a5a34, d: 0x5a3a22, w: 0xd9b07c } }[k];
+  const P = { "🐶": { c: 0xd9a45c, d: 0x8a5a2c, w: 0xfff3d6 }, "🐱": { c: 0xf0a23c, d: 0xc9742a, w: 0xfff3d6 }, "🐰": { c: 0xf6f2ea, d: 0xf28cb0, w: 0xffffff }, "🐔": { c: 0xf6f2ea, d: 0xe8503a, w: 0xffffff }, "🐻": { c: 0x8a5a34, d: 0x5a3a22, w: 0xd9b07c } }[k];
   return uq(() => {
     const g = new THREE.Group(), body = new THREE.Group(); g.add(body);
     Sp(body, .34, P.c, 0, .5, 0, { s: [1, 1.05, .9] }); Sp(body, .24, P.w, 0, .46, .14, { s: [1, 1, .6] });
@@ -2008,12 +2008,12 @@ const DINO_K = idx => [null, null, "parasaurolophus", "triceratops", "velocirapt
 const mkWildDino = (idx, boss) => { const k = boss ? "trex" : DINO_K(idx); return DINOM.ready && k ? mkDinoG(k) : boss ? mkTrex() : DINO3[idx](); };
 /* ----- 몬스터 모델: Quaternius Ultimate Monsters (CC0) — 대기·걷기·달리기·공격·피격·죽음 ----- */
 const MONK = { "🐀": "slime", "🦇": "bee", "🕷️": "mushnub", "💀": "ghost", "🧟": "orc", "👹": "bluedemon", "🐲": "dragon" };
-const MTGT = { slime: .95, bee: 1.15, mushnub: 1.05, ghost: 1.5, orc: 1.95, bluedemon: 2.3, dragon: 2.1, spikyslime: 1.15, hornet: 1.35, mushking: 1.35, skullghost: 1.65, skullorc: 2.15 };
-const MONCLIP = { Idle: [/^Idle$/, /Flying_Idle/, /Idle/], Walk: [/^Walk$/, /^Flying$/, /Fast_Flying/, /Walk/], Run: [/^Run$/, /Fast_Flying/, /^Walk$/, /Flying/], Attack: [/Bite_Front/, /Headbutt/, /^Punch$/, /Weapon/, /Bite/, /Punch/, /Attack/], Hit: [/Hit/], Death: [/Death/] };
+const MTGT = { slime: .95, bee: 1.15, mushnub: 1.05, ghost: 1.5, orc: 1.95, bluedemon: 2.3, dragon: 2.1, spikyslime: 1.15, hornet: 1.35, mushking: 1.35, skullghost: 1.65, skullorc: 2.15, "v/dog": 1.15, "v/cat": 1.15, "v/bunny": 1.55, "v/chicken": 1.2 };
+const MONCLIP = { Idle: [/^Idle$/, /Flying_Idle/, /Idle/], Walk: [/^Walk$/, /^Flying$/, /Fast_Flying/, /Walk/], Run: [/^Run$/, /Fast_Flying/, /^Walk$/, /Flying/], Attack: [/Bite_Front/, /Headbutt/, /^Punch$/, /Weapon/, /Bite/, /Punch/, /Attack/], Hit: [/Hit/], Death: [/Death/], Wave: [/^Wave$/, /^Yes$/, /Dance/, /Idle/], Yes: [/^Yes$/, /^Wave$/, /Idle/] };
 const MONM = { ready: false, started: false, src: {}, clips: {}, sc: {}, map: {} };
 function loadMonsters() {
   if (MONM.started || !R3) return; MONM.started = true; const L = new THREE.GLTFLoader(), ks = Object.keys(MTGT);
-  Promise.all(ks.map(k => L.loadAsync(`assets/monsters/${k}.${KEXT}`))).then(r => { ks.forEach((k, i) => {
+  Promise.all(ks.map(k => L.loadAsync(k.startsWith("v/") ? `assets/villagers/${k.slice(2)}.${KEXT}` : `assets/monsters/${k}.${KEXT}`))).then(r => { ks.forEach((k, i) => {
     const sc = r[i].scene, cl = r[i].animations; MONM.src[k] = sc; MONM.clips[k] = cl; const bb = new THREE.Box3().setFromObject(sc); MONM.sc[k] = MTGT[k] / Math.max(.1, bb.max.y - bb.min.y);
     MONM.map[k] = {}; for (const st in MONCLIP) { let c = null; for (const re of MONCLIP[st]) if ((c = cl.find(a => re.test(a.name)))) break; MONM.map[k][st] = c || cl[0]; }
   }); MONM.ready = true; }).catch(e => console.warn("몬스터 모델을 불러오지 못해 기본 모델로 표시해요.", e));
@@ -2027,10 +2027,13 @@ function mkMonG(k) {
 // 상태 우선순위: 죽음 > 공격(예비 동작 포함) > 피격 > 이동 > 대기
 function monTick(e, mv, fast) {
   if (e.atkT > 0) e.atkT -= DT; if (e.hitT > 0) e.hitT -= DT;
-  const want = e.dying ? "Death" : e.atkT > 0 ? "Attack" : e.hitT > 0 ? "Hit" : mv ? (fast ? "Run" : "Walk") : "Idle";
+  const want = e.dying ? "Death" : e.emote && !mv ? e.emote : e.atkT > 0 ? "Attack" : e.hitT > 0 ? "Hit" : mv ? (fast ? "Run" : "Walk") : "Idle";
   if (e.cur !== want) { const a = e.act(want), once = want !== "Idle" && want !== "Walk" && want !== "Run"; a.reset(); a.setLoop(once ? THREE.LoopOnce : THREE.LoopRepeat, once ? 1 : Infinity); a.clampWhenFinished = once; a.fadeIn(.12).play(); if (e.curA && e.curA !== a) e.curA.fadeOut(.12); e.curA = a; e.cur = want; }
   e.mixer.update(Math.min(DT, .1));
 }
+// 마을 주민: Quaternius Ultimate Monsters의 동물(CC0). 말을 걸면 손을 흔들어요
+const VILM = { "🐶": "v/dog", "🐱": "v/cat", "🐰": "v/bunny", "🐔": "v/chicken" };
+const mkVilModel = em => MONM.ready && VILM[em] ? mkMonG(VILM[em]) : mkAnimal(em);
 const mkMonModel = (em, el) => MONM.ready && (el ? ELITE[el].model : MONK[em]) ? mkMonG(el ? ELITE[el].model : MONK[em]) : MON3[em]();
 const MON3 = { "🐀": mkRat, "🦇": mkBat, "🕷️": mkSpider, "💀": mkSkel, "🧟": mkZombie, "👹": mkOgre, "🐲": mkDragon };
 const DINO3 = [mkLizard, mkBoar, mkBrachio, mkCroc, mkRaptor];
@@ -2155,6 +2158,9 @@ const mkBobber = () => { const g = new THREE.Group(); Sp(g, .08, 0xe8505a, 0, 0,
 
 /* ----- 엔티티 동기화 ----- */
 const ENT = new WeakMap(), LIVE = new Set(), PK = { v: {}, h: {}, d: {} };
+// 모델 파일이 늦게 도착하면, 먼저 만들어 둔 코드 모델(e.proc)을 버리고 새로 만들어요
+function dropEnt(o) { const e = ENT.get(o); if (!e) return; e.par.remove(e.g); e.g.traverse(m => { if (m.isMesh && m.material && m.material.userData.own) m.material.dispose(); if (m.isMesh && m.userData.ownGeo) m.geometry.dispose(); }); LIVE.delete(e); ENT.delete(o); }
+function entM(o, make, parent) { const e = ENT.get(o); if (e && e.proc && MONM.ready) dropEnt(o); const n = ent(o, make, parent); if (!MONM.ready && !n.mon) n.proc = true; return n; }
 function ent(o, make, parent) {
   let e = ENT.get(o);
   if (!e) { e = make(o); e.par = parent; e.key0 = o; parent.add(e.g); ENT.set(o, e); LIVE.add(e); }
@@ -2445,9 +2451,9 @@ function drawVillageEnts(act) {
   for (const f of flowers) { const e = ent(f, () => ({ g: mkFlower(f.e) }), g.vdyn); e.g.position.set(f.x + .5, 0, f.y + .5); e.g.visible = !(f.back > 0); }
   for (const it of ground) { const e = ent(it, () => { const m = Sp(new THREE.Group(), .13, FRC[it.k] || 0xe8505a, 0, 0, 0); return { g: m.parent }; }, g.vdyn); e.g.position.set(it.x + .5, .2 + Math.abs(Math.sin(vtime * 4 + it.x)) * .12, it.y + .5); }
   for (const v of villagers) {
-    const e = ent(v, () => mkAnimal(v.e), g.vdyn), mv = v.talk <= 0 && (v.vx || v.vy);
+    const e = entM(v, () => mkVilModel(v.e), g.vdyn), mv = v.talk <= 0 && (v.vx || v.vy); e.emote = v.talk > 0 ? "Wave" : null;
     e.g.position.set(v.x / T, 0, (v.y + 8) / T); if (mv) face(e.g, v.vx, v.vy); else if (act && v.talk > 0) face(e.g, P.x - v.x, P.y - v.y);
-    animE(e, mv, 8, .5); if (act && Math.hypot(v.x - P.x, v.y - P.y) < 80) labelT(v.name, v.x / T, (v.y + 8) / T, 2, "#fff3d6");
+    animE(e, mv, e.mon ? 5 : 8, .5); if (act && Math.hypot(v.x - P.x, v.y - P.y) < 80) labelT(v.name, v.x / T, (v.y + 8) / T, 2, "#fff3d6");
   }
   for (const b of bugs) {
     const e = ent(b, () => mkBug(b.id), g.vdyn); e.g.position.set(b.x / T, .7 + Math.sin(vtime * 6 + b.a) * .1, (b.y + 8) / T); face(e.g, Math.cos(b.a), Math.sin(b.a));
@@ -2582,7 +2588,7 @@ function drawDun() {
   }
   for (const m of dun.mons) {
     if (Math.abs(m.x / T - camT.x) > 20 || Math.abs((m.y + 8) / T - camT.z) > 14) continue;
-    const e = ent(m, () => { const b = m.wild ? mkWildDino(m.idx, m.boss) : mkMonModel(m.e, m.elite); b.g.scale.multiplyScalar(m.demon ? 1.45 : m.boss && !m.wild ? 1.8 : m.elite ? 1.2 : 1); return b; }, g.dyn);
+    const e = (m.wild || m.demon ? ent : entM)(m, () => { const b = m.wild ? mkWildDino(m.idx, m.boss) : mkMonModel(m.e, m.elite); b.g.scale.multiplyScalar(m.demon ? 1.45 : m.boss && !m.wild ? 1.8 : m.elite ? 1.2 : 1); return b; }, g.dyn);
     if (e.mon) { e.mv = e.px !== undefined && Math.hypot(m.x - e.px, m.y - e.py) > 6 * DT; e.px = m.x; e.py = m.y; if ((m.wind > 0 || m.cw > 0) && !(e.atkT > 0)) e.atkT = Math.max(m.wind || 0, m.cw || 0) + .45; if (m.flash > (e.lfl || 0) + .02 && !(e.atkT > 0)) e.hitT = .35; e.lfl = m.flash; }
     const chase = !(m.wild && !m.hostile), dx = P.x - m.x, dy = P.y - m.y, mv = chase ? Math.hypot(dx, dy) < 260 && Math.hypot(dx, dy) > 24 : (m.wvx || m.wvy);
     e.g.position.set(m.x / T, 0, (m.y + 8) / T); if (chase) face(e.g, dx, dy, 10); else if (mv) face(e.g, m.wvx, m.wvy, 6); if (e.dino && m.cd > (e.lcd || 0) + .5) e.atkT = .7; e.lcd = m.cd; animE(e, e.mon ? e.mv || m.kb > 0 : mv, e.mon ? (m.spd >= 90 ? 9 : 5) : m.boss ? 5 : 8, .55); flash(e, m.flash > 0);
@@ -3247,8 +3253,8 @@ function warpTo(id) {
 function drawWorldEnts(g, P, pz) {
   for (const v of dun.vil) {
     if (Math.abs(v.x / T - camT.x) > 22 || Math.abs((v.y + 8) / T - camT.z) > 16) continue;
-    const e = ent(v, () => v.model === "king" ? mkKing() : v.model === "guard" ? mkGuard() : mkAnimal(v.e), g.dyn), mv = v.talk <= 0 && (v.vx || v.vy);
-    e.g.position.set(v.x / T, 0, (v.y + 8) / T); if (mv) face(e.g, v.vx, v.vy); else if (v.talk > 0 || (v.fixed && Math.hypot(v.x - P.x, v.y - P.y) < 6 * T)) face(e.g, P.x - v.x, P.y - v.y); else if (v.fixed) face(e.g, 0, 1); animE(e, mv, 8, .5);
+    const e = (v.model ? ent : entM)(v, () => v.model === "king" ? mkKing() : v.model === "guard" ? mkGuard() : mkVilModel(v.e), g.dyn), mv = v.talk <= 0 && (v.vx || v.vy); e.emote = v.talk > 0 ? "Wave" : null;
+    e.g.position.set(v.x / T, 0, (v.y + 8) / T); if (mv) face(e.g, v.vx, v.vy); else if (v.talk > 0 || (v.fixed && Math.hypot(v.x - P.x, v.y - P.y) < 6 * T)) face(e.g, P.x - v.x, P.y - v.y); else if (v.fixed) face(e.g, 0, 1); animE(e, mv, e.mon ? 5 : 8, .5);
     if (v.model === "king") { labelT("👑 " + v.name, v.x / T, (v.y + 8) / T, 2.4, "#ffe27a"); if (S.story.stage < STORY.length) labelT(storyReady() ? "❗" : "❓", v.x / T, (v.y + 8) / T, 3.1, "#ffd34d"); } else if (Math.hypot(v.x - P.x, v.y - P.y) < 90) labelT(v.name, v.x / T, (v.y + 8) / T, 2, "#fff3d6");
   }
   for (const o of NET.others.values()) {
@@ -3787,7 +3793,7 @@ for (const id of ["gear", "shop"]) { const el = $(id); let y0 = null;
   const up = e => { if (y0 === null) return; const dy = e.clientY - y0; y0 = null; el.style.transform = ""; if (dy > 70 && !(id === "gear" && gearTab === "perk")) closeShop(); };
   el.addEventListener("pointerup", up); el.addEventListener("pointercancel", up); }
 renderDock();
-window.__game = { get hitStop() { return hitStop; }, get MONM() { return MONM; }, ENT, MON_WIND, ELITE, eliteify, eliteAI, saveApi: { save, exportSave, importSave, listBackups, restoreBackup, backupNow, SAVE, SAVE_VER },  get DINOM() { return DINOM; }, wsolid, bioBase,  equipBag, unequip, homeTileAt, openShop, enterHome: () => enterHome(), get furnSel() { return furnSel; }, ctxHint, renderBar,  get sun() { return sun; }, get GRD() { return GRD; }, get S3() { return S3; }, setYaw: v => { camYaw = v; camManT = vtime + 999; }, get MAN() { return MAN; }, get KAY() { return KAY; }, get curPE() { return curPE; }, pAnim, WX, setWeather: t => { WX.type = t; WX.t = 9999; }, startArena, arenaTick, startWave, gemGain, choosePerk, finishArena, openPerk, autoFight, idleStored, dailyTouch, genArena, mkMonT, get PERKS() { return PERKS; }, get ARES() { return ARES; }, sEvent, storyReady, reportStory, openKing, nearKing, demonAI, finalizeDemon, enterDemon, onDemonDefeat, mkDemon, damageP, addFame, get STORY() { return STORY; }, NET, spawnNear, worldTick, killMon, setBuild: i => { buildSel = i == null ? null : BUILD[i]; }, farmAct, winteract, genOffers, turnIn, warpTo, worldAct, enterWorld, getWorld, get WORLD() { return WORLD; }, get dun() { return dun; }, wc, wb, setClock: v => { clock = v; }, fireball, feed, toggleMount, craft, togglePanel, enterDungeon, get dun() { return dun; }, pstats, genGear, attack, scene: () => scene, furnSelSet: v => { furnSel = v; renderFurn(); }, player, trees, S, keys, act, get fishing() { return fishing; }, bugs, villagers }; // 디버그/테스트용
+window.__game = { VILM, get hitStop() { return hitStop; }, get MONM() { return MONM; }, ENT, MON_WIND, ELITE, eliteify, eliteAI, saveApi: { save, exportSave, importSave, listBackups, restoreBackup, backupNow, SAVE, SAVE_VER },  get DINOM() { return DINOM; }, wsolid, bioBase,  equipBag, unequip, homeTileAt, openShop, enterHome: () => enterHome(), get furnSel() { return furnSel; }, ctxHint, renderBar,  get sun() { return sun; }, get GRD() { return GRD; }, get S3() { return S3; }, setYaw: v => { camYaw = v; camManT = vtime + 999; }, get MAN() { return MAN; }, get KAY() { return KAY; }, get curPE() { return curPE; }, pAnim, WX, setWeather: t => { WX.type = t; WX.t = 9999; }, startArena, arenaTick, startWave, gemGain, choosePerk, finishArena, openPerk, autoFight, idleStored, dailyTouch, genArena, mkMonT, get PERKS() { return PERKS; }, get ARES() { return ARES; }, sEvent, storyReady, reportStory, openKing, nearKing, demonAI, finalizeDemon, enterDemon, onDemonDefeat, mkDemon, damageP, addFame, get STORY() { return STORY; }, NET, spawnNear, worldTick, killMon, setBuild: i => { buildSel = i == null ? null : BUILD[i]; }, farmAct, winteract, genOffers, turnIn, warpTo, worldAct, enterWorld, getWorld, get WORLD() { return WORLD; }, get dun() { return dun; }, wc, wb, setClock: v => { clock = v; }, fireball, feed, toggleMount, craft, togglePanel, enterDungeon, get dun() { return dun; }, pstats, genGear, attack, scene: () => scene, furnSelSet: v => { furnSel = v; renderFurn(); }, player, trees, S, keys, act, get fishing() { return fishing; }, bugs, villagers }; // 디버그/테스트용
 </script>
 </body>
 </html>
