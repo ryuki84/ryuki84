@@ -10,6 +10,7 @@
 | 저장 | `localStorage` 키 `pokgeun-sandbox`(+`.bak1~3`), 형식은 기존 v3 그대로 |
 | 테스트 | `npm test` — 시나리오 27개(빌드 최신 확인 후 실행) |
 | 작업 순서 | `docs/WORK_QUEUE.md` |
+| 아티팩트 | https://claude.ai/artifact/Aoc5seu2i8uMxrq32mo6mz (1판, 비공개). `npm run build:artifact` → `dist/artifact/`를 root로, 파일 161개 게시 |
 
 ## 기존 게임과 달라진 점
 - **전투 중심 콘텐츠 끔**: `src/js/01-data.js`의 `FEAT = { arena, demon, story, elite }` 모두 `false`
