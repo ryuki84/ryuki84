@@ -19,15 +19,18 @@ const D = open.OUT + '/';
     const g = window.__game, W = g.WORLD, sl = ms => new Promise(r => setTimeout(r, ms)); const c = W.pois.find(p => p.type === 'cave');
     g.player.x = (c.x + 1) * 32; g.player.y = (c.y + 1.5) * 32 + 18; g.player.dx = 0; g.player.dy = -1; g.dun.mons.length = 0; await sl(200); if (g.dun.kind === 'world') g.worldAct(); await sl(300);   // 저프레임에서는 입구에 서는 순간 이미 들어가 있을 수 있어요
     const inDun = { scene: g.scene(), kind: g.dun.kind, hasRet: !!g.dun.ret, depth: g.dun.depth };
-    g.player.hp = 0; await sl(800); // 동굴에서 사망 → 월드 리스폰
-    return { inDun, after: { scene: g.scene(), kind: g.dun && g.dun.kind, at: [Math.round(g.player.x / 32), Math.round(g.player.y / 32)] }, spawn: W.spawn };
+    g.player.hp = 0;   // 동굴에서 사망 → 월드 리스폰
+    return { inDun, spawn: W.spawn };
   });
+  await p.waitForFunction(() => window.__game.dun && window.__game.dun.kind === 'world', null, { timeout: 120000 }).catch(() => {});
+  r.cave.after = await p.evaluate(() => { const g = window.__game; return { scene: g.scene(), kind: g.dun && g.dun.kind, at: [Math.round(g.player.x / 32), Math.round(g.player.y / 32)] }; });
   // 포털: 마을로 복귀
   r.portal = await p.evaluate(async () => {
     const g = window.__game, W = g.WORLD, sl = ms => new Promise(r => setTimeout(r, ms)); const po = W.pois.find(p => p.type === 'portal');
-    g.player.x = (po.x + .5) * 32; g.player.y = (po.y + .5) * 32 + 18; g.player.dx = 0; g.player.dy = -1; g.dun.mons.length = 0; g.worldAct(); await sl(400);
-    return { scene: g.scene() };
+    g.player.x = (po.x + .5) * 32; g.player.y = (po.y + .5) * 32 + 18; g.player.dx = 0; g.player.dy = -1; g.dun.mons.length = 0; g.worldAct();
   });
+  await p.waitForFunction(() => window.__game.scene() === 'out', null, { timeout: 120000 }).catch(() => {});
+  r.portal = await p.evaluate(() => ({ scene: window.__game.scene() }));
   // 저장/불러오기: 편집 내용이 유지되는지
   r.save = await p.evaluate(() => { const raw = localStorage.getItem('pokgeun-maeul'); const o = JSON.parse(raw); return { edits: Object.keys(o.wedits || {}).length, wp: Object.keys(o.wp || {}).length, disc: (o.disc || '').length, bytes: raw.length }; });
   await p.screenshot({ timeout: 180000, path: D + 'w_after.png' });
