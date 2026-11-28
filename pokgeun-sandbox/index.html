@@ -382,6 +382,14 @@
   .crow .ci { font-size:24px; text-align:center; } .crow .cn { display:flex; flex-direction:column; min-width:0; } .crow .cn b { font-size:14px; } .crow .cn small { font-size:11.5px; opacity:.8; line-height:1.35; }
   .crow button { margin:0 !important; padding:4px 12px !important; min-width:84px; font-size:13px; } .crow button.need { background:rgba(255,255,255,.75); }
   details.oldc { margin-top:12px; } details.oldc summary { cursor:pointer; font-weight:800; padding:6px 0; }
+  /* 허기·스태미나 (GDD P3-1) */
+  #rpg .bar i.fd { background:linear-gradient(180deg,#ffd27a,#e8a23c); }
+  body.m2 #hst .sb { position:relative; height:13px; border-radius:7px; background:rgba(74,59,42,.14); overflow:hidden; }
+  body.m2 #hst .sb i { position:absolute; left:0; height:50%; transition:width .3s; }
+  body.m2 #hst .sb i.fd { top:0; background:linear-gradient(90deg,#f0b24a,#ffd27a); } body.m2 #hst .sb i.fd.low { background:#e8604a; animation:pulse 1s infinite; }
+  body.m2 #hst .sb i.st { bottom:0; background:linear-gradient(90deg,#4fb0e8,#8fd8ff); }
+  body.m2 #hst .sb span { position:absolute; inset:0; text-align:center; line-height:13px; font-size:9.5px; color:#3a2a1a; text-shadow:0 0 2px #fff,0 0 2px #fff; }
+  body.m2 #subs { grid-template-columns:repeat(2,46px); } body.m2 #subs button { width:46px; height:46px; }
 
 </style>
 </head>
@@ -420,7 +428,7 @@
       <div><b>📋 메뉴</b><span class="tonly">오른쪽 위 ☰ (제작·건설·외형…)</span><span class="konly">오른쪽 아이콘 · <kbd>H</kbd> 단축키</span></div>
       <div><b>🏗️ 건설</b><span>마을 밖 넓은 세상에서<br>벽·바닥·모닥불·밭 짓기</span></div>
     </div>
-    <p class="news">🆕 <b>최근 업데이트</b> · <b>도구와 작업대!</b> 돌도끼·돌곡괭이로 빨리 캐고, 작업대에서 판자·가구를 만들어 내 집을 꾸며요 · 하는 만큼 오르는 숙련도 · 새 캐릭터: 동글동글 치비 친구들과 직업 주민 6명 · 외형에서 얼굴·옷·모자·망토 섞기 · 마을 동물(강아지·고양이·소·돼지·병아리) · 휴대폰 화면 새 단장: 어디서나 같은 버튼, 부드러운 조이스틱, 지역 이름 안내</p>
+    <p class="news">🆕 <b>최근 업데이트</b> · <b>도구와 작업대·배고픔과 요리!</b> 돌도끼·돌곡괭이로 빨리 캐고, 작업대에서 판자·가구를 만들어 내 집을 꾸며요 · 하는 만큼 오르는 숙련도 · 모닥불에서 고기 굽고 수프 끓이기(🍙 먹기) · 새 캐릭터: 동글동글 치비 친구들과 직업 주민 6명 · 외형에서 얼굴·옷·모자·망토 섞기 · 마을 동물(강아지·고양이·소·돼지·병아리) · 휴대폰 화면 새 단장: 어디서나 같은 버튼, 부드러운 조이스틱, 지역 이름 안내</p>
     <p id="nickrow" hidden>🌐 닉네임 <input id="nick" maxlength="12" placeholder="모험가" style="font:inherit;padding:3px 8px;border:2px solid var(--ink);border-radius:8px;width:9em"></p>
     <p id="gfxinfo"></p>
     <div class="hfoot"><button id="start">시작하기</button><button id="reset" style="background:#e8dcc0">새로 시작</button></div>
@@ -1114,6 +1122,8 @@ function nearBench(r = 4) {
 const hasCost = c => Object.entries(c).every(([k, v]) => (S.mat[k] || 0) >= v);
 function craftState(r) {
   if (r.bench && !nearBench()) return "bench";
+  if (r.fire && !nearFire()) return "fire";
+  if (r.fish && !FISHES.some(k => (S.inv[k] || 0) > 0)) return "cost";
   if (r.tool) { const o = S.tools[r.tool[0]]; if (o.t > r.tool[1] || (o.t === r.tool[1] && o.d > 0)) return "have"; }
   if (r.repair && !Object.entries(S.tools).some(([k, o]) => o.t > 0 && o.d < TOOLDEF[k].tiers[o.t].dur)) return "full";
   return hasCost(r.cost) ? "ok" : "cost";
@@ -1121,7 +1131,9 @@ function craftState(r) {
 function craft2(id) {
   const r = CRAFT2.find(r => r.id === id); if (!r) return; const st = craftState(r);
   if (st === "bench") return say("🧰 작업대 가까이에서 만들 수 있어요. 건설(B)에서 작업대를 지어 보세요.", 2600);
+  if (st === "fire") return say("🔥 모닥불 옆에서 요리할 수 있어요. 건설(B)에서 모닥불(목재 3·돌 2)을 지어 보세요.", 2600);
   if (st !== "ok") return;
+  if (r.fish) { const k = FISHES.find(k => (S.inv[k] || 0) > 0); S.inv[k]--; }
   for (const k in r.cost) S.mat[k] -= r.cost[k];
   if (r.tool) { const [k, t] = r.tool; S.tools[k] = { t, d: TOOLDEF[k].tiers[t].dur }; say(`${r.e} ${r.n}을(를) 만들었어요! 맞는 자원을 캘 때 자동으로 써요.`, 2600); }
   else if (r.repair) { for (const k in S.tools) { const o = S.tools[k]; if (o.t > 0) o.d = TOOLDEF[k].tiers[o.t].dur; } say("🔧 도구를 모두 고쳤어요.", 1800); }
@@ -1134,20 +1146,77 @@ function bodyCraft2() {
   const tl = Object.entries(TOOLDEF).map(([k, d]) => { const o = S.tools[k], tr = d.tiers[o.t]; return `<div class="tcard${o.t && !o.d ? " broken" : ""}"><b>${d.e}</b><span>${tr ? tr.n : d.n + " 없음"}</span>${tr ? `<i style="--w:${(o.d / tr.dur * 100).toFixed(0)}%"></i><small>${o.d ? `${o.d}/${tr.dur}` : "망가짐 · 작업대에서 고치기"}</small>` : `<small>맨손으로 느리게</small>`}</div>`; }).join("");
   const pf = Object.entries(PROF).map(([k, [e, n]]) => `<span class="mchip">${e} ${n} <b>Lv.${profLv(k)}</b></span>`).join("");
   const bench = nearBench(), row = r => {
-    const st = craftState(r), cost = Object.entries(r.cost).map(([k, v]) => `<span style="color:${(S.mat[k] || 0) >= v ? "inherit" : "#c0392b"}">${MAT[k][0]}${v}</span>`).join(" ");
-    const lab = { ok: "만들기", cost: "재료 부족", bench: "작업대 필요", have: "가지고 있음", full: "고칠 것 없음" }[st];
-    return `<div class="crow"><span class="ci">${r.e}</span><span class="cn"><b>${r.n}</b>${r.d ? `<small>${r.d}</small>` : ""}<small>${cost}</small></span><button data-craft2="${r.id}" ${st === "ok" || st === "bench" ? "" : "disabled"} class="${st === "bench" ? "need" : ""}">${lab}</button></div>`;
+    const st = craftState(r), cost = Object.entries(r.cost).map(([k, v]) => `<span style="color:${(S.mat[k] || 0) >= v ? "inherit" : "#c0392b"}">${MAT[k][0]}${v}</span>`).join(" ") + (r.fish ? `<span style="color:${FISHES.some(k => (S.inv[k] || 0) > 0) ? "inherit" : "#c0392b"}">🐟1</span>` : "");
+    const lab = { ok: r.g === "food" ? "요리하기" : "만들기", cost: "재료 부족", bench: "작업대 필요", fire: "모닥불 필요", have: "가지고 있음", full: "고칠 것 없음" }[st];
+    return `<div class="crow"><span class="ci">${r.e}</span><span class="cn"><b>${r.n}</b>${r.d ? `<small>${r.d}</small>` : ""}<small>${cost}</small></span><button data-craft2="${r.id}" ${st === "ok" || st === "bench" || st === "fire" ? "" : "disabled"} class="${st === "bench" || st === "fire" ? "need" : ""}">${lab}</button></div>`;
   };
   const sec = (g, t) => `<h3>${t}</h3>` + CRAFT2.filter(r => r.g === g).map(row).join("");
   const old = RECIPES.map((r, i) => { const ok = hasCost(r.cost), cost = Object.entries(r.cost).map(([k, v]) => `<span style="color:${(S.mat[k] || 0) >= v ? "inherit" : "#c0392b"}">${MAT[k][0]}${v}</span>`).join(" ");
     return `<div class="crow"><span class="ci">${r.e}</span><span class="cn"><b>${r.n}</b><small>${cost}</small></span><button data-craft="${i}" ${ok ? "" : "disabled"}>만들기</button></div>`; }).join("");
   return `<h2>🔨 제작</h2><div class="mchips">${chips}</div><h3>🧰 내 도구</h3><div class="tcards">${tl}</div>
     <div class="benchst ${bench ? "on" : ""}">${bench ? "🧰 작업대 옆이에요 — 모든 제작법을 쓸 수 있어요" : "🧰 작업대 없음 — 건설(B)에서 작업대(목재 6·돌 2)를 지으면 판자·가구를 만들 수 있어요"}</div>
-    ${sec("tool", "🪓 도구")}${sec("mat", "🟫 재료")}${sec("furn", "🛋️ 가구 (내 집에 놓기)")}
+    ${sec("tool", "🪓 도구")}${sec("mat", "🟫 재료")}${sec("furn", "🛋️ 가구 (내 집에 놓기)")}${sec("food", nearFire() ? "🍳 요리 — 🔥 모닥불 옆이에요" : "🍳 요리 (모닥불 옆에서)")}
     <h3>📈 숙련도</h3><div class="mchips">${pf}</div>
     <details class="oldc"><summary>⚔️ 모험 장비</summary>${old}</details>`;
 }
 bodyCraft = bodyCraft2;
+
+/* ===== GDD P3-1 (2026-11-28): 허기 · 스태미나 · 먹기 · 요리 =====
+   난이도 보통(GDD 8.3): 즉사 없음, 단계적으로 알려 주고 대응할 시간을 줘요.
+   - 허기(S.surv.food 0~100): 넓은 세상·던전에서 30초에 1, 마을·집에서는 90초에 1 줄어요(100 → 0 약 50분)
+     30 아래면 스태미나 회복이 절반, 0이면 체력이 천천히 줄지만 최대 체력의 25% 아래로는 안 내려가요
+   - 스태미나(player.sta 0~100): 채집·공격 2.5, 구르기 15. 쉬면 초당 14 회복. 5 아래면 채집·공격이 느려져요
+   - 먹기: 가장 든든한 음식부터 자동으로(🍙 버튼 · T 키). 요리는 모닥불 옆에서(제작 창 '요리') */
+MAT.cmeat = ["🍗", "구운 고기"]; MAT.soup = ["🥣", "열매 수프"]; MAT.gfish = ["🍢", "생선 구이"];
+const FOODS = [   // 든든한 순서
+  { k: "soup", src: "mat", f: 32, sta: 40, n: "열매 수프" }, { k: "cmeat", src: "mat", f: 36, sta: 30, n: "구운 고기" }, { k: "gfish", src: "mat", f: 30, sta: 30, n: "생선 구이" },
+  { k: "peach", src: "inv", f: 16, n: "복숭아" }, { k: "apple", src: "inv", f: 14, n: "사과" }, { k: "orange", src: "inv", f: 14, n: "오렌지" },
+  { k: "berry", src: "mat", f: 6, n: "열매" }, { k: "meat", src: "mat", f: 7, n: "날고기", raw: true },
+];
+const FISHES = ["crucian", "tropical", "puffer"];
+S.surv = Object.assign({ food: 100 }, S.surv && typeof S.surv === "object" ? S.surv : {});
+player.sta = 100;
+const SV = { actT: 9, warnT: -99, starveT: 0, low: false };
+const foodHave = f => f.src === "mat" ? (S.mat[f.k] || 0) : (S.inv[f.k] || 0);
+function eatBest() {
+  if (!started || modal) return;
+  if (S.surv.food >= 97) return say("🙂 배가 불러요.", 1400);
+  const f = FOODS.find(f => foodHave(f) > 0); if (!f) return say("🍙 먹을 게 없어요. 덤불의 열매, 과일나무, 사냥한 고기를 모아 모닥불에서 요리해 보세요.", 3200);
+  if (f.src === "mat") S.mat[f.k]--; else S.inv[f.k]--;
+  S.surv.food = Math.min(100, S.surv.food + f.f); if (f.sta) player.sta = Math.min(100, player.sta + f.sta);
+  sfx("potion"); pAnim("Use_Item", .6); fx(player.x, player.y - 26, `🍙 +${f.f}`, "#ffd34d"); SV.low = S.surv.food < 30;
+  say(`😋 ${f.n}을(를) 먹었어요${f.raw ? " (익히면 훨씬 든든해요)" : ""}. 배부름 ${Math.round(S.surv.food)}`, 1800); hud();
+}
+// 요리법(모닥불 옆): 제작 창의 '🍳 요리' 칸에 나와요
+CRAFT2.push(
+  { id: "c_meat", g: "food", fire: 1, e: "🍗", n: "구운 고기", cost: { meat: 1 }, give: { cmeat: 1 }, d: "배부름 +36 · 스태미나 +30" },
+  { id: "c_meat5", g: "food", fire: 1, e: "🍗", n: "구운 고기 ×5", cost: { meat: 5 }, give: { cmeat: 5 }, d: "한 번에 많이" },
+  { id: "c_soup", g: "food", fire: 1, e: "🥣", n: "열매 수프", cost: { berry: 3 }, give: { soup: 1 }, d: "배부름 +32 · 스태미나 +40" },
+  { id: "c_fish", g: "food", fire: 1, e: "🍢", n: "생선 구이", cost: {}, fish: 1, give: { gfish: 1 }, d: "잡은 물고기 한 마리 → 배부름 +30" },
+);
+function nearFire(r = 3) {
+  if (!(scene === "dun" && dun && dun.kind === "world")) return false;
+  const px = Math.floor(player.x / T), py = Math.floor((player.y + 8) / T);
+  for (let y = py - r; y <= py + r; y++) for (let x = px - r; x <= px + r; x++) if (wc(x, y) === CELL.FIRE) return true;
+  return false;
+}
+/* 매 프레임 */
+function survTick(dt) {
+  if (!started || modal || resetting) return;
+  const P = player, out = scene === "dun", lowF = S.surv.food < 30, zero = S.surv.food <= 0;
+  S.surv.food = Math.max(0, S.surv.food - dt / (out ? 30 : 90));
+  if ((SV.actT += dt) > .6) P.sta = Math.min(100, P.sta + dt * 14 * (zero ? .3 : lowF ? .5 : 1));
+  if (lowF && !SV.low) { SV.low = true; say("🍙 배가 고파요. 먹으면(🍙 · T) 스태미나가 다시 잘 차올라요.", 3000); }
+  if (!lowF) SV.low = false;
+  if (zero && out) { if ((SV.starveT += dt) > 4) { SV.starveT = 0; const m = pstats().maxhp; if (P.hp > m * .25) { P.hp = Math.max(m * .25, P.hp - 2); fx(P.x, P.y - 20, "🍙 배고파요", "#ffb04d"); } }
+    if (vtime - SV.warnT > 30) { SV.warnT = vtime; say("😵 너무 배고파요! 체력이 조금씩 줄어요. 열매·고기를 먹어요.", 3200); } }
+}
+const staUse = n => { player.sta = Math.max(0, player.sta - n); SV.actT = 0; };
+{ const a0 = attack; attack = function (held) { const P = player, cd0 = P.atkCd; const r = a0.call(this, held); if (scene === "dun" && cd0 <= 0 && P.atkCd > 0) { staUse(2.5); if (P.sta < 5) { P.atkCd *= 2.2; if (vtime - SV.warnT > 6) { SV.warnT = vtime; say("😮‍💨 힘들어요… 잠깐 쉬면 다시 빨라져요.", 1800); } } } return r; }; }
+{ const d0 = dash; dash = function () { const P = player; if (scene === "dun" && P.eCd <= 0 && !modal && P.sta < 15) return say("😮‍💨 숨이 차서 구를 수 없어요.", 1400); const e0 = P.eCd, r = d0.call(this); if (P.eCd > e0) staUse(15); return r; }; }
+{ const s0 = sleepAt; sleepAt = function (...a) { player.sta = 100; S.surv.food = Math.max(5, S.surv.food - 8); return s0.apply(this, a); }; }   // 자고 나면 개운하지만 조금 출출
+addEventListener("keydown", e => { if (e.code === "KeyT" && !e.repeat && started && document.activeElement?.id !== "chatin") eatBest(); });
+{ let lt = performance.now(); (function loop(now) { survTick(clamp((now - lt) / 1000, 0, .1)); lt = now; requestAnimationFrame(loop); })(lt); }
 
 /* ---------- RPG: 던전 · 야생 지대 ---------- */
 function matRow() { const s = Object.entries(MAT).filter(([k]) => S.mat[k] > 0).map(([k, [e]]) => `${e}${S.mat[k]}`).join(" "); return s ? `<div>${s}</div>` : ""; }
@@ -1158,6 +1227,7 @@ function renderRpg() {
   el.hidden = false;
   el.innerHTML = `<div class="bar"><i class="hp" style="width:${clamp(P.hp / st.maxhp * 100, 0, 100)}%"></i><span>❤️ ${Math.max(0, Math.ceil(P.hp))}/${st.maxhp}</span></div>
     <div class="bar"><i class="xp" style="width:${S.xp / xpNeed(S.lv) * 100}%"></i><span>Lv.${S.lv} · ${S.xp}/${xpNeed(S.lv)}</span></div>
+    <div class="bar"><i class="fd" style="width:${S.surv.food}%"></i><span>🍙 배부름 ${Math.round(S.surv.food)} · ⚡ ${Math.round(P.sta)} <small>(T 먹기)</small></span></div>
     <div class="sk"><b>스페이스</b> 공격${wild ? "·채집" : ""} · <b>Q</b> 회전 ${cd(P.qCd)}<br><b>E</b> 구르기 ${cd(P.eCd)} · <b>R</b> 화염구 ${skLv("fire") ? cd(P.rCd) : "미습득"}<br><b>F</b> 🧪×${S.potions}${wild ? " · <b>V</b> 먹이주기 · <b>G</b> 탈것" : ""}<br><b>I</b> 장비 · <b>K</b> 캐릭터 · <b>C</b> 제작${world ? " · <b>B</b> 건설 · <b>N</b> 지도 · <b>J</b> 의뢰" : ""}</div>
     <div>${dun.arena ? arenaInfo() : world ? worldInfo() : wild ? "🌴 야생 지대" : dun.demon ? `😈 마왕성 ${dun.depth - DEMON_BASE + 1}층` : `🕳️ 지하 ${dun.depth}층`} · 몬스터 ${dun.mons.length}마리${S.pts + S.sp > 0 ? " · ✨포인트!" : ""}</div>${questLine() ? `<div>${questLine()}</div>` : ""}${dun.demon ? bossBar() : ""}`;
 }
@@ -4393,7 +4463,7 @@ function ctxWorld() {
 const HST = document.createElement("div"); HST.id = "hst"; $("stage").appendChild(HST);
 function renderHst() {
   const st = pstats(), hp = clamp(player.hp / st.maxhp, 0, 1);
-  const h = `<div class="hp${hp < .3 ? " low" : ""}"><i style="width:${(hp * 100).toFixed(1)}%"></i><span>❤️ ${Math.max(0, Math.ceil(player.hp))}/${st.maxhp}</span></div><div class="row"><span>${clockText()}</span><span>🔔 ${S.bells.toLocaleString()}</span><span class="lv">Lv.${S.lv}</span></div>`;
+  const h = `<div class="hp${hp < .3 ? " low" : ""}"><i style="width:${(hp * 100).toFixed(1)}%"></i><span>❤️ ${Math.max(0, Math.ceil(player.hp))}/${st.maxhp}</span></div><div class="sb"><i class="fd${S.surv.food < 30 ? " low" : ""}" style="width:${S.surv.food.toFixed(0)}%"></i><i class="st" style="width:${player.sta.toFixed(0)}%"></i><span>🍙 ${Math.round(S.surv.food)} · ⚡ ${Math.round(player.sta)}</span></div><div class="row"><span>${clockText()}</span><span>🔔 ${S.bells.toLocaleString()}</span><span class="lv">Lv.${S.lv}</span></div>`;
   if (h !== HST.__h) { HST.__h = h; HST.innerHTML = h; }
 }
 
@@ -4410,11 +4480,11 @@ const JZ = document.createElement("div"); JZ.id = "jzone"; JZ.innerHTML = '<div 
 /* ---- 행동 버튼 + 장면별 보조 버튼 ---- */
 const ACT = document.createElement("div"); ACT.id = "act2"; ACT.innerHTML = '<div id="actx" hidden></div><div id="subs"></div><button id="abtn" data-k="Space"><b>✋</b><small>행동</small></button>'; $("stage").appendChild(ACT);
 const SUBS = {
-  out: [["🎒", "주머니", "inv"]],
+  out: [["🎒", "주머니", "inv"], ["🍙", "먹기", "eat"]],
   home: [["✋", "집기", "KeyX"]],
-  dun: [["💨", "구르기", "KeyE"], ["🧪", "물약", "KeyF"], ["🌀", "회전", "KeyQ"], ["🔥", "화염", "KeyR"]],
-  wild: [["💨", "구르기", "KeyE"], ["🧪", "물약", "KeyF"], ["🍖", "먹이", "KeyV"], ["🐎", "탈것", "KeyG"], ["⋯", "더보기", "more"]],
-  world: [["💨", "구르기", "KeyE"], ["🧪", "물약", "KeyF"], ["🏗️", "건설", "build"], ["⋯", "더보기", "more"]],
+  dun: [["🍙", "먹기", "eat"], ["💨", "구르기", "KeyE"], ["🧪", "물약", "KeyF"], ["🌀", "회전", "KeyQ"]],
+  wild: [["🍙", "먹기", "eat"], ["💨", "구르기", "KeyE"], ["🧪", "물약", "KeyF"], ["🍖", "먹이", "KeyV"], ["🐎", "탈것", "KeyG"]],
+  world: [["🍙", "먹기", "eat"], ["💨", "구르기", "KeyE"], ["🧪", "물약", "KeyF"], ["🏗️", "건설", "build"], ["⋯", "더보기", "more"]],
   more: [["🌀", "회전", "KeyQ"], ["🔥", "화염", "KeyR"], ["🍖", "먹이", "KeyV"], ["🐎", "탈것", "KeyG"]],
   building: [["🗑️", "철거", "KeyX"], ["✅", "건설 끝", "KeyB"]],
 };
@@ -4430,7 +4500,7 @@ function renderSubs() {
 ACT.addEventListener("pointerdown", e => {
   const b = e.target.closest("button"); if (!b || !started) return; e.preventDefault(); sfx("ui");
   if (b.dataset.k) { try { b.setPointerCapture(e.pointerId); } catch (_) {} b.classList.add("down"); press(b.dataset.k); const up = () => { b.classList.remove("down"); release(b.dataset.k); b.removeEventListener("pointerup", up); b.removeEventListener("pointercancel", up); }; b.addEventListener("pointerup", up); b.addEventListener("pointercancel", up); return; }
-  const a = b.dataset.a; if (a === "more") { subMore = !subMore; renderSubs(); } else if (a === "inv") document.body.classList.toggle("showinv"); else if (a === "build") togglePanel("build");
+  const a = b.dataset.a; if (a === "more") { subMore = !subMore; renderSubs(); } else if (a === "inv") document.body.classList.toggle("showinv"); else if (a === "build") togglePanel("build"); else if (a === "eat") eatBest();
 });
 function renderAct() {
   const h = started && !modal ? ctxHint() : "", ab = $("abtn"), x = $("actx");
@@ -4482,7 +4552,7 @@ function hudTick(dt) {
   if (!M2) return; renderHst(); renderAct(); placeMiniTap();
 }
 { let lt = performance.now(); (function loop(now) { const dt = clamp((now - lt) / 1000, 0, .1); lt = now; hudTick(dt); requestAnimationFrame(loop); })(lt); }
-Object.assign(window.__game, { JOY, ctxWorld, areaName, AREA, M2, setCell: (...a) => setCell(...a), worldGather: () => worldGather(), save: () => save(), CRAFT2, craft2: id => craft2(id) });
+Object.assign(window.__game, { JOY, ctxWorld, areaName, AREA, M2, setCell: (...a) => setCell(...a), worldGather: () => worldGather(), save: () => save(), CRAFT2, craft2: id => craft2(id), eatBest: () => eatBest(), SV, survTick: dt => survTick(dt), dash: () => dash() });
 
 </script>
 </body>
