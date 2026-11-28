@@ -311,7 +311,7 @@
       <div><b>📋 메뉴</b><span>오른쪽 아이콘을 누르거나<br>단축키 (<kbd>H</kbd> 전체 보기)</span></div>
       <div><b>🧰 마을 도구</b><span><kbd>1</kbd>~<kbd>5</kbd> 손·채·낚싯대·삽·묘목</span></div>
     </div>
-    <p class="news">🆕 <b>최근 업데이트</b> · <b>⚙️ 설정 → 🖼️ 화면 스타일에서 귀여운 2D로 바꿀 수 있어요!</b> · 새 마을 주민(퍼그 콩이·소 음메·애니 나비·토리)과 돌아다니는 시바·여우 · 휴대폰 끊김 최적화 · <b>플레이어가 애니풍 캐릭터로!</b> (🧑 외형에서 3명 중 고르기) · 마을 문 바로 밖에 약한 몬스터 · 3D 주민·국왕·몬스터 · 공격 전 ❗ 예고와 타격감</p>
+    <p class="news">🆕 <b>최근 업데이트</b> · <b>⚙️ 설정 → 🎨 그래픽 스타일: 듀랑고풍·원신풍·파스텔 툰·부드러운 3D·귀여운 2D 중에서 골라요!</b> · 새 마을 주민(퍼그 콩이·소 음메·애니 나비·토리)과 돌아다니는 시바·여우 · 휴대폰 끊김 최적화 · <b>플레이어가 애니풍 캐릭터로!</b> (🧑 외형에서 3명 중 고르기) · 마을 문 바로 밖에 약한 몬스터 · 3D 주민·국왕·몬스터 · 공격 전 ❗ 예고와 타격감</p>
     <p class="goals">🏪 상점에서 팔고 사기 · 🕳️ 던전 · 🌍 오픈월드(건설·채집·의뢰) · 🏟️ 아레나 · 👑 국왕의 의뢰로 대마왕 토벌</p>
     <p id="nickrow" hidden>🌐 닉네임 <input id="nick" maxlength="12" placeholder="모험가" style="font:inherit;padding:3px 8px;border:2px solid var(--ink);border-radius:8px;width:9em"></p>
     <p id="gfxinfo"></p>
@@ -362,9 +362,12 @@ THREE.ColorManagement.enabled = false;
 const RENDER_VER = "2026-11-28";
 let SAFE_FROM = "";   // 툰이 된 이유: "safe"(기기 검사 실패 기록) / "url"(주소 지정) / ""
 const RSTYLE = (() => { try { const h = (location.hash.match(/style=(\w+)/) || [])[1]; let v = new URLSearchParams(location.search).get("style") || h; if (v) SAFE_FROM = "url";
-  if (!v) try { const raw = localStorage.getItem("pokgeun-safe"); if (raw) { let o = null; try { o = JSON.parse(raw); } catch (e) {} if (o && o.v === RENDER_VER) { v = o.style; SAFE_FROM = "safe"; } else localStorage.removeItem("pokgeun-safe"); } } catch (e) {}
+  let pref = null; try { pref = localStorage.getItem("pokgeun-style"); } catch (e) {}   // 설정에서 고른 그래픽 스타일
+  if (!v && (!pref || pref === "real" || pref === "pbr")) try { const raw = localStorage.getItem("pokgeun-safe"); if (raw) { let o = null; try { o = JSON.parse(raw); } catch (e) {} if (o && o.v === RENDER_VER) { v = o.style; SAFE_FROM = "safe"; } else localStorage.removeItem("pokgeun-safe"); } } catch (e) {}
+  if (!v) v = pref;
   return ["toon", "cel", "pbr", "real"].includes(v) ? v : "real"; } catch (e) { return "toon"; } })();
 const REAL = RSTYLE === "real", PBRL = RSTYLE === "pbr" || REAL;
+const VIEW2D = (() => { try { const q = new URLSearchParams(location.search).get("view"); if (q) return q === "2d"; return localStorage.getItem("pokgeun-view") === "2d"; } catch (e) { return false; } })();
 THREE.ColorManagement.enabled = REAL;   // 듀랑고풍: 정확한 색 관리 + ACES 톤매핑
 const RX = REAL ? await Promise.all([import("three/addons/objects/Sky.js"), import("three/addons/postprocessing/OutputPass.js")]).catch(() => null) : null;
 const PBRX = PBRL ? await Promise.all([import("three/addons/postprocessing/GTAOPass.js"), Promise.resolve(null)]).catch(() => null) : null;
@@ -1420,7 +1423,7 @@ if (!QLEVELS[gfxLv]) gfxLv = (window.matchMedia && matchMedia("(pointer:coarse)"
 const QUAL = { ...QLEVELS[gfxLv] }, TOUCHDEV = !!(window.matchMedia && matchMedia("(pointer:coarse)").matches);
 const touchCap = () => { if (!TOUCHDEV) return; QUAL.dpr = Math.min(QUAL.dpr, gfxLv === "high" ? 2 : 1.5); if (gfxLv !== "high") QUAL.bloom = false; QUAL.shadow = Math.min(QUAL.shadow, gfxLv === "high" ? 2048 : 1024); };   // 휴대폰은 화면 픽셀이 많고 GPU가 약해서 낮춰요
 touchCap();
-{ const gi = document.getElementById("gfxinfo"); if (gi) { gi.innerHTML = `🎨 그래픽: <b>${RSTYLE === "real" ? "실사(듀랑고풍)" : "툰"}</b> · 화질 ${QLEVELS[gfxLv].n} · 버전 ${RENDER_VER}` + (RSTYLE !== "real" ? ` <button id="tryReal">🌄 실사 그래픽 다시 시도</button>` : "");
+{ const gi = document.getElementById("gfxinfo"); if (gi) { gi.innerHTML = `🎨 그래픽: <b>${VIEW2D ? "귀여운 2D" : { real: "듀랑고풍(실사)", cel: "원신풍(애니 셀)", toon: "파스텔 툰", pbr: "부드러운 3D" }[RSTYLE]}</b> · 화질 ${QLEVELS[gfxLv].n} · 버전 ${RENDER_VER}` + (SAFE_FROM === "safe" ? ` <button id="tryReal">🌄 실사 그래픽 다시 시도</button>` : "");
   const tb = document.getElementById("tryReal"); if (tb) tb.onclick = () => { try { localStorage.removeItem("pokgeun-safe"); } catch (e) {} location.replace(location.pathname); }; } }
 let composer = null, bloomPass = null, gradePass = null, postTried = false;
 if (HAS3D) try {
@@ -2757,7 +2760,6 @@ function drawDun() {
 /* ===== 귀여운 2D 화면 (설정에서 3D ↔ 2D) — Ninja Adventure 도트 그림(Pixel-boy, CC0) =====
    게임 내용(마을·월드·전투·저장)은 그대로, 보이는 것만 위에서 내려다보는 2D로 그려요. 3D 렌더링은 건너뛰어서 휴대폰에서 훨씬 가벼워요.
    마을·오픈월드·동굴·던전·마왕성·아레나·야생·집 안 모두 2D로 그려요. */
-const VIEW2D = (() => { try { const q = new URLSearchParams(location.search).get("view"); if (q) return q === "2d"; return localStorage.getItem("pokgeun-view") === "2d"; } catch (e) { return false; } })();
 const V2 = { ready: false, started: false, img: {}, st: new WeakMap(), k: 1, cx: 0, cy: 0, W: 0, H: 0, atk: 0, evk: -1 };
 const V2CH = ["Boy", "Woman", "Princess", "Knight", "Noble", "Villager", "OldMan", "GoldKnight", "Monk"];
 const V2MO = ["Slime", "Slime2", "Butterfly", "ButterflyBlue", "Mushroom", "Mushroom2", "Spirit", "Spirit2", "Cyclope", "Cyclope2", "Beast", "Beast2", "Dragon", "Lizard", "Lizard2", "Reptile", "Reptile2", "Mole", "Snake", "Skull"];
@@ -3911,7 +3913,7 @@ player.hp = pstats().maxhp;
 resize(); hud(); loadKay(); loadMan(); loadDinos(); loadMonsters(); load2D();
 if (SAVE.from.startsWith(SAVE_KEY + ".bak")) setTimeout(() => say("⚠️ 저장 파일이 손상돼서 가장 최근 백업으로 불러왔어요. (깨진 원본은 따로 보관했어요)", 7000), 1200); $("clock").textContent = clockText(); setMute(muted);
 $("snd").onclick = () => { setMute(!muted); sfx("ui"); };
-const STY_N = { toon: "툰", cel: "원신풍 셀", pbr: "PBR", real: "듀랑고풍" };
+const STY_N = { toon: "파스텔 툰", cel: "원신풍", pbr: "부드러운 3D", real: "듀랑고풍" };
 $("sty").textContent = "🖌️ " + STY_N[RSTYLE];
 $("sty").onclick = () => {
   const nx = { real: "toon", toon: "cel", cel: "pbr", pbr: "real" }[RSTYLE]; save(); sfx("ui"); say(`🖌️ ${STY_N[nx]} 스타일로 바꾸는 중…`, 3000);
@@ -3937,11 +3939,15 @@ const tapKey = code => { press(code); setTimeout(() => release(code), 90); };
 /* 설정(⚙️): 소리 · 화질 · 그래픽 스타일 · 시점을 한곳에 */
 function renderCfg() {
   const it = (id, lab) => `<button data-cfg="${id}"><span>${lab}</span><b>${$(id).textContent.replace(/^\S+\s*/, "") || $(id).textContent}</b></button>`;
-  $("cfg").innerHTML = `<h3>⚙️ 설정</h3>${it("snd", "🔊 소리")}${it("gfx", "🎨 화질")}${it("view", "🎥 시점")}<button data-cfg="keys"><span>⌨️ 조작 방법</span><b>H</b></button><button data-cfg="savebox"><span>💾 저장 관리</span><b>›</b></button><button data-cfg="view2d"><span>🖼️ 화면 스타일</span><b>${VIEW2D ? "귀여운 2D" : "3D"}</b></button>`;
+  $("cfg").innerHTML = `<h3>⚙️ 설정</h3>${it("snd", "🔊 소리")}${it("gfx", "🎨 화질")}${it("view", "🎥 시점")}<button data-cfg="keys"><span>⌨️ 조작 방법</span><b>H</b></button><button data-cfg="savebox"><span>💾 저장 관리</span><b>›</b></button><button data-cfg="stylebox"><span>🎨 그래픽 스타일</span><b>${VIEW2D ? "귀여운 2D" : STY_N[RSTYLE]}</b></button>`;
   const sb = $("cfg").querySelector('[data-cfg="snd"] b'); if (sb) sb.textContent = muted ? "꺼짐" : "켜짐";
 }
 $("cfgbtn").onclick = e => { e.stopPropagation(); const c = $("cfg"); c.hidden = !c.hidden; if (!c.hidden) renderCfg(); sfx("ui"); };
-$("cfg").addEventListener("click", e => { const b = e.target.closest("[data-cfg]"); if (!b) return; e.stopPropagation(); const id = b.dataset.cfg; if (id === "keys") { $("cfg").hidden = true; return toggleKeys(); } if (id === "savebox") { $("cfg").hidden = true; return openSaveBox(); } if (id === "view2d") { try { localStorage.setItem("pokgeun-view", VIEW2D ? "3d" : "2d"); } catch (e) {} save(); return location.reload(); } $(id).click(); setTimeout(renderCfg, 60); });
+$("cfg").addEventListener("click", e => { const b = e.target.closest("[data-cfg]"); if (!b) return; e.stopPropagation(); const id = b.dataset.cfg; if (id === "keys") { $("cfg").hidden = true; return toggleKeys(); } if (id === "savebox") { $("cfg").hidden = true; return openSaveBox(); } if (id === "stylebox") { const cur = VIEW2D ? "2d" : RSTYLE, opt = [["real", "🌄 듀랑고풍", "실사 조명·안개·그림자"], ["cel", "✨ 원신풍", "애니 셀 셰이딩·외곽선·밝은 색"], ["toon", "🍭 파스텔 툰", "둥글고 부드러운 툰"], ["pbr", "🪵 부드러운 3D", "실사와 툰 사이"], ["2d", "🧸 귀여운 2D", "위에서 보는 도트 그림(가장 가벼움)"]];
+      $("cfg").innerHTML = `<h3>🎨 그래픽 스타일</h3>` + opt.map(([k, n, d]) => `<button data-cfg="st:${k}"${k === cur ? ' style="outline:3px solid #ff8f5e"' : ""}><span>${n}<br><small style="opacity:.75">${d}</small></span><b>${k === cur ? "✓" : ""}</b></button>`).join("") + `<button data-cfg="back"><span>‹ 돌아가기</span></button>`; return; }
+    if (id === "back") return renderCfg();
+    if (id.startsWith("st:")) { const k = id.slice(3); try { if (k === "2d") localStorage.setItem("pokgeun-view", "2d"); else { localStorage.setItem("pokgeun-view", "3d"); localStorage.setItem("pokgeun-style", k); localStorage.removeItem("pokgeun-safe"); } } catch (e) {} save(); say("🎨 스타일을 바꾸는 중…", 2000);
+      try { const u = new URL(location.href); u.searchParams.delete("style"); u.searchParams.delete("view"); u.hash = ""; history.replaceState(null, "", u); } catch (e) {} return setTimeout(() => location.reload(), 150); } $(id).click(); setTimeout(renderCfg, 60); });
 addEventListener("pointerdown", e => { if (!e.target.closest("#cfg, #cfgbtn")) $("cfg").hidden = true; });
 /* 메뉴 독: 단축키를 몰라도 클릭으로 */
 const DOCK = [["equip", "⚔️", "장비", "I"], ["char", "📜", "캐릭터", "K"], ["craft", "🔨", "제작", "C"], ["build", "🏗️", "건설", "B"], ["quest", "📋", "의뢰", "J"], ["map", "🗺️", "지도", "N"], ["king", "👑", "왕국", "L"], ["arena", "🏟️", "아레나", "Y"], ["look", "🧑", "외형", "O"], ["keys", "❓", "도움말", "H"]];
@@ -4079,7 +4085,7 @@ for (const id of ["gear", "shop"]) { const el = $(id); let y0 = null;
   const up = e => { if (y0 === null) return; const dy = e.clientY - y0; y0 = null; el.style.transform = ""; if (dy > 70 && !(id === "gear" && gearTab === "perk")) closeShop(); };
   el.addEventListener("pointerup", up); el.addEventListener("pointercancel", up); }
 renderDock();
-window.__game = { get V2() { return V2; }, VIEW2D, v2on, critters, get VRMV() { return VRMV; }, get NAT() { return NAT; }, get R3() { return R3; }, get VRMS() { return VRMS; }, spawnNearV: () => spawnNear(), VILM, get hitStop() { return hitStop; }, get MONM() { return MONM; }, ENT, MON_WIND, ELITE, eliteify, eliteAI, saveApi: { save, exportSave, importSave, listBackups, restoreBackup, backupNow, SAVE, SAVE_VER },  get DINOM() { return DINOM; }, wsolid, bioBase,  equipBag, unequip, homeTileAt, openShop, enterHome: () => enterHome(), get furnSel() { return furnSel; }, ctxHint, renderBar,  get sun() { return sun; }, get GRD() { return GRD; }, get S3() { return S3; }, setYaw: v => { camYaw = v; camManT = vtime + 999; }, get MAN() { return MAN; }, get KAY() { return KAY; }, get curPE() { return curPE; }, pAnim, WX, setWeather: t => { WX.type = t; WX.t = 9999; }, startArena, arenaTick, startWave, gemGain, choosePerk, finishArena, openPerk, autoFight, idleStored, dailyTouch, genArena, mkMonT, get PERKS() { return PERKS; }, get ARES() { return ARES; }, sEvent, storyReady, reportStory, openKing, nearKing, demonAI, finalizeDemon, enterDemon, onDemonDefeat, mkDemon, damageP, addFame, get STORY() { return STORY; }, NET, spawnNear, worldTick, killMon, setBuild: i => { buildSel = i == null ? null : BUILD[i]; }, farmAct, winteract, genOffers, turnIn, warpTo, worldAct, enterWorld, getWorld, get WORLD() { return WORLD; }, get dun() { return dun; }, wc, wb, setClock: v => { clock = v; }, fireball, feed, toggleMount, craft, togglePanel, enterDungeon, get dun() { return dun; }, pstats, genGear, attack, scene: () => scene, furnSelSet: v => { furnSel = v; renderFurn(); }, player, trees, S, keys, act, get fishing() { return fishing; }, bugs, villagers }; // 디버그/테스트용
+window.__game = { RSTYLE, get V2() { return V2; }, VIEW2D, v2on, critters, get VRMV() { return VRMV; }, get NAT() { return NAT; }, get R3() { return R3; }, get VRMS() { return VRMS; }, spawnNearV: () => spawnNear(), VILM, get hitStop() { return hitStop; }, get MONM() { return MONM; }, ENT, MON_WIND, ELITE, eliteify, eliteAI, saveApi: { save, exportSave, importSave, listBackups, restoreBackup, backupNow, SAVE, SAVE_VER },  get DINOM() { return DINOM; }, wsolid, bioBase,  equipBag, unequip, homeTileAt, openShop, enterHome: () => enterHome(), get furnSel() { return furnSel; }, ctxHint, renderBar,  get sun() { return sun; }, get GRD() { return GRD; }, get S3() { return S3; }, setYaw: v => { camYaw = v; camManT = vtime + 999; }, get MAN() { return MAN; }, get KAY() { return KAY; }, get curPE() { return curPE; }, pAnim, WX, setWeather: t => { WX.type = t; WX.t = 9999; }, startArena, arenaTick, startWave, gemGain, choosePerk, finishArena, openPerk, autoFight, idleStored, dailyTouch, genArena, mkMonT, get PERKS() { return PERKS; }, get ARES() { return ARES; }, sEvent, storyReady, reportStory, openKing, nearKing, demonAI, finalizeDemon, enterDemon, onDemonDefeat, mkDemon, damageP, addFame, get STORY() { return STORY; }, NET, spawnNear, worldTick, killMon, setBuild: i => { buildSel = i == null ? null : BUILD[i]; }, farmAct, winteract, genOffers, turnIn, warpTo, worldAct, enterWorld, getWorld, get WORLD() { return WORLD; }, get dun() { return dun; }, wc, wb, setClock: v => { clock = v; }, fireball, feed, toggleMount, craft, togglePanel, enterDungeon, get dun() { return dun; }, pstats, genGear, attack, scene: () => scene, furnSelSet: v => { furnSel = v; renderFurn(); }, player, trees, S, keys, act, get fishing() { return fishing; }, bugs, villagers }; // 디버그/테스트용
 </script>
 </body>
 </html>
