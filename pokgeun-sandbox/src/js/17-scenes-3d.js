@@ -47,7 +47,7 @@ function drawVillage() {
   PL0.x = P.x / T; PL0.z = pz; PL0.r = night ? 6 : 3; PL0.i = night ? 1.5 : .0; PL0.h = 1.8; PL0.c = 0xffd9a0;
   labelT("내 집", HOUSE.x + HOUSE.w / 2, HOUSE.y + HOUSE.h + .3, .3); labelT("다람쥐 상점", SHOP.x + SHOP.w / 2, SHOP.y + SHOP.h + .3, .3); labelT("던전 입구", CAVE.x + CAVE.w / 2, CAVE.y + CAVE.h + .35, .3); labelT("🏠 내 집 ←", G.gateX, G.gateZ + .3, .3); labelT("🏰 왕도 ↑", 15, -.6, .3); if (FEAT.arena) labelT("서바이벌 아레나", ARENA.x + 1.5, ARENA.y + ARENA.h + .3, .3);
   if (started && !modal) { const { tx, ty } = target(); cursorAt(tx, ty, terrain[ty] && terrain[ty][tx] === "w" ? -.1 : .03); } else G.cursor.visible = false;
-  follow(P.x / T, pz, W, H, D); finish(D); overlay();
+  follow(P.x / T, pz, W, H, D); finish(D); overlay(WORLD && WORLD.vreg && MOBUI() ? drawMiniWorld : null);
 }
 const mkRock0 = () => ({ g: mkRock() });
 

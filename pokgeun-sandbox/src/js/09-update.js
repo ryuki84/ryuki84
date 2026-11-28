@@ -6,7 +6,8 @@ function update(dt) {
   // 이동
   let ix = (keys.has("ArrowRight") || keys.has("KeyD") ? 1 : 0) - (keys.has("ArrowLeft") || keys.has("KeyA") ? 1 : 0);
   let iy = (keys.has("ArrowDown") || keys.has("KeyS") ? 1 : 0) - (keys.has("ArrowUp") || keys.has("KeyW") ? 1 : 0);
-  player.mv = !!(ix || iy); player.rawF = iy < 0 && !ix;
+  let amag = 1; if (JOY.on && !(ix || iy)) { ix = JOY.x; iy = JOY.y; amag = clamp(Math.hypot(ix, iy), .35, 1); }   // 아날로그: 모든 방향 + 살짝 밀면 천천히
+  player.mv = !!(ix || iy); player.rawF = iy < 0 && Math.abs(ix) < Math.abs(iy) * .4;
   if (keys.has("Comma") || keys.has("Period")) { camYaw += (keys.has("Comma") ? 1 : -1) * 2.2 * dt; camManT = vtime; }
   if (TPV() && (ix || iy)) { const c = Math.cos(camYaw), sn = Math.sin(camYaw), wx = ix * c + iy * sn, wz = -ix * sn + iy * c; ix = Math.abs(wx) < 1e-6 ? 0 : wx; iy = Math.abs(wz) < 1e-6 ? 0 : wz; }
   if (scene === "dun" && player.dash > 0 && !(ix || iy)) { ix = player.dx; iy = player.dy; }
@@ -14,7 +15,7 @@ function update(dt) {
     cancelFish();
     if (scene === "dun") { const l = Math.hypot(ix, iy); if (player.dash <= 0) { player.dx = ix / l; player.dy = iy / l; } }
     else if (Math.abs(ix) >= Math.abs(iy)) { player.dx = Math.sign(ix); player.dy = 0; } else { player.dx = 0; player.dy = Math.sign(iy); }
-    const len = Math.hypot(ix, iy), sp = (scene === "dun" ? (player.dash > 0 ? 340 : 120 * pstats().ms) : 120) * dt / len;
+    const len = Math.hypot(ix, iy), sp = (scene === "dun" ? (player.dash > 0 ? 340 : 120 * pstats().ms) : 120) * dt / len * (player.dash > 0 ? 1 : amag);
     if (!blocked(player.x + ix * sp, player.y + 8, 9, 6)) player.x += ix * sp;
     if (!blocked(player.x, player.y + 8 + iy * sp, 9, 6)) player.y += iy * sp;
   }

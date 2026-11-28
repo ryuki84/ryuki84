@@ -265,3 +265,95 @@
   #gear .lsec h3 { margin:10px 0 2px; font-size:14px; }
   #gear .lsec button:not([style*="border-radius:50%"]) { font-size:13px; }
   @media (max-width:760px), (pointer:coarse) { #gear.lookt { max-height:50vh !important; } }
+  /* ===== 모바일 개편 v2 (2026-11-28, src/js/29-hud.js) — body.m2 = 휴대폰(터치·좁은 화면) ===== */
+  #hst, #jzone, #act2, #minitap { display:none; }
+  #fade { position:absolute; inset:0; z-index:60; background:#1c1420; opacity:0; pointer-events:none; }
+  #fade.go { transition:opacity .55s ease-out; }
+  #banner { position:absolute; left:50%; top:22%; transform:translateX(-50%); z-index:24; pointer-events:none; padding:8px 22px; border-radius:999px; font-weight:800; font-size:clamp(16px,2.4vw,24px); color:#fff; background:rgba(28,22,34,.55); -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); text-shadow:0 1px 3px rgba(0,0,0,.4); white-space:nowrap; }
+  #banner[hidden] { display:none; }
+  #banner.show { animation:banner 2.6s ease both; }
+  @keyframes banner { 0% { opacity:0; transform:translate(-50%,8px); } 15%,75% { opacity:1; transform:translate(-50%,0); } 100% { opacity:0; transform:translate(-50%,-6px); } }
+  @media (prefers-reduced-motion:reduce) { #banner.show { animation:none; } #fade.go { transition:none; } }
+
+  body.m2 #bells, body.m2 #clock, body.m2 #rpg, body.m2 #abar, body.m2 #hint, body.m2 #touch, body.m2 #joy { display:none !important; }
+  body.m2 #hst { display:flex; flex-direction:column; gap:4px; position:absolute; left:calc(8px + env(safe-area-inset-left)); top:calc(8px + env(safe-area-inset-top)); z-index:16; width:min(176px,46vw); padding:6px 8px; border-radius:16px; background:var(--glass); -webkit-backdrop-filter:blur(14px) saturate(1.5); backdrop-filter:blur(14px) saturate(1.5); border:1px solid var(--edge); box-shadow:var(--shadow); font-size:12px; font-weight:700; }
+  body.m2 #hst .hp { position:relative; height:16px; border-radius:9px; background:rgba(74,59,42,.18); overflow:hidden; }
+  body.m2 #hst .hp i { position:absolute; left:0; top:0; bottom:0; background:linear-gradient(180deg,#ff7a70,#d83a3a); transition:width .2s; }
+  body.m2 #hst .hp.low i { animation:pulse 1s infinite; }
+  body.m2 #hst .hp span { position:absolute; inset:0; text-align:center; line-height:16px; font-size:11px; color:#fff; text-shadow:0 0 3px rgba(0,0,0,.7); }
+  body.m2 #hst .row { display:flex; justify-content:space-between; gap:6px; white-space:nowrap; font-variant-numeric:tabular-nums; }
+  body.m2 #hst .lv { opacity:.6; }
+  /* 오른쪽 위: 주머니 · 메뉴 · 설정 한 줄 */
+  body.m2 #cfgbtn { left:auto !important; right:calc(8px + env(safe-area-inset-right)); top:calc(8px + env(safe-area-inset-top)) !important; width:38px; height:34px; padding:0; display:flex; align-items:center; justify-content:center; font-size:16px; z-index:21; }
+  body.m2 #menubtn { right:calc(52px + env(safe-area-inset-right)) !important; top:calc(8px + env(safe-area-inset-top)) !important; width:38px; height:34px; padding:0 !important; display:flex !important; align-items:center; justify-content:center; font-size:16px !important; }
+  body.m2 #inv { right:calc(96px + env(safe-area-inset-right)) !important; top:calc(8px + env(safe-area-inset-top)) !important; max-width:52vw; padding:6px 12px !important; min-height:34px; font-size:12px !important; }
+  body.m2 #inv .invb { max-height:42vh; overflow:auto; }
+  body.m2 #cfg { left:auto !important; right:8px; top:calc(48px + env(safe-area-inset-top)) !important; width:min(260px,80vw); max-height:70vh; overflow:auto; }
+  body.m2.showdock #dock { top:calc(48px + env(safe-area-inset-top)) !important; grid-template-columns:repeat(4,64px) !important; }
+  body.m2.showdock #dock button { width:64px !important; height:58px !important; font-size:22px; }
+  body.m2 #dock button i { display:none; }
+  body.m2 #online { left:auto !important; right:8px; top:calc(124px + env(safe-area-inset-top)) !important; }
+  body.m2 #msg { top:calc(76px + env(safe-area-inset-top)) !important; max-width:min(78vw,420px); font-size:13px; }
+  body.m2 #chat { top:calc(80px + env(safe-area-inset-top)) !important; width:min(60vw,320px); }
+  body.m2 #furn { top:calc(80px + env(safe-area-inset-top)) !important; }
+  body.m2 #minitap { display:block; position:absolute; right:calc(9px + env(safe-area-inset-right)); z-index:12; border-radius:6px; cursor:pointer; }
+  body.m2 #minitap[hidden] { display:none; }
+  /* 마을 도구: 왼쪽 아래 한 줄(조이스틱은 화면 어디서나 떠요) */
+  body.m2 #tools { left:calc(8px + env(safe-area-inset-left)) !important; transform:none !important; bottom:calc(10px + env(safe-area-inset-bottom)) !important; gap:5px; z-index:17; }
+  body.m2 #tools .tool { width:44px; height:44px; }
+  body.m2 #tools .tool.on { transform:translateY(-4px); }
+  /* 조이스틱 영역: 화면 왼쪽 아래 절반, 누른 자리에 나타나요 */
+  body.m2.playing #jzone { display:block; position:absolute; left:0; bottom:0; width:52%; height:62%; z-index:13; touch-action:none; }
+  body.m2[data-scene="out"] #jzone { bottom:calc(64px + env(safe-area-inset-bottom)); height:56%; }
+  #jbase { position:absolute; width:116px; height:116px; margin:-58px 0 0 -58px; border-radius:50%; background:radial-gradient(circle, rgba(255,255,255,.32), rgba(255,255,255,.08)); border:2px solid rgba(255,255,255,.55); opacity:0; transition:opacity .12s; pointer-events:none; left:90px; top:70%; }
+  #jbase i { position:absolute; left:50%; top:50%; width:50px; height:50px; margin:-25px 0 0 -25px; border-radius:50%; background:linear-gradient(180deg,#ffd9a8,#f2a65a); box-shadow:0 4px 12px rgba(0,0,0,.28); }
+  body.m2.playing #jzone #jbase { opacity:.38; }
+  body.m2 #jzone.on #jbase { opacity:1; }
+  /* 행동 버튼 */
+  body.m2.playing #act2 { display:flex; position:absolute; right:calc(12px + env(safe-area-inset-right)); bottom:calc(14px + env(safe-area-inset-bottom)); z-index:18; flex-direction:column; align-items:flex-end; gap:8px; pointer-events:none; }
+  body.m2 #act2 > * { pointer-events:auto; }
+  body.m2 #act2 button { margin:0; padding:0; touch-action:none; -webkit-user-select:none; user-select:none; }
+  body.m2 #abtn { width:78px; height:78px; border-radius:50%; display:flex; flex-direction:column; align-items:center; justify-content:center; background:linear-gradient(180deg,#ffd9a8,#f2a65a); box-shadow:0 6px 18px rgba(242,140,60,.45), 0 1px 0 rgba(255,255,255,.7) inset; }
+  body.m2 #abtn b { font-size:28px; line-height:1; } body.m2 #abtn small { font-size:11px; font-weight:800; margin-top:2px; max-width:70px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  body.m2 #abtn.down, body.m2 #subs button.down { transform:scale(.92); filter:brightness(.9); }
+  body.m2 #actx { order:-2; max-width:min(56vw,280px); padding:5px 12px; border-radius:999px; font-size:12px; font-weight:700; color:#fff; background:rgba(28,22,34,.62); -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; pointer-events:none !important; }
+  body.m2 #actx[hidden] { display:none; }
+  body.m2 #subs { order:-1; display:grid; grid-template-columns:repeat(2,48px); gap:7px; direction:rtl; }
+  body.m2 #subs button { position:relative; width:48px; height:48px; border-radius:50%; font-size:19px; line-height:1; display:flex; flex-direction:column; align-items:center; justify-content:center; direction:ltr; background:var(--glass); -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); border:1px solid var(--edge); box-shadow:0 3px 10px rgba(30,22,10,.22); overflow:hidden; }
+  body.m2 #subs button small { font-size:8.5px; font-weight:800; margin-top:1px; }
+  body.m2 #subs button::after { content:""; position:absolute; inset:0; background:conic-gradient(rgba(20,16,28,.55) var(--cd,0%), transparent 0); pointer-events:none; }
+  body.m2 #subs button.dis { opacity:.4; }
+  body.m2 #subs button.on { background:linear-gradient(180deg,#ffd9a8,#f2a65a); }
+  /* 패널: 세로는 아래 시트, 가로는 오른쪽 패널(게임 화면이 왼쪽에 보이게) */
+  body.m2 #gear, body.m2 #shop { max-height:78vh !important; }
+  body.m2 #gear .gtabs [data-tab] { padding:8px 12px !important; font-size:13px; }
+  body.m2 #gear button, body.m2 #shop button { min-height:44px; }
+  body.m2 #gear .g, body.m2 #shop .row { min-height:48px; }
+  body.m2 #help { width:min(94vw,460px) !important; max-height:88vh; padding:18px 18px calc(16px + env(safe-area-inset-bottom)); }
+  @media (orientation:landscape) {
+    body.m2 #gear, body.m2 #shop { left:auto !important; right:0 !important; top:0 !important; bottom:0 !important; width:min(440px,54vw) !important; max-height:none !important; height:100%; border-radius:22px 0 0 22px !important; padding:calc(8px + env(safe-area-inset-top)) calc(14px + env(safe-area-inset-right)) calc(12px + env(safe-area-inset-bottom)) 14px !important; }
+    body.m2 #gear .grip, body.m2 #shop .grip { display:none; }
+    body.m2 #gear .gtabs { top:0; }
+    body.m2 #subs { grid-template-columns:repeat(2,44px); } body.m2 #subs button { width:44px; height:44px; }
+    body.m2 #abtn { width:70px; height:70px; }
+    body.m2.playing #jzone { height:72%; width:46%; }
+    body.m2 #help { max-height:92vh; }
+    body.m2 #help .hcards { grid-template-columns:repeat(3,minmax(0,1fr)); }
+  }
+  /* 시작 화면 */
+  .tonly { display:none; } body.m2 .tonly { display:inline; } body.m2 .konly { display:none; }
+  #help .lead { display:flex; gap:10px; align-items:center; }
+  #help #start { font-size:18px; padding:12px 28px; border-radius:16px; }
+  body.m2:not(.playing) #tools { display:none !important; }
+  body.m2 #inv { right:calc(96px + env(safe-area-inset-right)) !important; }
+  #help .hfoot { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  body.m2 #help .hfoot { position:sticky; bottom:calc(-16px - env(safe-area-inset-bottom)); margin:6px -18px calc(-16px - env(safe-area-inset-bottom)); padding:10px 18px calc(12px + env(safe-area-inset-bottom)); background:linear-gradient(180deg,rgba(255,252,244,0),rgba(255,252,244,.96) 30%); border-radius:0 0 22px 22px; }
+  body.m2 #help .hfoot button { margin:0; }
+  body.m2 #gear .gtabs { margin-right:40px !important; }
+  body.m2 #actx { position:absolute; right:calc(100% + 8px); bottom:24px; order:0; }
+  @media (orientation:landscape) {
+    body.m2 #help { padding-top:12px; }
+    body.m2 #help h2 { margin-bottom:4px; } body.m2 #help .sub { margin-bottom:6px; font-size:13px; }
+    body.m2 #help .hcards div { padding:6px 8px; } body.m2 #help .hcards span { font-size:11px; line-height:1.4; }
+    body.m2 #help .news { font-size:11px; margin:6px 0; }
+  }

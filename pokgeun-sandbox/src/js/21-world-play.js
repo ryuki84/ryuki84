@@ -111,7 +111,7 @@ function worldTick(dt) {
     const NP = poisNear(px - 100, py - 100, px + 100, py + 100);
     for (const p of NP) { if (!p.guard && p.type !== "demon") continue; if (S.wcl[p.id]) continue; const d = Math.hypot((p.x + .5) * T - P.x, (p.y + .5) * T - P.y) / T; if (d < 30 && !p.spawned) { p.spawned = true; spawnGuards(p); say(`⚠️ ${p.name}이(가) 가까워요!`, 2200); } else if (d > 75 && p.spawned) { p.spawned = false; dun.mons = dun.mons.filter(m => m.poi !== p.id); } }
     for (const p of NP) if (p.wp && !S.wp[p.id] && Math.hypot(p.x - px, p.y - py) < 4) discoverWp(p);
-    const tw = inTown(px, py); if (tw && dun.inTown !== tw.id) say(`🏘️ ${tw.name} — 안전지대예요`, 2500); dun.inTown = tw ? tw.id : null;
+    const tw = inTown(px, py); if (tw && dun.inTown !== tw.id && !document.body.classList.contains("m2")) say(`🏘️ ${tw.name} — 안전지대예요`, 2500); dun.inTown = tw ? tw.id : null;
     const mz = NP.find(q => q.type === "maze" && Math.abs(q.x - px) <= 16 && Math.abs(q.y - py) <= 16); if ((mz ? mz.id : null) !== dun.inMaze) { dun.inMaze = mz ? mz.id : null; if (mz) say(`🏛️ ${mz.name} · 위험도 ${"★".repeat(mz.tier + 1)}${S.wcl[mz.id] ? " (소탕 완료)" : " — 가운데 방의 보스를 쓰러뜨리세요"}`, 3000); dun.areaB = -2; }
     const b = wb(px, py); if (b !== dun.areaB && !tw && !dun.inMaze) { dun.areaB = b; if (b > 0) say(`${BIO_E[b]} ${BIO_N[b]} · 위험도 ${"★".repeat(wTier(px, py) + 1)}`, 2200); }
   }

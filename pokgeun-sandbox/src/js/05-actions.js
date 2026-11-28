@@ -70,7 +70,7 @@ function seamToWorld() {
 function seamToLocal(kind) {
   const r = kind === "home" ? WORLD.hreg : WORLD.vreg, P = player, dx = P.dx, dy = P.dy; WDUN = dun; S.wpos = { x: P.x, y: P.y };
   scene = kind === "home" ? "home" : "out"; dun = null; P.x -= r.x * T; P.y -= r.y * T; P.dx = dx; P.dy = dy; P.mounted = false; furnSel = null; cancelFish(); hud(); renderBar();
-  if (kind === "home") say("🏠 집 안이에요. 가구를 놓아 보세요 (지붕이 사라져 안이 보여요)", 2200); else say("🏡 포근 마을", 1200);
+  if (kind === "home") say("🏠 집 안이에요. 가구를 놓아 보세요 (지붕이 사라져 안이 보여요)", 2200); 
 }
 function enterHome() {
   save(); scene = "home"; furnSel = null; cancelFish();

@@ -1,5 +1,6 @@
 /* ---------- 입력 ---------- */
 const keys = new Set();
+const JOY = { x: 0, y: 0, on: false };   // 모바일 아날로그 조이스틱(-1~1). 29-hud.js가 채워요
 function press(code) {
   if (keys.has(code)) return;
   keys.add(code);
@@ -55,5 +56,5 @@ $("reset").onclick = () => {
 };
 addEventListener("visibilitychange", () => { if (document.hidden) save(); });
 addEventListener("pagehide", save);
-function begin() { started = true; $("help").hidden = true; hud(); say("나무를 흔들고, 낚시하고, 곤충을 잡아 보세요!", 3500); setTimeout(idleToast, 4000); }
+function begin() { started = true; $("help").hidden = true; hud(); say("🌳 포근 마을에 온 걸 환영해요! 마을 밖 넓은 세상에서 나무와 돌을 모아 보세요.", 3500); setTimeout(idleToast, 4000); }
 $("start").onclick = begin;

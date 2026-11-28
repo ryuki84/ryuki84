@@ -36,7 +36,7 @@ function hud() {
   document.body.dataset.scene = scene === "dun" && dun ? (dun.kind === "wild" ? "wild" : dun.kind === "world" ? "world" : "dun") : scene;
   $("bells").textContent = `🔔 ${S.bells.toLocaleString()} 벨 · ⚔️ Lv.${S.lv}${S.pts + S.sp > 0 ? " ✨" : ""}`;
   const rows = Object.entries(S.inv).filter(([, v]) => v > 0).map(([k, v]) => `<div><span>${ITEMS[k].e} ${ITEMS[k].n}</span><span>×${v}</span></div>`).join("");
-  $("inv").innerHTML = `<b>🎒 주머니 ${count()}/${CAP} <u>▾</u></b><div class="invb">${rows}<div><span>🧪 물약</span><span>×${S.potions}</span></div>${matRow()}</div>`;
+  $("inv").innerHTML = `<b>🎒 <span class="konly">주머니 </span>${count()}/${CAP} <u>▾</u></b><div class="invb">${rows}<div><span>🧪 물약</span><span>×${S.potions}</span></div>${matRow()}</div>`;
   renderFurn(); renderRpg();
   $("tools").style.display = scene === "dun" ? "none" : "flex";
   $("tools").innerHTML = TOOLS.map((t, i) => `<div class="tool ${i === player.tool ? "on" : ""}" data-i="${i}"><i>${i + 1}</i>${t.e}<small>${i === 4 ? "×" + (S.inv.sapling || 0) : t.n}</small></div>`).join("");

@@ -274,6 +274,99 @@
   #gear .lsec h3 { margin:10px 0 2px; font-size:14px; }
   #gear .lsec button:not([style*="border-radius:50%"]) { font-size:13px; }
   @media (max-width:760px), (pointer:coarse) { #gear.lookt { max-height:50vh !important; } }
+  /* ===== 모바일 개편 v2 (2026-11-28, src/js/29-hud.js) — body.m2 = 휴대폰(터치·좁은 화면) ===== */
+  #hst, #jzone, #act2, #minitap { display:none; }
+  #fade { position:absolute; inset:0; z-index:60; background:#1c1420; opacity:0; pointer-events:none; }
+  #fade.go { transition:opacity .55s ease-out; }
+  #banner { position:absolute; left:50%; top:22%; transform:translateX(-50%); z-index:24; pointer-events:none; padding:8px 22px; border-radius:999px; font-weight:800; font-size:clamp(16px,2.4vw,24px); color:#fff; background:rgba(28,22,34,.55); -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); text-shadow:0 1px 3px rgba(0,0,0,.4); white-space:nowrap; }
+  #banner[hidden] { display:none; }
+  #banner.show { animation:banner 2.6s ease both; }
+  @keyframes banner { 0% { opacity:0; transform:translate(-50%,8px); } 15%,75% { opacity:1; transform:translate(-50%,0); } 100% { opacity:0; transform:translate(-50%,-6px); } }
+  @media (prefers-reduced-motion:reduce) { #banner.show { animation:none; } #fade.go { transition:none; } }
+
+  body.m2 #bells, body.m2 #clock, body.m2 #rpg, body.m2 #abar, body.m2 #hint, body.m2 #touch, body.m2 #joy { display:none !important; }
+  body.m2 #hst { display:flex; flex-direction:column; gap:4px; position:absolute; left:calc(8px + env(safe-area-inset-left)); top:calc(8px + env(safe-area-inset-top)); z-index:16; width:min(176px,46vw); padding:6px 8px; border-radius:16px; background:var(--glass); -webkit-backdrop-filter:blur(14px) saturate(1.5); backdrop-filter:blur(14px) saturate(1.5); border:1px solid var(--edge); box-shadow:var(--shadow); font-size:12px; font-weight:700; }
+  body.m2 #hst .hp { position:relative; height:16px; border-radius:9px; background:rgba(74,59,42,.18); overflow:hidden; }
+  body.m2 #hst .hp i { position:absolute; left:0; top:0; bottom:0; background:linear-gradient(180deg,#ff7a70,#d83a3a); transition:width .2s; }
+  body.m2 #hst .hp.low i { animation:pulse 1s infinite; }
+  body.m2 #hst .hp span { position:absolute; inset:0; text-align:center; line-height:16px; font-size:11px; color:#fff; text-shadow:0 0 3px rgba(0,0,0,.7); }
+  body.m2 #hst .row { display:flex; justify-content:space-between; gap:6px; white-space:nowrap; font-variant-numeric:tabular-nums; }
+  body.m2 #hst .lv { opacity:.6; }
+  /* 오른쪽 위: 주머니 · 메뉴 · 설정 한 줄 */
+  body.m2 #cfgbtn { left:auto !important; right:calc(8px + env(safe-area-inset-right)); top:calc(8px + env(safe-area-inset-top)) !important; width:38px; height:34px; padding:0; display:flex; align-items:center; justify-content:center; font-size:16px; z-index:21; }
+  body.m2 #menubtn { right:calc(52px + env(safe-area-inset-right)) !important; top:calc(8px + env(safe-area-inset-top)) !important; width:38px; height:34px; padding:0 !important; display:flex !important; align-items:center; justify-content:center; font-size:16px !important; }
+  body.m2 #inv { right:calc(96px + env(safe-area-inset-right)) !important; top:calc(8px + env(safe-area-inset-top)) !important; max-width:52vw; padding:6px 12px !important; min-height:34px; font-size:12px !important; }
+  body.m2 #inv .invb { max-height:42vh; overflow:auto; }
+  body.m2 #cfg { left:auto !important; right:8px; top:calc(48px + env(safe-area-inset-top)) !important; width:min(260px,80vw); max-height:70vh; overflow:auto; }
+  body.m2.showdock #dock { top:calc(48px + env(safe-area-inset-top)) !important; grid-template-columns:repeat(4,64px) !important; }
+  body.m2.showdock #dock button { width:64px !important; height:58px !important; font-size:22px; }
+  body.m2 #dock button i { display:none; }
+  body.m2 #online { left:auto !important; right:8px; top:calc(124px + env(safe-area-inset-top)) !important; }
+  body.m2 #msg { top:calc(76px + env(safe-area-inset-top)) !important; max-width:min(78vw,420px); font-size:13px; }
+  body.m2 #chat { top:calc(80px + env(safe-area-inset-top)) !important; width:min(60vw,320px); }
+  body.m2 #furn { top:calc(80px + env(safe-area-inset-top)) !important; }
+  body.m2 #minitap { display:block; position:absolute; right:calc(9px + env(safe-area-inset-right)); z-index:12; border-radius:6px; cursor:pointer; }
+  body.m2 #minitap[hidden] { display:none; }
+  /* 마을 도구: 왼쪽 아래 한 줄(조이스틱은 화면 어디서나 떠요) */
+  body.m2 #tools { left:calc(8px + env(safe-area-inset-left)) !important; transform:none !important; bottom:calc(10px + env(safe-area-inset-bottom)) !important; gap:5px; z-index:17; }
+  body.m2 #tools .tool { width:44px; height:44px; }
+  body.m2 #tools .tool.on { transform:translateY(-4px); }
+  /* 조이스틱 영역: 화면 왼쪽 아래 절반, 누른 자리에 나타나요 */
+  body.m2.playing #jzone { display:block; position:absolute; left:0; bottom:0; width:52%; height:62%; z-index:13; touch-action:none; }
+  body.m2[data-scene="out"] #jzone { bottom:calc(64px + env(safe-area-inset-bottom)); height:56%; }
+  #jbase { position:absolute; width:116px; height:116px; margin:-58px 0 0 -58px; border-radius:50%; background:radial-gradient(circle, rgba(255,255,255,.32), rgba(255,255,255,.08)); border:2px solid rgba(255,255,255,.55); opacity:0; transition:opacity .12s; pointer-events:none; left:90px; top:70%; }
+  #jbase i { position:absolute; left:50%; top:50%; width:50px; height:50px; margin:-25px 0 0 -25px; border-radius:50%; background:linear-gradient(180deg,#ffd9a8,#f2a65a); box-shadow:0 4px 12px rgba(0,0,0,.28); }
+  body.m2.playing #jzone #jbase { opacity:.38; }
+  body.m2 #jzone.on #jbase { opacity:1; }
+  /* 행동 버튼 */
+  body.m2.playing #act2 { display:flex; position:absolute; right:calc(12px + env(safe-area-inset-right)); bottom:calc(14px + env(safe-area-inset-bottom)); z-index:18; flex-direction:column; align-items:flex-end; gap:8px; pointer-events:none; }
+  body.m2 #act2 > * { pointer-events:auto; }
+  body.m2 #act2 button { margin:0; padding:0; touch-action:none; -webkit-user-select:none; user-select:none; }
+  body.m2 #abtn { width:78px; height:78px; border-radius:50%; display:flex; flex-direction:column; align-items:center; justify-content:center; background:linear-gradient(180deg,#ffd9a8,#f2a65a); box-shadow:0 6px 18px rgba(242,140,60,.45), 0 1px 0 rgba(255,255,255,.7) inset; }
+  body.m2 #abtn b { font-size:28px; line-height:1; } body.m2 #abtn small { font-size:11px; font-weight:800; margin-top:2px; max-width:70px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  body.m2 #abtn.down, body.m2 #subs button.down { transform:scale(.92); filter:brightness(.9); }
+  body.m2 #actx { order:-2; max-width:min(56vw,280px); padding:5px 12px; border-radius:999px; font-size:12px; font-weight:700; color:#fff; background:rgba(28,22,34,.62); -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; pointer-events:none !important; }
+  body.m2 #actx[hidden] { display:none; }
+  body.m2 #subs { order:-1; display:grid; grid-template-columns:repeat(2,48px); gap:7px; direction:rtl; }
+  body.m2 #subs button { position:relative; width:48px; height:48px; border-radius:50%; font-size:19px; line-height:1; display:flex; flex-direction:column; align-items:center; justify-content:center; direction:ltr; background:var(--glass); -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); border:1px solid var(--edge); box-shadow:0 3px 10px rgba(30,22,10,.22); overflow:hidden; }
+  body.m2 #subs button small { font-size:8.5px; font-weight:800; margin-top:1px; }
+  body.m2 #subs button::after { content:""; position:absolute; inset:0; background:conic-gradient(rgba(20,16,28,.55) var(--cd,0%), transparent 0); pointer-events:none; }
+  body.m2 #subs button.dis { opacity:.4; }
+  body.m2 #subs button.on { background:linear-gradient(180deg,#ffd9a8,#f2a65a); }
+  /* 패널: 세로는 아래 시트, 가로는 오른쪽 패널(게임 화면이 왼쪽에 보이게) */
+  body.m2 #gear, body.m2 #shop { max-height:78vh !important; }
+  body.m2 #gear .gtabs [data-tab] { padding:8px 12px !important; font-size:13px; }
+  body.m2 #gear button, body.m2 #shop button { min-height:44px; }
+  body.m2 #gear .g, body.m2 #shop .row { min-height:48px; }
+  body.m2 #help { width:min(94vw,460px) !important; max-height:88vh; padding:18px 18px calc(16px + env(safe-area-inset-bottom)); }
+  @media (orientation:landscape) {
+    body.m2 #gear, body.m2 #shop { left:auto !important; right:0 !important; top:0 !important; bottom:0 !important; width:min(440px,54vw) !important; max-height:none !important; height:100%; border-radius:22px 0 0 22px !important; padding:calc(8px + env(safe-area-inset-top)) calc(14px + env(safe-area-inset-right)) calc(12px + env(safe-area-inset-bottom)) 14px !important; }
+    body.m2 #gear .grip, body.m2 #shop .grip { display:none; }
+    body.m2 #gear .gtabs { top:0; }
+    body.m2 #subs { grid-template-columns:repeat(2,44px); } body.m2 #subs button { width:44px; height:44px; }
+    body.m2 #abtn { width:70px; height:70px; }
+    body.m2.playing #jzone { height:72%; width:46%; }
+    body.m2 #help { max-height:92vh; }
+    body.m2 #help .hcards { grid-template-columns:repeat(3,minmax(0,1fr)); }
+  }
+  /* 시작 화면 */
+  .tonly { display:none; } body.m2 .tonly { display:inline; } body.m2 .konly { display:none; }
+  #help .lead { display:flex; gap:10px; align-items:center; }
+  #help #start { font-size:18px; padding:12px 28px; border-radius:16px; }
+  body.m2:not(.playing) #tools { display:none !important; }
+  body.m2 #inv { right:calc(96px + env(safe-area-inset-right)) !important; }
+  #help .hfoot { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  body.m2 #help .hfoot { position:sticky; bottom:calc(-16px - env(safe-area-inset-bottom)); margin:6px -18px calc(-16px - env(safe-area-inset-bottom)); padding:10px 18px calc(12px + env(safe-area-inset-bottom)); background:linear-gradient(180deg,rgba(255,252,244,0),rgba(255,252,244,.96) 30%); border-radius:0 0 22px 22px; }
+  body.m2 #help .hfoot button { margin:0; }
+  body.m2 #gear .gtabs { margin-right:40px !important; }
+  body.m2 #actx { position:absolute; right:calc(100% + 8px); bottom:24px; order:0; }
+  @media (orientation:landscape) {
+    body.m2 #help { padding-top:12px; }
+    body.m2 #help h2 { margin-bottom:4px; } body.m2 #help .sub { margin-bottom:6px; font-size:13px; }
+    body.m2 #help .hcards div { padding:6px 8px; } body.m2 #help .hcards span { font-size:11px; line-height:1.4; }
+    body.m2 #help .news { font-size:11px; margin:6px 0; }
+  }
+
 </style>
 </head>
 <body>
@@ -301,21 +394,20 @@
   <div id="chat" hidden><div id="chatlog"></div><input id="chatin" hidden maxlength="120" autocomplete="off" placeholder="메시지 입력 · Enter 전송 · Esc 취소"></div>
   <div id="shop" hidden></div>
   <div id="help">
-    <h2>🌳 포근 마을에 오신 걸 환영해요</h2>
-    <p class="sub">동물 친구들과 살면서 숲을 탐험하고, 던전과 대마왕에 도전하는 3D 모험이에요.</p>
+    <h2>🌳 포근 마을</h2>
+    <p class="sub">나무를 베고, 도구를 만들고, 나만의 집과 마을을 지어 가는 포근한 판타지 생활이에요.</p>
     <div class="hcards">
-      <div><b>🕹️ 이동</b><span>WASD · 방향키<br>📱 왼쪽 조이스틱</span></div>
-      <div><b>🎥 카메라</b><span>마우스 드래그 · <kbd>,</kbd> <kbd>.</kbd><br><kbd>P</kbd> 시점 전환</span></div>
-      <div><b>✋ 행동</b><span><kbd>Space</kbd> — 화면 아래<br>안내에 나온 행동</span></div>
-      <div><b>⚔️ 전투</b><span><kbd>Q</kbd> 회전 <kbd>E</kbd> 구르기<br><kbd>R</kbd> 화염구 <kbd>F</kbd> 물약</span></div>
-      <div><b>📋 메뉴</b><span>오른쪽 아이콘을 누르거나<br>단축키 (<kbd>H</kbd> 전체 보기)</span></div>
-      <div><b>🧰 마을 도구</b><span><kbd>1</kbd>~<kbd>5</kbd> 손·채·낚싯대·삽·묘목</span></div>
+      <div><b>🕹️ 이동</b><span class="tonly">왼쪽 화면 아무 데나<br>누르고 밀기</span><span class="konly">WASD · 방향키</span></div>
+      <div><b>✋ 행동</b><span class="tonly">오른쪽 아래 큰 버튼<br>(앞에 있는 것에 맞게 바뀌어요)</span><span class="konly"><kbd>Space</kbd> 채집·말 걸기·공격</span></div>
+      <div><b>🎥 카메라</b><span class="tonly">오른쪽 화면 끌기<br>두 손가락 확대·축소</span><span class="konly">마우스 드래그 · 휠<br><kbd>P</kbd> 시점 전환</span></div>
+      <div><b>🗺️ 지도</b><span class="tonly">오른쪽 위 작은 지도 누르기</span><span class="konly"><kbd>N</kbd></span></div>
+      <div><b>📋 메뉴</b><span class="tonly">오른쪽 위 ☰ (제작·건설·외형…)</span><span class="konly">오른쪽 아이콘 · <kbd>H</kbd> 단축키</span></div>
+      <div><b>🏗️ 건설</b><span>마을 밖 넓은 세상에서<br>벽·바닥·모닥불·밭 짓기</span></div>
     </div>
-    <p class="news">🆕 <b>최근 업데이트</b> · <b>⚙️ 설정 → 🎨 그래픽 스타일: 듀랑고풍·원신풍·파스텔 툰·부드러운 3D·귀여운 2D 중에서 골라요!</b> · 새 마을 주민(퍼그 콩이·소 음메·애니 나비·토리)과 돌아다니는 시바·여우 · 휴대폰 끊김 최적화 · <b>플레이어가 애니풍 캐릭터로!</b> (🧑 외형에서 3명 중 고르기) · 마을 문 바로 밖에 약한 몬스터 · 3D 주민·국왕·몬스터 · 공격 전 ❗ 예고와 타격감</p>
-    <p class="goals">🏪 상점에서 팔고 사기 · 🕳️ 던전 · 🌍 오픈월드(건설·채집·의뢰) · 🏟️ 아레나 · 👑 국왕의 의뢰로 대마왕 토벌</p>
+    <p class="news">🆕 <b>최근 업데이트</b> · 새 캐릭터: 동글동글 치비 친구들과 직업 주민 6명 · 외형에서 얼굴·옷·모자·망토 섞기 · 마을 동물(강아지·고양이·소·돼지·병아리) · 휴대폰 화면 새 단장: 어디서나 같은 버튼, 부드러운 조이스틱, 지역 이름 안내</p>
     <p id="nickrow" hidden>🌐 닉네임 <input id="nick" maxlength="12" placeholder="모험가" style="font:inherit;padding:3px 8px;border:2px solid var(--ink);border-radius:8px;width:9em"></p>
     <p id="gfxinfo"></p>
-    <button id="start">시작하기</button><button id="reset" style="background:#e8dcc0">새로 시작</button>
+    <div class="hfoot"><button id="start">시작하기</button><button id="reset" style="background:#e8dcc0">새로 시작</button></div>
   </div>
   </div>
   <div id="tools"></div>
@@ -636,7 +728,7 @@ function hud() {
   document.body.dataset.scene = scene === "dun" && dun ? (dun.kind === "wild" ? "wild" : dun.kind === "world" ? "world" : "dun") : scene;
   $("bells").textContent = `🔔 ${S.bells.toLocaleString()} 벨 · ⚔️ Lv.${S.lv}${S.pts + S.sp > 0 ? " ✨" : ""}`;
   const rows = Object.entries(S.inv).filter(([, v]) => v > 0).map(([k, v]) => `<div><span>${ITEMS[k].e} ${ITEMS[k].n}</span><span>×${v}</span></div>`).join("");
-  $("inv").innerHTML = `<b>🎒 주머니 ${count()}/${CAP} <u>▾</u></b><div class="invb">${rows}<div><span>🧪 물약</span><span>×${S.potions}</span></div>${matRow()}</div>`;
+  $("inv").innerHTML = `<b>🎒 <span class="konly">주머니 </span>${count()}/${CAP} <u>▾</u></b><div class="invb">${rows}<div><span>🧪 물약</span><span>×${S.potions}</span></div>${matRow()}</div>`;
   renderFurn(); renderRpg();
   $("tools").style.display = scene === "dun" ? "none" : "flex";
   $("tools").innerHTML = TOOLS.map((t, i) => `<div class="tool ${i === player.tool ? "on" : ""}" data-i="${i}"><i>${i + 1}</i>${t.e}<small>${i === 4 ? "×" + (S.inv.sapling || 0) : t.n}</small></div>`).join("");
@@ -762,7 +854,7 @@ function seamToWorld() {
 function seamToLocal(kind) {
   const r = kind === "home" ? WORLD.hreg : WORLD.vreg, P = player, dx = P.dx, dy = P.dy; WDUN = dun; S.wpos = { x: P.x, y: P.y };
   scene = kind === "home" ? "home" : "out"; dun = null; P.x -= r.x * T; P.y -= r.y * T; P.dx = dx; P.dy = dy; P.mounted = false; furnSel = null; cancelFish(); hud(); renderBar();
-  if (kind === "home") say("🏠 집 안이에요. 가구를 놓아 보세요 (지붕이 사라져 안이 보여요)", 2200); else say("🏡 포근 마을", 1200);
+  if (kind === "home") say("🏠 집 안이에요. 가구를 놓아 보세요 (지붕이 사라져 안이 보여요)", 2200); 
 }
 function enterHome() {
   save(); scene = "home"; furnSel = null; cancelFish();
@@ -1287,6 +1379,7 @@ function talk(v) {
 
 /* ---------- 입력 ---------- */
 const keys = new Set();
+const JOY = { x: 0, y: 0, on: false };   // 모바일 아날로그 조이스틱(-1~1). 29-hud.js가 채워요
 function press(code) {
   if (keys.has(code)) return;
   keys.add(code);
@@ -1342,7 +1435,7 @@ $("reset").onclick = () => {
 };
 addEventListener("visibilitychange", () => { if (document.hidden) save(); });
 addEventListener("pagehide", save);
-function begin() { started = true; $("help").hidden = true; hud(); say("나무를 흔들고, 낚시하고, 곤충을 잡아 보세요!", 3500); setTimeout(idleToast, 4000); }
+function begin() { started = true; $("help").hidden = true; hud(); say("🌳 포근 마을에 온 걸 환영해요! 마을 밖 넓은 세상에서 나무와 돌을 모아 보세요.", 3500); setTimeout(idleToast, 4000); }
 $("start").onclick = begin;
 
 /* ---------- 업데이트 ---------- */
@@ -1353,7 +1446,8 @@ function update(dt) {
   // 이동
   let ix = (keys.has("ArrowRight") || keys.has("KeyD") ? 1 : 0) - (keys.has("ArrowLeft") || keys.has("KeyA") ? 1 : 0);
   let iy = (keys.has("ArrowDown") || keys.has("KeyS") ? 1 : 0) - (keys.has("ArrowUp") || keys.has("KeyW") ? 1 : 0);
-  player.mv = !!(ix || iy); player.rawF = iy < 0 && !ix;
+  let amag = 1; if (JOY.on && !(ix || iy)) { ix = JOY.x; iy = JOY.y; amag = clamp(Math.hypot(ix, iy), .35, 1); }   // 아날로그: 모든 방향 + 살짝 밀면 천천히
+  player.mv = !!(ix || iy); player.rawF = iy < 0 && Math.abs(ix) < Math.abs(iy) * .4;
   if (keys.has("Comma") || keys.has("Period")) { camYaw += (keys.has("Comma") ? 1 : -1) * 2.2 * dt; camManT = vtime; }
   if (TPV() && (ix || iy)) { const c = Math.cos(camYaw), sn = Math.sin(camYaw), wx = ix * c + iy * sn, wz = -ix * sn + iy * c; ix = Math.abs(wx) < 1e-6 ? 0 : wx; iy = Math.abs(wz) < 1e-6 ? 0 : wz; }
   if (scene === "dun" && player.dash > 0 && !(ix || iy)) { ix = player.dx; iy = player.dy; }
@@ -1361,7 +1455,7 @@ function update(dt) {
     cancelFish();
     if (scene === "dun") { const l = Math.hypot(ix, iy); if (player.dash <= 0) { player.dx = ix / l; player.dy = iy / l; } }
     else if (Math.abs(ix) >= Math.abs(iy)) { player.dx = Math.sign(ix); player.dy = 0; } else { player.dx = 0; player.dy = Math.sign(iy); }
-    const len = Math.hypot(ix, iy), sp = (scene === "dun" ? (player.dash > 0 ? 340 : 120 * pstats().ms) : 120) * dt / len;
+    const len = Math.hypot(ix, iy), sp = (scene === "dun" ? (player.dash > 0 ? 340 : 120 * pstats().ms) : 120) * dt / len * (player.dash > 0 ? 1 : amag);
     if (!blocked(player.x + ix * sp, player.y + 8, 9, 6)) player.x += ix * sp;
     if (!blocked(player.x, player.y + 8 + iy * sp, 9, 6)) player.y += iy * sp;
   }
@@ -2657,7 +2751,7 @@ function drawVillage() {
   PL0.x = P.x / T; PL0.z = pz; PL0.r = night ? 6 : 3; PL0.i = night ? 1.5 : .0; PL0.h = 1.8; PL0.c = 0xffd9a0;
   labelT("내 집", HOUSE.x + HOUSE.w / 2, HOUSE.y + HOUSE.h + .3, .3); labelT("다람쥐 상점", SHOP.x + SHOP.w / 2, SHOP.y + SHOP.h + .3, .3); labelT("던전 입구", CAVE.x + CAVE.w / 2, CAVE.y + CAVE.h + .35, .3); labelT("🏠 내 집 ←", G.gateX, G.gateZ + .3, .3); labelT("🏰 왕도 ↑", 15, -.6, .3); if (FEAT.arena) labelT("서바이벌 아레나", ARENA.x + 1.5, ARENA.y + ARENA.h + .3, .3);
   if (started && !modal) { const { tx, ty } = target(); cursorAt(tx, ty, terrain[ty] && terrain[ty][tx] === "w" ? -.1 : .03); } else G.cursor.visible = false;
-  follow(P.x / T, pz, W, H, D); finish(D); overlay();
+  follow(P.x / T, pz, W, H, D); finish(D); overlay(WORLD && WORLD.vreg && MOBUI() ? drawMiniWorld : null);
 }
 const mkRock0 = () => ({ g: mkRock() });
 
@@ -3432,7 +3526,7 @@ function worldTick(dt) {
     const NP = poisNear(px - 100, py - 100, px + 100, py + 100);
     for (const p of NP) { if (!p.guard && p.type !== "demon") continue; if (S.wcl[p.id]) continue; const d = Math.hypot((p.x + .5) * T - P.x, (p.y + .5) * T - P.y) / T; if (d < 30 && !p.spawned) { p.spawned = true; spawnGuards(p); say(`⚠️ ${p.name}이(가) 가까워요!`, 2200); } else if (d > 75 && p.spawned) { p.spawned = false; dun.mons = dun.mons.filter(m => m.poi !== p.id); } }
     for (const p of NP) if (p.wp && !S.wp[p.id] && Math.hypot(p.x - px, p.y - py) < 4) discoverWp(p);
-    const tw = inTown(px, py); if (tw && dun.inTown !== tw.id) say(`🏘️ ${tw.name} — 안전지대예요`, 2500); dun.inTown = tw ? tw.id : null;
+    const tw = inTown(px, py); if (tw && dun.inTown !== tw.id && !document.body.classList.contains("m2")) say(`🏘️ ${tw.name} — 안전지대예요`, 2500); dun.inTown = tw ? tw.id : null;
     const mz = NP.find(q => q.type === "maze" && Math.abs(q.x - px) <= 16 && Math.abs(q.y - py) <= 16); if ((mz ? mz.id : null) !== dun.inMaze) { dun.inMaze = mz ? mz.id : null; if (mz) say(`🏛️ ${mz.name} · 위험도 ${"★".repeat(mz.tier + 1)}${S.wcl[mz.id] ? " (소탕 완료)" : " — 가운데 방의 보스를 쓰러뜨리세요"}`, 3000); dun.areaB = -2; }
     const b = wb(px, py); if (b !== dun.areaB && !tw && !dun.inMaze) { dun.areaB = b; if (b > 0) say(`${BIO_E[b]} ${BIO_N[b]} · 위험도 ${"★".repeat(wTier(px, py) + 1)}`, 2200); }
   }
@@ -3585,7 +3679,8 @@ function bodyMap() {
 function drawWorldMap() {   // 끝없는 월드: 내 주변 480칸(발견한 곳만)
   const cvm = document.getElementById("wmap"); if (!cvm) return; const x = cvm.getContext("2d"), W = getWorld(), k = 3, n = 120; x.fillStyle = "#14121c"; x.fillRect(0, 0, cvm.width, cvm.height);
   const inW = scene === "dun" && dun && dun.kind === "world", cxp = inW ? player.x / T : W.vreg.x + 15, cyp = inW ? player.y / T : W.vreg.y + 10, bx0 = Math.floor(cxp / 4) - n / 2, by0 = Math.floor(cyp / 4) - n / 2;
-  for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) { if (!W.disc.has(DKEY(bx0 + i, by0 + j))) continue; x.fillStyle = BIO_CS[wb((bx0 + i) * 4 + 2, (by0 + j) * 4 + 2)]; x.fillRect(i * k, j * k, k, k); }
+  for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) { const d = W.disc.has(DKEY(bx0 + i, by0 + j)); x.globalAlpha = d ? 1 : .22; x.fillStyle = BIO_CS[wb((bx0 + i) * 4 + 2, (by0 + j) * 4 + 2)]; x.fillRect(i * k, j * k, k, k); }   // 안 가 본 곳은 흐리게
+  x.globalAlpha = 1;
   for (const p of poisNear(bx0 * 4, by0 * 4, (bx0 + n) * 4, (by0 + n) * 4)) { const i = (p.x >> 2) - bx0, j = (p.y >> 2) - by0; if (i < 0 || j < 0 || i >= n || j >= n || !W.disc.has(DKEY(p.x >> 2, p.y >> 2))) continue; const c = { town: "#ffd34d", cave: "#7a5a9a", maze: "#e0a040", shrine: "#6ee7ff", camp: "#e8505a", ruin: "#b8bcc8", lair: "#ff7a1a", portal: "#6ee7ff", demon: "#c03aff" }[p.type]; if (!c) continue; x.fillStyle = c; x.fillRect(i * k - 2, j * k - 2, 5, 5); }
   { const i = Math.floor(cxp / 4) - bx0, j = Math.floor(cyp / 4) - by0; x.fillStyle = "#fff"; x.fillRect(i * k - 2, j * k - 2, 5, 5); }
   x.fillStyle = "#fff8"; x.font = "11px sans-serif"; x.fillText(`좌표 ${Math.round(cxp - WC0)}, ${Math.round(cyp - WC0)}`, 6, 352);
@@ -3615,7 +3710,8 @@ function drawWorldEnts(g, P, pz) {
   for (const p of poisNear(camT.x - 12, camT.z - 26, camT.x + 12, camT.z + 9)) { if (Math.abs(p.x - camT.x) > 12 || Math.abs(p.y - camT.z) > 9) continue; if (p.type === "maze") labelT("🏛️ " + p.name, p.x + .5, p.y + 17.5, .3); else if (p.type === "shop" || p.type === "inn") labelT(p.name, p.x + 1.5, p.y + 2.3, .3); else if (p.type === "board" || p.type === "shrine" || p.type === "portal") labelT(p.name, p.x + .5, p.y + 1.3, .4, p.type === "board" ? "#fff3d6" : "#8fefff"); else if (p.type === "castle" && !p.deco) labelT("🏰 포근성", p.x + 5, p.y + 5.4, .4, "#ffe27a"); else if (p.type === "demon") labelT("😈 마왕성", p.x + 4.5, p.y + 4.4, .4, "#ff6a6a"); else if (p.type === "cave") labelT("동굴 (깊이 " + clamp(1 + Math.floor(p.dist / 45), 1, 12) + ")", p.x + 1, p.y + 2.5, .3); else if (p.type === "chest") labelT(S.wopen[p.id] ? "빈 상자" : p.name, p.x + .5, p.y + 1.2, .3, "#f5d142"); }
 }
 function drawMiniWorld() {
-  const W = WORLD, P = player, px = Math.floor(P.x / T), py = Math.floor((P.y + 8) / T), hw = 26, hh = 18, k = 3 * (ov.clientWidth < 600 ? 1.4 : 1);
+  const loc = scene !== "dun", o0x = loc ? WORLD.vreg.x * T : 0, o0y = loc ? WORLD.vreg.y * T : 0;   // 마을(지역 장면)에서는 월드 좌표로 바꿔서 그려요
+  const W = WORLD, P = { x: player.x + o0x, y: player.y + o0y }, px = Math.floor(P.x / T), py = Math.floor((P.y + 8) / T), hw = 26, hh = 18, k = 3 * (ov.clientWidth < 600 ? 1.4 : 1);
   const ox = VW - hw * 2 * k - 12, oy = MOBUI() ? miniTop() : LVH - hh * 2 * k - 12;
   ctx.fillStyle = "rgba(10,8,20,.7)"; ctx.fillRect(ox - 3, oy - 3, hw * 2 * k + 6, hh * 2 * k + 6);
   for (let j = -hh; j < hh; j++) for (let i = -hw; i < hw; i++) {
@@ -3624,7 +3720,7 @@ function drawMiniWorld() {
   }
   const dot = (x, y, col, r) => { const sx = ox + (x / T - px + hw) * k, sy = oy + (y / T - py + hh) * k; if (sx < ox || sy < oy || sx > ox + hw * 2 * k || sy > oy + hh * 2 * k) return; ctx.fillStyle = col; ctx.fillRect(sx - r, sy - r, r * 2, r * 2); };
   for (const p of poisNear(px - hw, py - hh, px + hw, py + hh)) { const c = { town: "#ffd34d", cave: "#b58aff", maze: "#e0a040", shrine: "#6ee7ff", camp: "#e8505a", ruin: "#d8dce8", lair: "#ff7a1a", portal: "#6ee7ff", demon: "#c03aff" }[p.type]; if (c) dot((p.x + .5) * T, (p.y + .5) * T, c, k * 1.2); }
-  for (const m of dun.mons) dot(m.x, m.y, m.boss ? "#ff9f1c" : m.wild && !m.hostile ? "#7be07b" : "#ff5a5a", k * (m.boss ? 1.3 : .7));
+  if (!loc) for (const m of dun.mons) dot(m.x, m.y, m.boss ? "#ff9f1c" : m.wild && !m.hostile ? "#7be07b" : "#ff5a5a", k * (m.boss ? 1.3 : .7));
   for (const o of NET.others.values()) dot(o.x, o.y + 8, "#8affb0", k * 1.1);
   dot(P.x, P.y + 8, "#ffffff", k * 1.1);
 }
@@ -4150,6 +4246,128 @@ for (const id of ["gear", "shop"]) { const el = $(id); let y0 = null;
   el.addEventListener("pointerup", up); el.addEventListener("pointercancel", up); }
 renderDock();
 window.__game = { FEAT, RSTYLE, get V2() { return V2; }, VIEW2D, v2on, critters, get VRMV() { return VRMV; }, get NAT() { return NAT; }, get R3() { return R3; }, get VRMS() { return VRMS; }, spawnNearV: () => spawnNear(), VILM, get hitStop() { return hitStop; }, get MONM() { return MONM; }, ENT, MON_WIND, ELITE, eliteify, eliteAI, saveApi: { save, exportSave, importSave, listBackups, restoreBackup, backupNow, SAVE, SAVE_VER },  get DINOM() { return DINOM; }, wsolid, bioBase,  equipBag, unequip, homeTileAt, openShop, enterHome: () => enterHome(), get furnSel() { return furnSel; }, ctxHint, renderBar,  get sun() { return sun; }, get GRD() { return GRD; }, get S3() { return S3; }, setYaw: v => { camYaw = v; camManT = vtime + 999; }, get MAN() { return MAN; }, get KAY() { return KAY; }, get curPE() { return curPE; }, pAnim, WX, setWeather: t => { WX.type = t; WX.t = 9999; }, startArena, arenaTick, startWave, gemGain, choosePerk, finishArena, openPerk, autoFight, idleStored, dailyTouch, genArena, mkMonT, get PERKS() { return PERKS; }, get ARES() { return ARES; }, sEvent, storyReady, reportStory, openKing, nearKing, demonAI, finalizeDemon, enterDemon, onDemonDefeat, mkDemon, damageP, addFame, get STORY() { return STORY; }, NET, spawnNear, worldTick, killMon, setBuild: i => { buildSel = i == null ? null : BUILD[i]; }, farmAct, winteract, genOffers, turnIn, warpTo, worldAct, enterWorld, getWorld, get WORLD() { return WORLD; }, get dun() { return dun; }, wc, wb, setClock: v => { clock = v; }, fireball, feed, toggleMount, craft, togglePanel, enterDungeon, get dun() { return dun; }, pstats, genGear, attack, scene: () => scene, furnSelSet: v => { furnSel = v; renderFurn(); }, player, trees, S, keys, act, get fishing() { return fishing; }, bugs, villagers }; // 디버그/테스트용
+/* ===== 모바일 개편 v2 (2026-11-28) =====
+   - 휴대폰(터치·좁은 화면): 마을·월드·집·동굴 어디서나 같은 HUD
+     왼쪽 위 상태 카드(체력·시간·벨) · 오른쪽 위 주머니·메뉴·설정 · 왼쪽 아래 어디든 누르면 나오는 아날로그 조이스틱
+     오른쪽 아래 상황 행동 버튼(앞에 있는 것에 따라 아이콘·이름이 바뀜) + 장면별 보조 버튼
+   - 모든 화면: 월드에서 앞에 있는 것을 알려 주는 행동 안내, 동굴·이동석 이동 때 화면 전환, 새 지역에 들어서면 지역 이름 */
+const M2 = TOUCHY || matchMedia("(max-width:760px)").matches;
+document.body.classList.toggle("m2", M2);
+
+/* ---- 월드 행동 안내: 바라보는 칸에 무엇이 있는지 ---- */
+const POI_ACT = { shop: "🏪 상점 열기", inn: "🛏️ 여관에서 쉬기", board: "📋 의뢰 게시판", shrine: "🔷 이동석", portal: "🌀 마을로 돌아가기", cave: "🕳️ 동굴 들어가기", chest: "🎁 상자 열기", castle: "🏰 성", demon: "😈 마왕성" };
+const CELL_ACT = { 1: "🪓 나무 베기", 2: "⛏️ 바위 캐기", 3: "🌿 덤불 채집", 4: "⛏️ 광석 캐기", 5: "🌵 선인장 채집" };
+function ctxWorld() {
+  const P = player, fx = P.x + P.dx * 26, fy = P.y + 8 + P.dy * 26, tx = Math.floor(fx / T), ty = Math.floor(fy / T);
+  if (buildSel) return `🏗️ ${buildSel.n} 설치`;
+  if (fishing) return fishing.state === "bite" ? "🎣 지금! 낚아채기" : "🎣 입질을 기다리는 중…";
+  const v = dun.vil.find(v => Math.hypot(v.x - fx, v.y + 8 - fy) < 40); if (v) return `💬 ${v.name}${v.job ? " (" + v.job + ")" : ""}와 이야기`;
+  const poi = interAt(tx, ty); if (poi && POI_ACT[poi.type] && (poi.type !== "demon" || FEAT.demon)) return poi.type === "chest" && S.wopen[poi.id] ? "📦 빈 상자" : POI_ACT[poi.type];
+  const c = wc(tx, ty);
+  if (c === CELL.BED) return "🛏️ 침대에서 쉬기"; if (c === CELL.FIRE) return "🔥 모닥불 쬐기";
+  if (c === CELL.FARM) { const st = cropStage(ty * WN + tx); return st < 0 ? "🌱 씨앗 심기" : st < 2 ? "🌿 자라는 중" : "🧺 수확하기"; }
+  if (dun.mons.some(m => !(m.wild && !m.hostile) && Math.hypot(m.x - P.x, m.y - P.y) < 72)) return "⚔️ 공격";
+  for (const o of [26, 38]) { const gx = Math.floor((P.x + P.dx * o) / T), gy = Math.floor((P.y + 8 + P.dy * o) / T), g = wc(gx, gy); if (CELL_ACT[g]) return CELL_ACT[g]; }
+  if (wb(tx, ty) === 0 && !inTown(tx, ty)) return "🎣 낚시하기";
+  return "✋ 행동";
+}
+{ const base = ctxHint; ctxHint = function () { if (started && !modal && scene === "dun" && dun && dun.kind === "world") return ctxWorld(); return base(); }; }
+
+/* ---- 상태 카드 ---- */
+const HST = document.createElement("div"); HST.id = "hst"; $("stage").appendChild(HST);
+function renderHst() {
+  const st = pstats(), hp = clamp(player.hp / st.maxhp, 0, 1);
+  const h = `<div class="hp${hp < .3 ? " low" : ""}"><i style="width:${(hp * 100).toFixed(1)}%"></i><span>❤️ ${Math.max(0, Math.ceil(player.hp))}/${st.maxhp}</span></div><div class="row"><span>${clockText()}</span><span>🔔 ${S.bells.toLocaleString()}</span><span class="lv">Lv.${S.lv}</span></div>`;
+  if (h !== HST.__h) { HST.__h = h; HST.innerHTML = h; }
+}
+
+/* ---- 아날로그 조이스틱: 왼쪽 아래 아무 데나 누르면 그 자리에 나타나요 ---- */
+const JZ = document.createElement("div"); JZ.id = "jzone"; JZ.innerHTML = '<div id="jbase"><i></i></div>'; $("stage").appendChild(JZ);
+{ const base = JZ.firstChild, knob = base.firstChild; let id = null, ox = 0, oy = 0;
+  const R = () => base.offsetWidth * .42 || 44;
+  const mv = e => { let dx = e.clientX - ox, dy = e.clientY - oy; const l = Math.hypot(dx, dy), r = R(); if (l > r) { dx *= r / l; dy *= r / l; } knob.style.transform = `translate(${dx}px,${dy}px)`; JOY.x = dx / r; JOY.y = dy / r; JOY.on = l > 6; };
+  const end = () => { id = null; JOY.on = false; JOY.x = JOY.y = 0; knob.style.transform = ""; JZ.classList.remove("on"); };
+  JZ.addEventListener("pointerdown", e => { if (!started || modal || id !== null) return; e.preventDefault(); id = e.pointerId; try { JZ.setPointerCapture(id); } catch (_) {} const r = JZ.getBoundingClientRect(); ox = e.clientX; oy = e.clientY; base.style.left = (ox - r.left) + "px"; base.style.top = (oy - r.top) + "px"; JZ.classList.add("on"); mv(e); });
+  JZ.addEventListener("pointermove", e => { if (e.pointerId === id) mv(e); });
+  JZ.addEventListener("pointerup", end); JZ.addEventListener("pointercancel", end); JZ.addEventListener("lostpointercapture", end); }
+
+/* ---- 행동 버튼 + 장면별 보조 버튼 ---- */
+const ACT = document.createElement("div"); ACT.id = "act2"; ACT.innerHTML = '<div id="actx" hidden></div><div id="subs"></div><button id="abtn" data-k="Space"><b>✋</b><small>행동</small></button>'; $("stage").appendChild(ACT);
+const SUBS = {
+  out: [["🎒", "주머니", "inv"]],
+  home: [["✋", "집기", "KeyX"]],
+  dun: [["💨", "구르기", "KeyE"], ["🧪", "물약", "KeyF"], ["🌀", "회전", "KeyQ"], ["🔥", "화염", "KeyR"]],
+  wild: [["💨", "구르기", "KeyE"], ["🧪", "물약", "KeyF"], ["🍖", "먹이", "KeyV"], ["🐎", "탈것", "KeyG"], ["⋯", "더보기", "more"]],
+  world: [["💨", "구르기", "KeyE"], ["🧪", "물약", "KeyF"], ["🏗️", "건설", "build"], ["⋯", "더보기", "more"]],
+  more: [["🌀", "회전", "KeyQ"], ["🔥", "화염", "KeyR"], ["🍖", "먹이", "KeyV"], ["🐎", "탈것", "KeyG"]],
+  building: [["🗑️", "철거", "KeyX"], ["✅", "건설 끝", "KeyB"]],
+};
+let subMore = false;
+function subKey() { const s = document.body.dataset.scene; if (s === "world" && buildSel) return "building"; return s; }
+function renderSubs() {
+  const k = subKey(), list = (SUBS[k] || []).concat(subMore && (k === "world" || k === "wild") ? SUBS.more : []), el = $("subs"), P = player;
+  const cd = { KeyE: [P.eCd, 2.5], KeyQ: [P.qCd, P.qMax || 5], KeyR: [P.rCd, 3], KeyF: [P.fCd || 0, 1] };
+  const sig = k + subMore + list.map(b => b[2]).join();
+  if (el.__s !== sig) { el.__s = sig; el.innerHTML = list.map(([ic, n, a]) => `<button ${/^Key/.test(a) ? `data-k="${a}"` : `data-a="${a}"`} class="${a === "more" && subMore ? "on" : ""}">${ic}<small>${n}</small></button>`).join(""); }
+  el.querySelectorAll("[data-k]").forEach(b => { const c = cd[b.dataset.k]; b.style.setProperty("--cd", c && c[0] > 0 ? clamp(c[0] / c[1], 0, 1) * 100 + "%" : "0%"); if (b.dataset.k === "KeyR") b.classList.toggle("dis", skLv("fire") <= 0); if (b.dataset.k === "KeyF") b.classList.toggle("dis", S.potions <= 0); });
+}
+ACT.addEventListener("pointerdown", e => {
+  const b = e.target.closest("button"); if (!b || !started) return; e.preventDefault(); sfx("ui");
+  if (b.dataset.k) { try { b.setPointerCapture(e.pointerId); } catch (_) {} b.classList.add("down"); press(b.dataset.k); const up = () => { b.classList.remove("down"); release(b.dataset.k); b.removeEventListener("pointerup", up); b.removeEventListener("pointercancel", up); }; b.addEventListener("pointerup", up); b.addEventListener("pointercancel", up); return; }
+  const a = b.dataset.a; if (a === "more") { subMore = !subMore; renderSubs(); } else if (a === "inv") document.body.classList.toggle("showinv"); else if (a === "build") togglePanel("build");
+});
+function renderAct() {
+  const h = started && !modal ? ctxHint() : "", ab = $("abtn"), x = $("actx");
+  const ic = (h.match(/^\S+/) || ["✋"])[0], tx = h.replace(/^\S+\s*/, "");
+  const sig = ic + "|" + tx; if (ab.__s !== sig) { ab.__s = sig; ab.innerHTML = `<b>${ic}</b><small>${tx.split(/[·(]/)[0].trim().split(" ").slice(-1)[0] || "행동"}</small>`; x.hidden = !tx || tx === "행동"; x.textContent = tx; }
+  renderSubs();
+}
+
+/* ---- 장면 전환: 동굴·이동석·포털로 순간 이동할 때 부드럽게 ---- */
+const FADE = document.createElement("div"); FADE.id = "fade"; $("stage").appendChild(FADE);
+function fadeIn() { FADE.classList.remove("go"); FADE.style.opacity = "1"; void FADE.offsetWidth; FADE.classList.add("go"); FADE.style.opacity = "0"; }
+{ const fw = f => function (...a) { if (started) fadeIn(); return f.apply(this, a); };   // 걸어서 넘는 지역 경계(seamTo…)는 그대로 이어져요
+  enterDungeon = fw(enterDungeon); leaveDungeon = fw(leaveDungeon); warpTo = fw(warpTo); }
+
+/* ---- 지역 이름: 새 지역에 1초 넘게 머물면 위에 잠깐 보여 줘요 ---- */
+const REGN = { 0: "🌊 바다", 1: "🏖️ 모래 해변", 2: "🌾 초록 초원", 3: "🌲 속삭임 숲", 4: "🏜️ 노을 사막", 5: "❄️ 수정 설원", 6: "🪷 별빛 습지", 7: "⛰️ 수정 산맥", 8: "🏘️ 마을", 9: "🛤️ 길", 10: "😈 마왕령" };
+const BAN = document.createElement("div"); BAN.id = "banner"; BAN.hidden = true; $("stage").appendChild(BAN);
+const AREA = { cur: "", cand: "", t: 0, hideT: 0 };
+function areaName() {
+  if (scene === "out") return "🏘️ 포근 마을"; if (scene === "home") return "🏠 내 집";
+  if (scene !== "dun" || !dun) return "";
+  if (dun.kind === "world") { const px = Math.floor(player.x / T), py = Math.floor((player.y + 8) / T), tw = inTown(px, py); if (tw) return "🏘️ " + tw.name; const b = wb(px, py); return b === 9 ? AREA.cur || REGN[9] : REGN[b] || ""; }
+  if (dun.kind === "wild") return "🌿 야생 지대"; if (dun.arena) return "🏟️ 아레나";
+  return `🕳️ 동굴 ${dun.depth || 1}층`;
+}
+function tickArea(dt) {
+  const n = started ? areaName() : ""; if (n !== AREA.cand) { AREA.cand = n; AREA.t = 0; } else AREA.t += dt;
+  if (n && n !== AREA.cur && AREA.t > (AREA.cur ? 1 : 0)) { AREA.cur = n; BAN.textContent = n; BAN.hidden = false; BAN.classList.remove("show"); void BAN.offsetWidth; BAN.classList.add("show"); AREA.hideT = 2.6; }
+  if (AREA.hideT > 0 && (AREA.hideT -= dt) <= 0) BAN.hidden = true;
+}
+
+/* ---- 패널: 휴대폰에서는 단축키 표시를 빼고 탭을 아이콘+이름으로 ---- */
+{ const base = renderGear; renderGear = function (...a) { const r = base.apply(this, a); if (M2) $("gear").querySelectorAll("[data-tab]").forEach(b => { b.textContent = b.textContent.replace(/\s*\([A-Z]\)\s*$/, ""); }); return r; }; }
+
+/* ---- 미니맵 누르면 지도 ---- */
+const MTAP = document.createElement("div"); MTAP.id = "minitap"; $("stage").appendChild(MTAP);
+MTAP.addEventListener("click", () => { if (started && !modal) { sfx("ui"); togglePanel("map"); } });
+function placeMiniTap() {
+  const on = M2 && started && !modal && WORLD && (scene === "out" || (scene === "dun" && dun && dun.kind === "world")); MTAP.hidden = !on; if (!on) return;
+  const cw = ov.clientWidth || VW, k = 3 * (cw < 600 ? 1.4 : 1), f = cw / VW; MTAP.style.width = (52 * k * f + 6) + "px"; MTAP.style.height = (36 * k * f + 6) + "px"; MTAP.style.top = (miniTop() * f - 3) + "px";
+}
+
+/* ---- 매 프레임(가볍게) ---- */
+let hudT2 = 0;
+function hudTick(dt) {
+  tickArea(dt);
+  if ((hudT2 += dt) < .12) return; hudT2 = 0;
+  document.body.classList.toggle("playing", started && !modal); document.body.classList.toggle("bmode", !!buildSel);
+  if (!M2) return; renderHst(); renderAct(); placeMiniTap();
+}
+{ let lt = performance.now(); (function loop(now) { const dt = clamp((now - lt) / 1000, 0, .1); lt = now; hudTick(dt); requestAnimationFrame(loop); })(lt); }
+Object.assign(window.__game, { JOY, ctxWorld, areaName, AREA, M2, setCell: (...a) => setCell(...a) });
+
 </script>
 </body>
 </html>

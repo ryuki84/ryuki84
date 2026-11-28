@@ -52,7 +52,8 @@ function bodyMap() {
 function drawWorldMap() {   // 끝없는 월드: 내 주변 480칸(발견한 곳만)
   const cvm = document.getElementById("wmap"); if (!cvm) return; const x = cvm.getContext("2d"), W = getWorld(), k = 3, n = 120; x.fillStyle = "#14121c"; x.fillRect(0, 0, cvm.width, cvm.height);
   const inW = scene === "dun" && dun && dun.kind === "world", cxp = inW ? player.x / T : W.vreg.x + 15, cyp = inW ? player.y / T : W.vreg.y + 10, bx0 = Math.floor(cxp / 4) - n / 2, by0 = Math.floor(cyp / 4) - n / 2;
-  for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) { if (!W.disc.has(DKEY(bx0 + i, by0 + j))) continue; x.fillStyle = BIO_CS[wb((bx0 + i) * 4 + 2, (by0 + j) * 4 + 2)]; x.fillRect(i * k, j * k, k, k); }
+  for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) { const d = W.disc.has(DKEY(bx0 + i, by0 + j)); x.globalAlpha = d ? 1 : .22; x.fillStyle = BIO_CS[wb((bx0 + i) * 4 + 2, (by0 + j) * 4 + 2)]; x.fillRect(i * k, j * k, k, k); }   // 안 가 본 곳은 흐리게
+  x.globalAlpha = 1;
   for (const p of poisNear(bx0 * 4, by0 * 4, (bx0 + n) * 4, (by0 + n) * 4)) { const i = (p.x >> 2) - bx0, j = (p.y >> 2) - by0; if (i < 0 || j < 0 || i >= n || j >= n || !W.disc.has(DKEY(p.x >> 2, p.y >> 2))) continue; const c = { town: "#ffd34d", cave: "#7a5a9a", maze: "#e0a040", shrine: "#6ee7ff", camp: "#e8505a", ruin: "#b8bcc8", lair: "#ff7a1a", portal: "#6ee7ff", demon: "#c03aff" }[p.type]; if (!c) continue; x.fillStyle = c; x.fillRect(i * k - 2, j * k - 2, 5, 5); }
   { const i = Math.floor(cxp / 4) - bx0, j = Math.floor(cyp / 4) - by0; x.fillStyle = "#fff"; x.fillRect(i * k - 2, j * k - 2, 5, 5); }
   x.fillStyle = "#fff8"; x.font = "11px sans-serif"; x.fillText(`좌표 ${Math.round(cxp - WC0)}, ${Math.round(cyp - WC0)}`, 6, 352);
@@ -82,7 +83,8 @@ function drawWorldEnts(g, P, pz) {
   for (const p of poisNear(camT.x - 12, camT.z - 26, camT.x + 12, camT.z + 9)) { if (Math.abs(p.x - camT.x) > 12 || Math.abs(p.y - camT.z) > 9) continue; if (p.type === "maze") labelT("🏛️ " + p.name, p.x + .5, p.y + 17.5, .3); else if (p.type === "shop" || p.type === "inn") labelT(p.name, p.x + 1.5, p.y + 2.3, .3); else if (p.type === "board" || p.type === "shrine" || p.type === "portal") labelT(p.name, p.x + .5, p.y + 1.3, .4, p.type === "board" ? "#fff3d6" : "#8fefff"); else if (p.type === "castle" && !p.deco) labelT("🏰 포근성", p.x + 5, p.y + 5.4, .4, "#ffe27a"); else if (p.type === "demon") labelT("😈 마왕성", p.x + 4.5, p.y + 4.4, .4, "#ff6a6a"); else if (p.type === "cave") labelT("동굴 (깊이 " + clamp(1 + Math.floor(p.dist / 45), 1, 12) + ")", p.x + 1, p.y + 2.5, .3); else if (p.type === "chest") labelT(S.wopen[p.id] ? "빈 상자" : p.name, p.x + .5, p.y + 1.2, .3, "#f5d142"); }
 }
 function drawMiniWorld() {
-  const W = WORLD, P = player, px = Math.floor(P.x / T), py = Math.floor((P.y + 8) / T), hw = 26, hh = 18, k = 3 * (ov.clientWidth < 600 ? 1.4 : 1);
+  const loc = scene !== "dun", o0x = loc ? WORLD.vreg.x * T : 0, o0y = loc ? WORLD.vreg.y * T : 0;   // 마을(지역 장면)에서는 월드 좌표로 바꿔서 그려요
+  const W = WORLD, P = { x: player.x + o0x, y: player.y + o0y }, px = Math.floor(P.x / T), py = Math.floor((P.y + 8) / T), hw = 26, hh = 18, k = 3 * (ov.clientWidth < 600 ? 1.4 : 1);
   const ox = VW - hw * 2 * k - 12, oy = MOBUI() ? miniTop() : LVH - hh * 2 * k - 12;
   ctx.fillStyle = "rgba(10,8,20,.7)"; ctx.fillRect(ox - 3, oy - 3, hw * 2 * k + 6, hh * 2 * k + 6);
   for (let j = -hh; j < hh; j++) for (let i = -hw; i < hw; i++) {
@@ -91,7 +93,7 @@ function drawMiniWorld() {
   }
   const dot = (x, y, col, r) => { const sx = ox + (x / T - px + hw) * k, sy = oy + (y / T - py + hh) * k; if (sx < ox || sy < oy || sx > ox + hw * 2 * k || sy > oy + hh * 2 * k) return; ctx.fillStyle = col; ctx.fillRect(sx - r, sy - r, r * 2, r * 2); };
   for (const p of poisNear(px - hw, py - hh, px + hw, py + hh)) { const c = { town: "#ffd34d", cave: "#b58aff", maze: "#e0a040", shrine: "#6ee7ff", camp: "#e8505a", ruin: "#d8dce8", lair: "#ff7a1a", portal: "#6ee7ff", demon: "#c03aff" }[p.type]; if (c) dot((p.x + .5) * T, (p.y + .5) * T, c, k * 1.2); }
-  for (const m of dun.mons) dot(m.x, m.y, m.boss ? "#ff9f1c" : m.wild && !m.hostile ? "#7be07b" : "#ff5a5a", k * (m.boss ? 1.3 : .7));
+  if (!loc) for (const m of dun.mons) dot(m.x, m.y, m.boss ? "#ff9f1c" : m.wild && !m.hostile ? "#7be07b" : "#ff5a5a", k * (m.boss ? 1.3 : .7));
   for (const o of NET.others.values()) dot(o.x, o.y + 8, "#8affb0", k * 1.1);
   dot(P.x, P.y + 8, "#ffffff", k * 1.1);
 }
